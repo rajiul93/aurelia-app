@@ -1,0 +1,92 @@
+{
+  "version": 8,
+  "name": "Aurelia Tourism",
+  "metadata": {
+    "mapbox:autocomposite": false
+  },
+  "sources": {
+    "openfreemap": {
+      "type": "vector",
+      "url": "https://tiles.openfreemap.org/planet"
+    }
+  },
+  "sprite": "https://tiles.openfreemap.org/sprites/ofm_f384/ofm",
+  "glyphs": "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf",
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": {
+        "background-color": "#1c1917"
+      }
+    },
+    {
+      "id": "landuse-park",
+      "type": "fill",
+      "source": "openfreemap",
+      "source-layer": "landuse",
+      "filter": ["==", "class", "park"],
+      "paint": {
+        "fill-color": "#292524",
+        "fill-opacity": 0.6
+      }
+    },
+    {
+      "id": "water",
+      "type": "fill",
+      "source": "openfreemap",
+      "source-layer": "water",
+      "paint": {
+        "fill-color": "#0f172a"
+      }
+    },
+    {
+      "id": "roads-minor",
+      "type": "line",
+      "source": "openfreemap",
+      "source-layer": "transportation",
+      "filter": ["in", "class", "path", "track", "service", "minor"],
+      "paint": {
+        "line-color": "#44403c",
+        "line-width": 1
+      }
+    },
+    {
+      "id": "roads-major",
+      "type": "line",
+      "source": "openfreemap",
+      "source-layer": "transportation",
+      "filter": ["in", "class", "primary", "secondary", "tertiary", "trunk"],
+      "paint": {
+        "line-color": "#57534e",
+        "line-width": 2
+      }
+    },
+    {
+      "id": "buildings",
+      "type": "fill",
+      "source": "openfreemap",
+      "source-layer": "building",
+      "paint": {
+        "fill-color": "#292524",
+        "fill-opacity": 0.35
+      }
+    },
+    {
+      "id": "place-labels",
+      "type": "symbol",
+      "source": "openfreemap",
+      "source-layer": "place",
+      "layout": {
+        "text-field": ["get", "name"],
+        "text-font": ["Noto Sans Regular"],
+        "text-size": 12
+      },
+      "paint": {
+        "text-color": "#d6d3d1",
+        "text-halo-color": "#1c1917",
+        "text-halo-width": 1
+      }
+    }
+  ]
+}

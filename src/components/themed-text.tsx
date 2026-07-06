@@ -1,28 +1,43 @@
-import { Platform, StyleSheet, Text, type TextProps } from 'react-native';
+import { cssInterop } from "nativewind";
+import { Platform, StyleSheet, Text, type TextProps } from "react-native";
 
-import { Fonts, ThemeColor } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
+import { Fonts, ThemeColor } from "@/constants/theme";
+import { useTheme } from "@/hooks/use-theme";
 
 export type ThemedTextProps = TextProps & {
-  type?: 'default' | 'title' | 'small' | 'smallBold' | 'subtitle' | 'link' | 'linkPrimary' | 'code';
+  type?:
+    | "default"
+    | "title"
+    | "small"
+    | "smallBold"
+    | "subtitle"
+    | "link"
+    | "linkPrimary"
+    | "code";
   themeColor?: ThemeColor;
+  className?: string;
 };
 
-export function ThemedText({ style, type = 'default', themeColor, ...rest }: ThemedTextProps) {
+export function ThemedText({
+  style,
+  type = "default",
+  themeColor,
+  ...rest
+}: ThemedTextProps) {
   const theme = useTheme();
 
   return (
     <Text
       style={[
-        { color: theme[themeColor ?? 'text'] },
-        type === 'default' && styles.default,
-        type === 'title' && styles.title,
-        type === 'small' && styles.small,
-        type === 'smallBold' && styles.smallBold,
-        type === 'subtitle' && styles.subtitle,
-        type === 'link' && styles.link,
-        type === 'linkPrimary' && styles.linkPrimary,
-        type === 'code' && styles.code,
+        { color: theme[themeColor ?? "text"] },
+        type === "default" && styles.default,
+        type === "title" && styles.title,
+        type === "small" && styles.small,
+        type === "smallBold" && styles.smallBold,
+        type === "subtitle" && styles.subtitle,
+        type === "link" && styles.link,
+        type === "linkPrimary" && styles.linkPrimary,
+        type === "code" && styles.code,
         style,
       ]}
       {...rest}
@@ -30,40 +45,44 @@ export function ThemedText({ style, type = 'default', themeColor, ...rest }: The
   );
 }
 
+cssInterop(ThemedText, { className: "style" });
+
 const styles = StyleSheet.create({
   small: {
+    fontFamily: Fonts.sansMedium,
     fontSize: 14,
     lineHeight: 20,
-    fontWeight: 500,
   },
   smallBold: {
+    fontFamily: Fonts.sansBold,
     fontSize: 14,
     lineHeight: 20,
-    fontWeight: 700,
   },
   default: {
+    fontFamily: Fonts.sansMedium,
     fontSize: 16,
     lineHeight: 24,
-    fontWeight: 500,
   },
   title: {
+    fontFamily: Fonts.sansBold,
     fontSize: 48,
-    fontWeight: 600,
     lineHeight: 52,
   },
   subtitle: {
-    fontSize: 32,
-    lineHeight: 44,
-    fontWeight: 600,
+    fontFamily: Fonts.sansBold,
+    fontSize: 28,
+    lineHeight: 34,
   },
   link: {
+    fontFamily: Fonts.sansMedium,
     lineHeight: 30,
     fontSize: 14,
   },
   linkPrimary: {
+    fontFamily: Fonts.sansMedium,
     lineHeight: 30,
     fontSize: 14,
-    color: '#3c87f7',
+    color: "#e1a566",
   },
   code: {
     fontFamily: Fonts.mono,

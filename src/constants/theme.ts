@@ -1,55 +1,47 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * Shared theme tokens. Brand primary and Roboto live in src/theme/*.
  */
 
-import '@/global.css';
+import "@/global.css";
 
-import { Platform } from 'react-native';
+import { Platform } from "react-native";
+
+import { BrandColors } from "@/theme/colors";
+import { Fonts as TypographyFonts } from "@/theme/typography";
 
 export const Colors = {
   light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
+    text: "#1a1208",
+    background: "#ffffff",
+    backgroundElement: "#F5F0EA",
+    backgroundSelected: "#EDE4D8",
+    textSecondary: "#6B5E52",
+    primary: BrandColors.primary,
+    primaryForeground: BrandColors.primaryForeground,
   },
   dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
+    text: "#ffffff",
+    background: "#0c0a09",
+    backgroundElement: "#1c1917",
+    backgroundSelected: "#292524",
+    textSecondary: "#a8a29e",
+    primary: BrandColors.primary,
+    primaryForeground: BrandColors.primaryForeground,
   },
 } as const;
 
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-  web: {
-    sans: 'var(--font-display)',
-    serif: 'var(--font-serif)',
-    rounded: 'var(--font-rounded)',
-    mono: 'var(--font-mono)',
-  },
-});
+export const Fonts = {
+  sans: TypographyFonts.sans,
+  sansMedium: TypographyFonts.sansMedium,
+  sansBold: TypographyFonts.sansBold,
+  mono: Platform.select({
+    ios: "ui-monospace",
+    default: "monospace",
+    web: "var(--font-mono)",
+  }),
+} as const;
 
 export const Spacing = {
   half: 2,
