@@ -1,8 +1,9 @@
-import { ScrollView, Pressable, StyleSheet } from "react-native";
+import { ScrollView, Pressable, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AccountPanel } from "@/components/auth/account-panel";
+import { HamburgerButton } from "@/components/navigation/hamburger-button";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { BottomTabInset, Spacing } from "@/constants/theme";
@@ -23,6 +24,9 @@ export default function AccountScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          <View style={styles.topBar}>
+            <HamburgerButton />
+          </View>
           <ThemedText type="subtitle" style={styles.title}>
             {t("account.title")}
           </ThemedText>
@@ -31,6 +35,19 @@ export default function AccountScreen() {
           </ThemedText>
 
           <AccountPanel />
+
+          <Pressable
+            onPress={() => router.push("/subscribe")}
+            style={[
+              styles.settingsLink,
+              { backgroundColor: theme.backgroundElement },
+            ]}
+          >
+            <ThemedText type="smallBold">{t("subscribe.accountCta")}</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              {t("subscribe.accountCtaHint")}
+            </ThemedText>
+          </Pressable>
 
           <Pressable
             onPress={() => router.push("/settings")}
@@ -64,6 +81,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.four,
     paddingBottom: BottomTabInset + Spacing.four,
     gap: Spacing.three,
+  },
+  topBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "stretch",
+    paddingTop: Spacing.two,
   },
   title: {
     paddingTop: Spacing.three,

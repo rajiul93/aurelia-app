@@ -57,6 +57,17 @@ export function TourAccessLockScreen({
               {message}
             </ThemedText>
 
+            {reason === "access_inactive" ? (
+              <Pressable
+                onPress={() => router.navigate("/subscribe")}
+                style={[styles.button, { backgroundColor: theme.primary }]}
+              >
+                <ThemedText type="smallBold" style={{ color: theme.primaryForeground }}>
+                  {t("accessLock.subscribe")}
+                </ThemedText>
+              </Pressable>
+            ) : null}
+
             <Pressable
               onPress={() => router.navigate("/explore")}
               style={[styles.button, { backgroundColor: theme.primary }]}

@@ -5,6 +5,7 @@ export type VersionsMap = {
   apiVersion: number;
   schemaVersion: number;
   appContentVersion: number;
+  knowledgeVersion?: number;
   remoteConfigVersion?: number;
   tours?: Array<{
     tourId: string;

@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
+import { HamburgerButton } from "@/components/navigation/hamburger-button";
 import { PageBackground } from "@/components/page-background";
 import { GuidesHubSection } from "@/components/tours/guides-hub-section";
 import { EmergencyAnnouncementBanner } from "@/components/emergency-announcement-banner";
@@ -82,6 +83,9 @@ export default function HomeScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
+          <View style={styles.topBar}>
+            <HamburgerButton />
+          </View>
           <View style={styles.header}>
             {installedGuides.length === 0 ? (
               <>
@@ -273,6 +277,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.four,
     paddingBottom: BottomTabInset + Spacing.four,
     gap: Spacing.three,
+  },
+  topBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "stretch",
+    paddingTop: Spacing.two,
   },
   header: {
     gap: Spacing.two,

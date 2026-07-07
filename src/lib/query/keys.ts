@@ -31,4 +31,10 @@ export const queryKeys = {
   storage: {
     summary: ["storage", "summary"] as const,
   },
+  subscriptions: {
+    all: ["subscriptions"] as const,
+    config: ["subscriptions", "config"] as const,
+    purchase: (id: string) =>
+      [...queryKeys.subscriptions.all, "purchase", id] as const,
+  },
 } as const;

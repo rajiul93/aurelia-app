@@ -1,34 +1,21 @@
-import { NativeTabs } from 'expo-router/unstable-native-tabs';
-import { useColorScheme } from 'react-native';
+import { Tabs } from "expo-router/js-tabs";
 
-import { Colors } from '@/constants/theme';
-import { useStrings } from '@/hooks/use-strings';
+import { GlassTabBar } from "@/components/navigation/glass-tab-bar";
+import { useStrings } from "@/hooks/use-strings";
 
 export default function AppTabs() {
-  const scheme = useColorScheme();
-  const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
   const { t } = useStrings();
 
   return (
-    <NativeTabs
-      backgroundColor={colors.background}
-      indicatorColor={colors.backgroundElement}
-      labelStyle={{ selected: { color: colors.text } }}>
-      <NativeTabs.Trigger name="index">
-        <NativeTabs.Trigger.Label>{t('tabs.home')}</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          src={require('@/assets/images/tabIcons/home.png')}
-          renderingMode="template"
-        />
-      </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="explore">
-        <NativeTabs.Trigger.Label>{t('tabs.account')}</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          src={require('@/assets/images/tabIcons/explore.png')}
-          renderingMode="template"
-        />
-      </NativeTabs.Trigger>
-    </NativeTabs>
+    <Tabs
+      screenOptions={{ headerShown: false }}
+      tabBar={(props) => <GlassTabBar {...props} />}
+    >
+      <Tabs.Screen name="index" options={{ title: t("tabs.home") }} />
+      <Tabs.Screen name="explore" options={{ title: t("tabs.account") }} />
+      <Tabs.Screen name="settings" options={{ title: t("tabs.settings") }} />
+      <Tabs.Screen name="faq" options={{ title: t("tabs.faq") }} />
+      <Tabs.Screen name="assistant" options={{ title: t("tabs.assistant") }} />
+    </Tabs>
   );
 }

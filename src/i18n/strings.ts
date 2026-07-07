@@ -9,6 +9,32 @@ const en = {
 
   "tabs.home": "Home",
   "tabs.account": "Account",
+  "tabs.settings": "Settings",
+  "tabs.faq": "FAQ",
+  "tabs.assistant": "Assistant",
+
+  "knowledge.preparing": "Preparing offline content…",
+
+  "drawer.menu": "Menu",
+  "drawer.information": "Information",
+  "drawer.legal": "Legal",
+  "drawer.appVersion": "Version {version}",
+
+  "faqScreen.title": "FAQ",
+  "faqScreen.subtitle": "Frequently asked questions.",
+  "faqScreen.empty": "No FAQs available yet.",
+
+  "assistant.title": "Aurelia Assistant",
+  "assistant.subtitle": "Ask about the app, tours, and more.",
+  "assistant.placeholder": "Ask a question…",
+  "assistant.send": "Send",
+  "assistant.initialMessage":
+    "Hi! I'm the Aurelia Assistant. Ask me anything about the app or your tours.",
+  "assistant.noAnswer":
+    "I couldn't find an answer to that yet. Try rephrasing your question.",
+  "assistant.empty": "The assistant is getting ready. Please try again shortly.",
+
+  "pages.notFound": "Page not found.",
 
   "welcome.title.line1": "Your journey",
   "welcome.title.line2": "through history",
@@ -90,6 +116,36 @@ const en = {
     "This tour is not included in your current access. Contact support if you believe this is a mistake.",
   "accessLock.openAccount": "Open account",
   "accessLock.goBack": "Go back",
+  "accessLock.subscribe": "Subscribe",
+
+  "subscribe.title": "Subscribe",
+  "subscribe.subtitle": "Choose a plan, devices, and tours to unlock.",
+  "subscribe.accountCta": "Subscription plans",
+  "subscribe.accountCtaHint":
+    "Buy or extend tour access — weekly, monthly, and more.",
+  "subscribe.signInToContinue": "Sign in to continue",
+  "subscribe.checkoutTitle": "Sign in to pay",
+  "subscribe.checkoutHint":
+    "Enter the email from your tour booking to continue with {amount}.",
+  "subscribe.planLabel": "Plan",
+  "subscribe.deviceLabel": "Devices",
+  "subscribe.toursLabel": "Tours",
+  "subscribe.noToursAvailable": "No tours available to purchase yet.",
+  "subscribe.priceBase": "Base price",
+  "subscribe.priceDevices": "Extra devices",
+  "subscribe.priceDiscount": "Discount",
+  "subscribe.priceTotal": "Total",
+  "subscribe.subscribeButton": "Subscribe for {amount}",
+  "subscribe.processing": "Processing…",
+  "subscribe.finalizing": "Finalizing your subscription…",
+  "subscribe.success": "Subscription active!",
+  "subscribe.successHint": "Your access has been updated.",
+  "subscribe.done": "Done",
+  "subscribe.errorGeneric": "Could not start checkout. Please try again.",
+  "subscribe.errorPayment": "Payment was not completed.",
+  "subscribe.selectAtLeastOneTour": "Select at least one tour.",
+  "subscribe.deviceCountUnavailable":
+    "Pricing isn't configured yet for this many devices.",
 
   "auth.verifyEmail": "Verify your email",
   "auth.verifyEmailHint":
@@ -247,6 +303,33 @@ const es: Record<StringKey, string> = {
   "language.fr": "Francés",
   "tabs.home": "Inicio",
   "tabs.account": "Cuenta",
+  "tabs.settings": "Ajustes",
+  "tabs.faq": "FAQ",
+  "tabs.assistant": "Asistente",
+
+  "knowledge.preparing": "Preparando el contenido sin conexión…",
+
+  "drawer.menu": "Menú",
+  "drawer.information": "Información",
+  "drawer.legal": "Legal",
+  "drawer.appVersion": "Versión {version}",
+
+  "faqScreen.title": "FAQ",
+  "faqScreen.subtitle": "Preguntas frecuentes.",
+  "faqScreen.empty": "Aún no hay preguntas disponibles.",
+
+  "assistant.title": "Asistente Aurelia",
+  "assistant.subtitle": "Pregunta sobre la app, los tours y más.",
+  "assistant.placeholder": "Haz una pregunta…",
+  "assistant.send": "Enviar",
+  "assistant.initialMessage":
+    "¡Hola! Soy el Asistente Aurelia. Pregúntame lo que quieras sobre la app o tus tours.",
+  "assistant.noAnswer":
+    "Todavía no encontré una respuesta. Intenta reformular tu pregunta.",
+  "assistant.empty":
+    "El asistente se está preparando. Inténtalo de nuevo en un momento.",
+
+  "pages.notFound": "Página no encontrada.",
   "welcome.title.line1": "Tu viaje",
   "welcome.title.line2": "por la historia",
   "welcome.title.highlight": "empieza aquí.",
@@ -323,6 +406,37 @@ const es: Record<StringKey, string> = {
     "Este tour no está incluido en tu acceso actual. Contacta soporte si crees que es un error.",
   "accessLock.openAccount": "Abrir cuenta",
   "accessLock.goBack": "Volver",
+  "accessLock.subscribe": "Suscribirse",
+
+  "subscribe.title": "Suscribirse",
+  "subscribe.subtitle": "Elige un plan, dispositivos y tours para desbloquear.",
+  "subscribe.accountCta": "Planes de suscripción",
+  "subscribe.accountCtaHint":
+    "Compra o extiende el acceso a tours — semanal, mensual y más.",
+  "subscribe.signInToContinue": "Inicia sesión para continuar",
+  "subscribe.checkoutTitle": "Inicia sesión para pagar",
+  "subscribe.checkoutHint":
+    "Introduce el correo de tu reserva para continuar con {amount}.",
+  "subscribe.planLabel": "Plan",
+  "subscribe.deviceLabel": "Dispositivos",
+  "subscribe.toursLabel": "Tours",
+  "subscribe.noToursAvailable": "Aún no hay tours disponibles para comprar.",
+  "subscribe.priceBase": "Precio base",
+  "subscribe.priceDevices": "Dispositivos adicionales",
+  "subscribe.priceDiscount": "Descuento",
+  "subscribe.priceTotal": "Total",
+  "subscribe.subscribeButton": "Suscribirse por {amount}",
+  "subscribe.processing": "Procesando…",
+  "subscribe.finalizing": "Finalizando tu suscripción…",
+  "subscribe.success": "¡Suscripción activa!",
+  "subscribe.successHint": "Tu acceso ha sido actualizado.",
+  "subscribe.done": "Listo",
+  "subscribe.errorGeneric": "No se pudo iniciar el pago. Inténtalo de nuevo.",
+  "subscribe.errorPayment": "El pago no se completó.",
+  "subscribe.selectAtLeastOneTour": "Selecciona al menos un tour.",
+  "subscribe.deviceCountUnavailable":
+    "Aún no hay precio configurado para esta cantidad de dispositivos.",
+
   "auth.verifyEmail": "Verifica tu email",
   "auth.verifyEmailHint":
     "Usa el mismo email de tu reserva para desbloquear descargas en este dispositivo.",
@@ -467,6 +581,33 @@ const fr: Record<StringKey, string> = {
   "language.fr": "Français",
   "tabs.home": "Accueil",
   "tabs.account": "Compte",
+  "tabs.settings": "Réglages",
+  "tabs.faq": "FAQ",
+  "tabs.assistant": "Assistant",
+
+  "knowledge.preparing": "Préparation du contenu hors ligne…",
+
+  "drawer.menu": "Menu",
+  "drawer.information": "Informations",
+  "drawer.legal": "Légal",
+  "drawer.appVersion": "Version {version}",
+
+  "faqScreen.title": "FAQ",
+  "faqScreen.subtitle": "Questions fréquentes.",
+  "faqScreen.empty": "Aucune question disponible pour le moment.",
+
+  "assistant.title": "Assistant Aurelia",
+  "assistant.subtitle": "Posez des questions sur l'app, les visites et plus.",
+  "assistant.placeholder": "Posez une question…",
+  "assistant.send": "Envoyer",
+  "assistant.initialMessage":
+    "Bonjour ! Je suis l'Assistant Aurelia. Posez-moi vos questions sur l'app ou vos visites.",
+  "assistant.noAnswer":
+    "Je n'ai pas encore trouvé de réponse. Essayez de reformuler votre question.",
+  "assistant.empty":
+    "L'assistant se prépare. Veuillez réessayer dans un instant.",
+
+  "pages.notFound": "Page introuvable.",
   "welcome.title.line1": "Votre voyage",
   "welcome.title.line2": "à travers l'histoire",
   "welcome.title.highlight": "commence ici.",
@@ -544,6 +685,37 @@ const fr: Record<StringKey, string> = {
     "Cette visite n'est pas incluse dans votre accès actuel. Contactez le support si vous pensez qu'il s'agit d'une erreur.",
   "accessLock.openAccount": "Ouvrir le compte",
   "accessLock.goBack": "Retour",
+  "accessLock.subscribe": "S'abonner",
+
+  "subscribe.title": "S'abonner",
+  "subscribe.subtitle": "Choisissez un plan, des appareils et des visites à débloquer.",
+  "subscribe.accountCta": "Plans d'abonnement",
+  "subscribe.accountCtaHint":
+    "Achetez ou prolongez l'accès aux visites — hebdomadaire, mensuel et plus.",
+  "subscribe.signInToContinue": "Connectez-vous pour continuer",
+  "subscribe.checkoutTitle": "Connectez-vous pour payer",
+  "subscribe.checkoutHint":
+    "Saisissez l'e-mail de votre réservation pour continuer avec {amount}.",
+  "subscribe.planLabel": "Plan",
+  "subscribe.deviceLabel": "Appareils",
+  "subscribe.toursLabel": "Visites",
+  "subscribe.noToursAvailable": "Aucune visite disponible à l'achat pour l'instant.",
+  "subscribe.priceBase": "Prix de base",
+  "subscribe.priceDevices": "Appareils supplémentaires",
+  "subscribe.priceDiscount": "Réduction",
+  "subscribe.priceTotal": "Total",
+  "subscribe.subscribeButton": "S'abonner pour {amount}",
+  "subscribe.processing": "Traitement…",
+  "subscribe.finalizing": "Finalisation de votre abonnement…",
+  "subscribe.success": "Abonnement actif !",
+  "subscribe.successHint": "Votre accès a été mis à jour.",
+  "subscribe.done": "Terminé",
+  "subscribe.errorGeneric": "Impossible de démarrer le paiement. Réessayez.",
+  "subscribe.errorPayment": "Le paiement n'a pas abouti.",
+  "subscribe.selectAtLeastOneTour": "Sélectionnez au moins une visite.",
+  "subscribe.deviceCountUnavailable":
+    "Aucun tarif configuré pour ce nombre d'appareils pour l'instant.",
+
   "auth.verifyEmail": "Vérifiez votre e-mail",
   "auth.verifyEmailHint":
     "Utilisez le même e-mail que votre réservation pour débloquer les téléchargements sur cet appareil.",

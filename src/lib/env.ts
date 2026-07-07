@@ -2,7 +2,12 @@ import Constants from "expo-constants";
 import { Platform } from "react-native";
 
 const extra = Constants.expoConfig?.extra as
-  | { apiBaseUrl?: string; mobileApiKey?: string; apiVersion?: number }
+  | {
+      apiBaseUrl?: string;
+      mobileApiKey?: string;
+      apiVersion?: number;
+      stripePublishableKey?: string;
+    }
   | undefined;
 
 /** Metro / Expo Go host on the LAN (works on physical devices). */
@@ -70,4 +75,8 @@ export const env = {
   apiVersion: Number(
     process.env.EXPO_PUBLIC_API_VERSION ?? extra?.apiVersion ?? 1,
   ),
+  stripePublishableKey:
+    process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ??
+    extra?.stripePublishableKey ??
+    "",
 };

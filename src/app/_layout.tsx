@@ -60,7 +60,8 @@ export default function RootLayout() {
           <Stack.Screen name="welcome" />
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="tour" />
-          <Stack.Screen name="settings" />
+          <Stack.Screen name="pages" />
+          <Stack.Screen name="subscribe" />
         </Stack>
       </ThemeProvider>
     </AppProviders>
