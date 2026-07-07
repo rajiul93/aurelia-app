@@ -1,7 +1,7 @@
 import type { AppLanguage } from "@/store/locale-store";
 
 const en = {
-  "app.name": "Aurelia",
+  "app.name": "My Colosseum",
 
   "language.en": "English",
   "language.es": "Spanish",
@@ -48,6 +48,28 @@ const en = {
     "Free catalog — name and cover only. Sign in to unlock downloads.",
   "home.signedInAs": "Signed in as {email}",
   "home.signInCta": "Sign in to unlock downloads",
+  "home.premiumTitle": "Unlock full tours",
+  "whyBuy.title": "Why buy this tour package?",
+  "whyBuy.subtitle": "Everything you need for a richer, effortless visit.",
+  "whyBuy.offlineTitle": "Offline navigation",
+  "whyBuy.offlineDesc":
+    "Download once and follow the route with GPS guidance — no signal required.",
+  "whyBuy.aiTitle": "AI travel assistant",
+  "whyBuy.aiDesc":
+    "Ask anything about the tour and get instant answers on your device.",
+  "whyBuy.poiTitle": "Curated points of interest",
+  "whyBuy.poiDesc":
+    "Hand-picked highlights with the stories behind each stop.",
+  "whyBuy.langTitle": "Multilingual support",
+  "whyBuy.langDesc": "Enjoy every tour in English, Spanish, or French.",
+  "whyBuy.verifiedTitle": "Verified information",
+  "whyBuy.verifiedDesc":
+    "Accurate, expert-checked details you can rely on.",
+  "whyBuy.experienceTitle": "Enhanced experience",
+  "whyBuy.experienceDesc":
+    "Audio, maps, and highlights that bring every place to life.",
+  "home.premiumSubtitle":
+    "Sign in and subscribe to download tours for offline use.",
   "home.couldNotLoadTours": "Could not load tours",
   "home.networkError": "Cannot reach API at {url}. Keep admin server running on the same Wi‑Fi.",
   "home.checkApiConfig": "Check API URL and MOBILE_API_KEY.",
@@ -161,6 +183,11 @@ const en = {
 
   "settings.title": "Settings",
   "settings.subtitle": "Access, language, storage, and app info",
+  "settings.theme": "Theme",
+  "settings.themeHint": "Choose how the app looks. System follows your device.",
+  "settings.themeSystem": "System",
+  "settings.themeLight": "Light",
+  "settings.themeDark": "Dark",
   "settings.language": "Language",
   "settings.languageHint":
     "Applies to app UI strings. Tour content language is chosen when you download a guide.",
@@ -297,7 +324,7 @@ const en = {
 export type StringKey = keyof typeof en;
 
 const es: Record<StringKey, string> = {
-  "app.name": "Aurelia",
+  "app.name": "My Colosseum",
   "language.en": "Inglés",
   "language.es": "Español",
   "language.fr": "Francés",
@@ -341,6 +368,29 @@ const es: Record<StringKey, string> = {
     "Catálogo gratuito — solo nombre y portada. Inicia sesión para desbloquear descargas.",
   "home.signedInAs": "Sesión iniciada como {email}",
   "home.signInCta": "Inicia sesión para desbloquear descargas",
+  "home.premiumTitle": "Desbloquea tours completos",
+  "whyBuy.title": "¿Por qué comprar este paquete de tour?",
+  "whyBuy.subtitle":
+    "Todo lo que necesitas para una visita más rica y sin complicaciones.",
+  "whyBuy.offlineTitle": "Navegación sin conexión",
+  "whyBuy.offlineDesc":
+    "Descarga una vez y sigue la ruta con guía GPS, sin necesidad de señal.",
+  "whyBuy.aiTitle": "Asistente de viaje con IA",
+  "whyBuy.aiDesc":
+    "Pregunta lo que quieras sobre el tour y obtén respuestas al instante en tu dispositivo.",
+  "whyBuy.poiTitle": "Puntos de interés seleccionados",
+  "whyBuy.poiDesc":
+    "Lugares destacados elegidos a mano con la historia de cada parada.",
+  "whyBuy.langTitle": "Soporte multilingüe",
+  "whyBuy.langDesc": "Disfruta cada tour en inglés, español o francés.",
+  "whyBuy.verifiedTitle": "Información verificada",
+  "whyBuy.verifiedDesc":
+    "Detalles precisos y comprobados por expertos en los que puedes confiar.",
+  "whyBuy.experienceTitle": "Experiencia mejorada",
+  "whyBuy.experienceDesc":
+    "Audio, mapas y lugares destacados que dan vida a cada sitio.",
+  "home.premiumSubtitle":
+    "Inicia sesión y suscríbete para descargar tours sin conexión.",
   "home.couldNotLoadTours": "No se pudieron cargar los tours",
   "home.networkError":
     "No se puede conectar con la API en {url}. Mantén el servidor admin en la misma red Wi‑Fi.",
@@ -450,6 +500,12 @@ const es: Record<StringKey, string> = {
   "auth.devCode": "Código dev: {code}",
   "settings.title": "Ajustes",
   "settings.subtitle": "Acceso, idioma, almacenamiento e info de la app",
+  "settings.theme": "Tema",
+  "settings.themeHint":
+    "Elige la apariencia de la app. Sistema sigue tu dispositivo.",
+  "settings.themeSystem": "Sistema",
+  "settings.themeLight": "Claro",
+  "settings.themeDark": "Oscuro",
   "settings.language": "Idioma",
   "settings.languageHint":
     "Aplica a los textos de la app. El idioma del tour se elige al descargar una guía.",
@@ -575,7 +631,7 @@ const es: Record<StringKey, string> = {
 };
 
 const fr: Record<StringKey, string> = {
-  "app.name": "Aurelia",
+  "app.name": "My Colosseum",
   "language.en": "Anglais",
   "language.es": "Espagnol",
   "language.fr": "Français",
@@ -619,6 +675,29 @@ const fr: Record<StringKey, string> = {
     "Catalogue gratuit — nom et couverture uniquement. Connectez-vous pour débloquer les téléchargements.",
   "home.signedInAs": "Connecté en tant que {email}",
   "home.signInCta": "Connectez-vous pour débloquer les téléchargements",
+  "home.premiumTitle": "Débloquez les visites complètes",
+  "whyBuy.title": "Pourquoi acheter ce forfait de visite ?",
+  "whyBuy.subtitle":
+    "Tout ce qu'il faut pour une visite plus riche et sans effort.",
+  "whyBuy.offlineTitle": "Navigation hors ligne",
+  "whyBuy.offlineDesc":
+    "Téléchargez une fois et suivez l'itinéraire avec le guidage GPS, sans réseau.",
+  "whyBuy.aiTitle": "Assistant de voyage IA",
+  "whyBuy.aiDesc":
+    "Posez toutes vos questions sur la visite et obtenez des réponses instantanées sur votre appareil.",
+  "whyBuy.poiTitle": "Points d'intérêt sélectionnés",
+  "whyBuy.poiDesc":
+    "Des incontournables triés sur le volet avec l'histoire de chaque étape.",
+  "whyBuy.langTitle": "Support multilingue",
+  "whyBuy.langDesc": "Profitez de chaque visite en anglais, espagnol ou français.",
+  "whyBuy.verifiedTitle": "Informations vérifiées",
+  "whyBuy.verifiedDesc":
+    "Des détails précis et vérifiés par des experts, dignes de confiance.",
+  "whyBuy.experienceTitle": "Expérience enrichie",
+  "whyBuy.experienceDesc":
+    "Audio, cartes et points forts qui donnent vie à chaque lieu.",
+  "home.premiumSubtitle":
+    "Connectez-vous et abonnez-vous pour télécharger les visites hors ligne.",
   "home.couldNotLoadTours": "Impossible de charger les visites",
   "home.networkError":
     "Impossible d'atteindre l'API à {url}. Gardez le serveur admin sur le même Wi‑Fi.",
@@ -729,6 +808,12 @@ const fr: Record<StringKey, string> = {
   "auth.devCode": "Code dev : {code}",
   "settings.title": "Réglages",
   "settings.subtitle": "Accès, langue, stockage et infos de l'app",
+  "settings.theme": "Thème",
+  "settings.themeHint":
+    "Choisissez l'apparence de l'app. Système suit votre appareil.",
+  "settings.themeSystem": "Système",
+  "settings.themeLight": "Clair",
+  "settings.themeDark": "Sombre",
   "settings.language": "Langue",
   "settings.languageHint":
     "S'applique aux textes de l'app. La langue de la visite est choisie lors du téléchargement.",

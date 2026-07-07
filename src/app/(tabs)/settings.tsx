@@ -6,6 +6,7 @@ import { AccessSettingsPanel } from "@/components/settings/access-settings-panel
 import { AppInfoSettingsPanel } from "@/components/settings/app-info-settings-panel";
 import { LanguageSettingsPanel } from "@/components/settings/language-settings-panel";
 import { StorageSettingsPanel } from "@/components/settings/storage-settings-panel";
+import { ThemeSettingsPanel } from "@/components/settings/theme-settings-panel";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { BottomTabInset, Spacing } from "@/constants/theme";
@@ -32,6 +33,7 @@ export default function SettingsScreen() {
           showsVerticalScrollIndicator={false}
         >
           <AccessSettingsPanel />
+          <ThemeSettingsPanel />
           <LanguageSettingsPanel />
           <StorageSettingsPanel />
           <AppInfoSettingsPanel />

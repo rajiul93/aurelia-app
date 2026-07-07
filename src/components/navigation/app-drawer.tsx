@@ -60,6 +60,11 @@ export function AppDrawer() {
     router.push(`/pages/${key}`);
   }
 
+  function goToFaq() {
+    closeDrawer();
+    router.push("/faq");
+  }
+
   function renderSection(
     label: string,
     items: typeof pages,
@@ -115,6 +120,18 @@ export function AppDrawer() {
           </View>
 
           <ScrollView contentContainerStyle={styles.content}>
+            <View style={styles.section}>
+              <Pressable onPress={goToFaq} style={styles.row}>
+                <Ionicons
+                  name="help-circle-outline"
+                  size={20}
+                  color={theme.primary}
+                />
+                <ThemedText type="small" style={styles.rowLabel}>
+                  {t("faqScreen.title")}
+                </ThemedText>
+              </Pressable>
+            </View>
             {renderSection(t("drawer.information"), infoPages)}
             {renderSection(t("drawer.legal"), legalPages)}
           </ScrollView>

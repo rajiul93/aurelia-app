@@ -9,6 +9,8 @@ type PageBackgroundProps = {
   imagePosition?: "center" | "right";
   /** Applies a stronger dark scrim so foreground text can stay white. */
   darkOverlay?: boolean;
+  /** Render the image with no scrim/overlay at all. */
+  noOverlay?: boolean;
 };
 
 export function PageBackground({
@@ -17,6 +19,7 @@ export function PageBackground({
   style,
   imagePosition = "center",
   darkOverlay = false,
+  noOverlay = false,
 }: PageBackgroundProps) {
   return (
     <View style={[styles.container, style]}>
@@ -30,7 +33,7 @@ export function PageBackground({
         />
       ) : null}
 
-      {uri ? (
+      {uri && !noOverlay ? (
         darkOverlay ? (
           <View style={[StyleSheet.absoluteFill, styles.darkOverlay]} />
         ) : (

@@ -6,11 +6,12 @@ import {
 } from "@expo-google-fonts/roboto";
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
+import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
-import { useColorScheme } from "react-native";
+
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 import "@/global.css";
-import { AnimatedSplashOverlay } from "@/components/animated-icon";
 import { AppProviders } from "@/providers/app-providers";
 import { BrandColors } from "@/theme/colors";
 
@@ -55,12 +56,13 @@ export default function RootLayout() {
       <ThemeProvider
         value={colorScheme === "dark" ? AureliaDarkTheme : AureliaLightTheme}
       >
-        <AnimatedSplashOverlay />
+        <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="welcome" />
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="tour" />
-          <Stack.Screen name="pages" />
+          <Stack.Screen name="pages/[key]" />
+          <Stack.Screen name="faq" />
           <Stack.Screen name="subscribe" />
         </Stack>
       </ThemeProvider>

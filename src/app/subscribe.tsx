@@ -1,36 +1,36 @@
-import { useStripe } from "@stripe/stripe-react-native";
-import { useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useStripe } from '@stripe/stripe-react-native';
+import { useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
   View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ScreenHeader } from "@/components/screen-header";
-import { CheckoutAuthSheet } from "@/components/subscribe/checkout-auth-sheet";
-import { ThemedText } from "@/components/themed-text";
-import { ThemedView } from "@/components/themed-view";
-import { Spacing } from "@/constants/theme";
-import { useCheckout } from "@/hooks/mutations/use-checkout";
-import { useCatalogTours } from "@/hooks/queries/use-catalog";
-import { usePurchaseStatus } from "@/hooks/queries/use-purchase-status";
-import { useSubscriptionConfig } from "@/hooks/queries/use-subscription-config";
-import { useStrings } from "@/hooks/use-strings";
-import { useTheme } from "@/hooks/use-theme";
-import { queryKeys } from "@/lib/query/keys";
-import { computeSubscriptionPrice } from "@/lib/subscription-pricing";
-import { useAuthStore } from "@/store/auth-store";
+import { ScreenHeader } from '@/components/screen-header';
+import { CheckoutAuthSheet } from '@/components/subscribe/checkout-auth-sheet';
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
+import { Spacing } from '@/constants/theme';
+import { useCheckout } from '@/hooks/mutations/use-checkout';
+import { useCatalogTours } from '@/hooks/queries/use-catalog';
+import { usePurchaseStatus } from '@/hooks/queries/use-purchase-status';
+import { useSubscriptionConfig } from '@/hooks/queries/use-subscription-config';
+import { useStrings } from '@/hooks/use-strings';
+import { useTheme } from '@/hooks/use-theme';
+import { queryKeys } from '@/lib/query/keys';
+import { computeSubscriptionPrice } from '@/lib/subscription-pricing';
+import { useAuthStore } from '@/store/auth-store';
 
-type Phase = "form" | "processing" | "finalizing";
+type Phase = 'form' | 'processing' | 'finalizing';
 
 function formatAmount(amount: number, currency: string) {
   return new Intl.NumberFormat(undefined, {
-    style: "currency",
+    style: 'currency',
     currency,
   }).format(amount);
 }
@@ -62,21 +62,21 @@ export default function SubscribeScreen() {
   const [deviceCount, setDeviceCount] = useState(1);
   const [selectedTourIds, setSelectedTourIds] = useState<string[]>([]);
   const [purchaseId, setPurchaseId] = useState<string | null>(null);
-  const [phase, setPhase] = useState<Phase>("form");
+  const [phase, setPhase] = useState<Phase>('form');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [checkoutAuthVisible, setCheckoutAuthVisible] = useState(false);
 
   const { data: purchaseStatusResponse } = usePurchaseStatus(
-    phase === "finalizing" ? purchaseId : null,
+    phase === 'finalizing' ? purchaseId : null,
   );
   const purchaseStatus = purchaseStatusResponse?.data.status;
-  const isPaid = phase === "finalizing" && purchaseStatus === "PAID";
+  const isPaid = phase === 'finalizing' && purchaseStatus === 'PAID';
   const isPurchaseFailed =
-    phase === "finalizing" &&
-    (purchaseStatus === "FAILED" || purchaseStatus === "CANCELLED");
+    phase === 'finalizing' &&
+    (purchaseStatus === 'FAILED' || purchaseStatus === 'CANCELLED');
 
   useEffect(() => {
-    if (purchaseStatus === "PAID") {
+    if (purchaseStatus === 'PAID') {
       void queryClient.invalidateQueries({
         queryKey: queryKeys.entitlements.me,
       });
@@ -127,12 +127,12 @@ export default function SubscribeScreen() {
 
   function validateCheckoutSelection() {
     if (!selectedPlanId || !priceBreakdown) {
-      setErrorMessage(t("subscribe.errorGeneric"));
+      setErrorMessage(t('subscribe.errorGeneric'));
       return false;
     }
 
     if (selectedTourIds.length === 0) {
-      setErrorMessage(t("subscribe.selectAtLeastOneTour"));
+      setErrorMessage(t('subscribe.selectAtLeastOneTour'));
       return false;
     }
 
@@ -163,11 +163,11 @@ export default function SubscribeScreen() {
     }
 
     if (selectedTourIds.length === 0) {
-      setErrorMessage(t("subscribe.selectAtLeastOneTour"));
+      setErrorMessage(t('subscribe.selectAtLeastOneTour'));
       return;
     }
 
-    setPhase("processing");
+    setPhase('processing');
 
     try {
       const result = await checkout.mutateAsync({
@@ -178,7 +178,7 @@ export default function SubscribeScreen() {
 
       const { error: initError } = await initPaymentSheet({
         paymentIntentClientSecret: result.data.clientSecret,
-        merchantDisplayName: "Aurelia",
+        merchantDisplayName: 'Aurelia',
       });
 
       if (initError) {
@@ -192,30 +192,30 @@ export default function SubscribeScreen() {
       }
 
       setPurchaseId(result.data.purchaseId);
-      setPhase("finalizing");
+      setPhase('finalizing');
     } catch (error) {
       setErrorMessage(
-        error instanceof Error ? error.message : t("subscribe.errorGeneric"),
+        error instanceof Error ? error.message : t('subscribe.errorGeneric'),
       );
-      setPhase("form");
+      setPhase('form');
     }
   }
 
   if (isPaid) {
     return (
       <ThemedView style={styles.container}>
-        <SafeAreaView style={styles.safeArea} edges={["top"]}>
+        <SafeAreaView style={styles.safeArea} edges={['top']}>
           <View style={styles.content}>
-            <ScreenHeader title={t("subscribe.title")} />
+            <ScreenHeader title={t('subscribe.title')} />
             <View
               style={[
                 styles.card,
                 { backgroundColor: theme.backgroundElement },
               ]}
             >
-              <ThemedText type="subtitle">{t("subscribe.success")}</ThemedText>
+              <ThemedText type="subtitle">{t('subscribe.success')}</ThemedText>
               <ThemedText themeColor="textSecondary">
-                {t("subscribe.successHint")}
+                {t('subscribe.successHint')}
               </ThemedText>
               <Pressable
                 onPress={() => router.back()}
@@ -225,7 +225,7 @@ export default function SubscribeScreen() {
                   type="smallBold"
                   style={{ color: theme.primaryForeground }}
                 >
-                  {t("subscribe.done")}
+                  {t('subscribe.done')}
                 </ThemedText>
               </Pressable>
             </View>
@@ -238,9 +238,9 @@ export default function SubscribeScreen() {
   if (isPurchaseFailed) {
     return (
       <ThemedView style={styles.container}>
-        <SafeAreaView style={styles.safeArea} edges={["top"]}>
+        <SafeAreaView style={styles.safeArea} edges={['top']}>
           <View style={styles.content}>
-            <ScreenHeader title={t("subscribe.title")} />
+            <ScreenHeader title={t('subscribe.title')} />
             <View
               style={[
                 styles.card,
@@ -248,17 +248,17 @@ export default function SubscribeScreen() {
               ]}
             >
               <ThemedText themeColor="textSecondary">
-                {t("subscribe.errorPayment")}
+                {t('subscribe.errorPayment')}
               </ThemedText>
               <Pressable
-                onPress={() => setPhase("form")}
+                onPress={() => setPhase('form')}
                 style={[styles.button, { backgroundColor: theme.primary }]}
               >
                 <ThemedText
                   type="smallBold"
                   style={{ color: theme.primaryForeground }}
                 >
-                  {t("subscribe.title")}
+                  {t('subscribe.title')}
                 </ThemedText>
               </Pressable>
             </View>
@@ -268,16 +268,16 @@ export default function SubscribeScreen() {
     );
   }
 
-  if (phase === "processing" || phase === "finalizing") {
+  if (phase === 'processing' || phase === 'finalizing') {
     return (
       <ThemedView style={styles.container}>
-        <SafeAreaView style={styles.safeArea} edges={["top"]}>
+        <SafeAreaView style={styles.safeArea} edges={['top']}>
           <View style={[styles.content, styles.centered]}>
             <ActivityIndicator size="large" color={theme.primary} />
             <ThemedText themeColor="textSecondary" style={styles.centerText}>
-              {phase === "finalizing"
-                ? t("subscribe.finalizing")
-                : t("subscribe.processing")}
+              {phase === 'finalizing'
+                ? t('subscribe.finalizing')
+                : t('subscribe.processing')}
             </ThemedText>
           </View>
         </SafeAreaView>
@@ -287,30 +287,28 @@ export default function SubscribeScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
           <ScreenHeader
-            title={t("subscribe.title")}
-            subtitle={t("subscribe.subtitle")}
+            title={t('subscribe.title')}
+            subtitle={t('subscribe.subtitle')}
           />
 
-          {configLoading ? (
-            <ActivityIndicator color={theme.primary} />
-          ) : null}
+          {configLoading ? <ActivityIndicator color={theme.primary} /> : null}
 
           {configError || (!configLoading && !config) ? (
             <ThemedText themeColor="textSecondary">
-              {t("subscribe.errorGeneric")}
+              {t('subscribe.errorGeneric')}
             </ThemedText>
           ) : null}
 
           {config ? (
             <>
               <ThemedText type="smallBold">
-                {t("subscribe.planLabel")}
+                {t('subscribe.planLabel')}
               </ThemedText>
               <View style={styles.optionRow}>
                 {config.plans.map((plan) => {
@@ -327,7 +325,7 @@ export default function SubscribeScreen() {
                             : theme.backgroundSelected,
                           backgroundColor: selected
                             ? theme.backgroundSelected
-                            : "transparent",
+                            : 'transparent',
                         },
                       ]}
                     >
@@ -341,7 +339,7 @@ export default function SubscribeScreen() {
               </View>
 
               <ThemedText type="smallBold">
-                {t("subscribe.deviceLabel")}
+                {t('subscribe.deviceLabel')}
               </ThemedText>
               <View style={styles.optionRow}>
                 {availableDeviceCounts.map((count) => {
@@ -358,7 +356,7 @@ export default function SubscribeScreen() {
                             : theme.backgroundSelected,
                           backgroundColor: selected
                             ? theme.backgroundSelected
-                            : "transparent",
+                            : 'transparent',
                         },
                       ]}
                     >
@@ -369,14 +367,14 @@ export default function SubscribeScreen() {
               </View>
 
               <ThemedText type="smallBold">
-                {t("subscribe.toursLabel")}
+                {t('subscribe.toursLabel')}
               </ThemedText>
               {toursLoading ? (
                 <ActivityIndicator color={theme.primary} />
               ) : null}
               {!toursLoading && tours.length === 0 ? (
                 <ThemedText type="small" themeColor="textSecondary">
-                  {t("subscribe.noToursAvailable")}
+                  {t('subscribe.noToursAvailable')}
                 </ThemedText>
               ) : null}
               {tours.map((tour) => {
@@ -393,7 +391,7 @@ export default function SubscribeScreen() {
                           : theme.backgroundSelected,
                         backgroundColor: checked
                           ? theme.backgroundSelected
-                          : "transparent",
+                          : 'transparent',
                       },
                     ]}
                   >
@@ -411,7 +409,7 @@ export default function SubscribeScreen() {
                 >
                   <View style={styles.priceRow}>
                     <ThemedText type="small" themeColor="textSecondary">
-                      {t("subscribe.priceBase")}
+                      {t('subscribe.priceBase')}
                     </ThemedText>
                     <ThemedText type="small">
                       {formatAmount(priceBreakdown.basePrice, config.currency)}
@@ -420,7 +418,7 @@ export default function SubscribeScreen() {
                   {deviceCount > 1 ? (
                     <View style={styles.priceRow}>
                       <ThemedText type="small" themeColor="textSecondary">
-                        {t("subscribe.priceDevices")}
+                        {t('subscribe.priceDevices')}
                       </ThemedText>
                       <ThemedText type="small">
                         {formatAmount(
@@ -433,7 +431,7 @@ export default function SubscribeScreen() {
                   {priceBreakdown.discountAmount > 0 ? (
                     <View style={styles.priceRow}>
                       <ThemedText type="small" themeColor="textSecondary">
-                        {t("subscribe.priceDiscount")} (
+                        {t('subscribe.priceDiscount')} (
                         {priceBreakdown.discountPercent}%)
                       </ThemedText>
                       <ThemedText type="small">
@@ -447,7 +445,7 @@ export default function SubscribeScreen() {
                   ) : null}
                   <View style={styles.priceRow}>
                     <ThemedText type="smallBold">
-                      {t("subscribe.priceTotal")}
+                      {t('subscribe.priceTotal')}
                     </ThemedText>
                     <ThemedText type="smallBold">
                       {formatAmount(priceBreakdown.total, config.currency)}
@@ -472,15 +470,15 @@ export default function SubscribeScreen() {
                   style={{ color: theme.primaryForeground }}
                 >
                   {!sessionToken
-                    ? t("subscribe.signInToContinue")
+                    ? t('subscribe.signInToContinue')
                     : priceBreakdown
-                      ? t("subscribe.subscribeButton", {
+                      ? t('subscribe.subscribeButton', {
                           amount: formatAmount(
                             priceBreakdown.total,
                             config.currency,
                           ),
                         })
-                      : t("subscribe.title")}
+                      : t('subscribe.title')}
                 </ThemedText>
               </Pressable>
             </>
@@ -513,12 +511,12 @@ const styles = StyleSheet.create({
     gap: Spacing.four,
   },
   centered: {
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   centerText: {
     marginTop: Spacing.three,
-    textAlign: "center",
+    textAlign: 'center',
   },
   scrollContent: {
     paddingHorizontal: Spacing.four,
@@ -526,8 +524,8 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
   },
   optionRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: Spacing.two,
   },
   option: {
@@ -544,7 +542,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     minWidth: 48,
-    alignItems: "center",
+    alignItems: 'center',
   },
   tourRow: {
     borderWidth: 1,
@@ -558,12 +556,12 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   priceRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
   button: {
-    alignSelf: "stretch",
-    alignItems: "center",
+    alignSelf: 'stretch',
+    alignItems: 'center',
     borderRadius: Spacing.two,
     paddingVertical: Spacing.three,
   },

@@ -1,16 +1,18 @@
 import { useMemo } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { ScrollView, StyleSheet } from "react-native";
+import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { HamburgerButton } from "@/components/navigation/hamburger-button";
+import { ScreenHeader } from "@/components/screen-header";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { FaqAccordion } from "@/components/tours/faq-accordion";
-import { BottomTabInset, Spacing } from "@/constants/theme";
+import { Spacing } from "@/constants/theme";
 import { useKnowledgeFaqs } from "@/hooks/use-knowledge";
 import { useStrings } from "@/hooks/use-strings";
 
 export default function FaqScreen() {
+  const router = useRouter();
   const { t } = useStrings();
   const faqs = useKnowledgeFaqs();
 
@@ -33,20 +35,16 @@ export default function FaqScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
-        <View style={styles.header}>
-          <HamburgerButton />
-          <View style={styles.headerText}>
-            <ThemedText type="subtitle">{t("faqScreen.title")}</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              {t("faqScreen.subtitle")}
-            </ThemedText>
-          </View>
-        </View>
-
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
+          <ScreenHeader
+            title={t("faqScreen.title")}
+            subtitle={t("faqScreen.subtitle")}
+            onBack={() => router.back()}
+          />
+
           {grouped.length === 0 ? (
             <ThemedText type="small" themeColor="textSecondary">
               {t("faqScreen.empty")}
@@ -69,20 +67,9 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.two,
-    paddingHorizontal: Spacing.four,
-    paddingBottom: Spacing.two,
-  },
-  headerText: {
-    flex: 1,
-    gap: Spacing.one,
-  },
   scrollContent: {
     paddingHorizontal: Spacing.four,
-    paddingBottom: BottomTabInset + Spacing.six,
+    paddingBottom: Spacing.six,
     gap: Spacing.four,
   },
 });

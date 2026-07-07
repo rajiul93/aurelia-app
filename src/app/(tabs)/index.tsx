@@ -1,7 +1,9 @@
+import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ThemedText } from "@/components/themed-text";
 import { HamburgerButton } from "@/components/navigation/hamburger-button";
 import { PageBackground } from "@/components/page-background";
+import { WhyBuyCard } from "@/components/tours/why-buy-card";
 import { GuidesHubSection } from "@/components/tours/guides-hub-section";
 import { EmergencyAnnouncementBanner } from "@/components/emergency-announcement-banner";
 import { TourDownloadButton } from "@/components/tours/tour-download-button";
@@ -72,11 +75,7 @@ export default function HomeScreen() {
   );
 
   return (
-    <PageBackground
-      uri={backgroundUrl}
-      imagePosition="right"
-      darkOverlay={heroOnDark}
-    >
+    <PageBackground uri={backgroundUrl} imagePosition="right" noOverlay>
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <ScrollView
           style={styles.scrollView}
@@ -85,51 +84,80 @@ export default function HomeScreen() {
         >
           <View style={styles.topBar}>
             <HamburgerButton />
+            <ThemedText
+              type="smallBold"
+              numberOfLines={1}
+              style={[styles.brandTitle, heroOnDark && styles.onDarkText]}
+            >
+              {title}
+            </ThemedText>
           </View>
           <View style={styles.header}>
-            {installedGuides.length === 0 ? (
-              <>
+            {!email ? (
+              <View
+                style={[
+                  styles.premiumCard,
+                  {
+                    backgroundColor: heroOnDark
+                      ? "rgba(15, 16, 22, 0.55)"
+                      : theme.backgroundElement,
+                    borderColor: heroOnDark
+                      ? "rgba(255, 255, 255, 0.18)"
+                      : theme.backgroundSelected,
+                  },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.premiumIcon,
+                    {
+                      backgroundColor: heroOnDark
+                        ? "rgba(255, 255, 255, 0.14)"
+                        : theme.backgroundSelected,
+                    },
+                  ]}
+                >
+                  <Ionicons name="lock-closed" size={20} color={theme.primary} />
+                </View>
                 <ThemedText
-                  type="subtitle"
+                  type="smallBold"
                   style={[styles.wrapText, heroOnDark && styles.onDarkText]}
                 >
-                  {title}
+                  {t("home.premiumTitle")}
                 </ThemedText>
                 <ThemedText
                   type="small"
                   themeColor={heroOnDark ? undefined : "textSecondary"}
                   style={[styles.wrapText, heroOnDark && styles.onDarkMuted]}
                 >
-                  {t("home.catalogSubtitle")}
+                  {t("home.premiumSubtitle")}
                 </ThemedText>
-              </>
-            ) : null}
-            {email ? (
-              installedGuides.length === 0 ? (
-                <ThemedText
-                  type="small"
-                  themeColor={heroOnDark ? undefined : "primary"}
-                  style={[styles.wrapText, heroOnDark && styles.onDarkText]}
+                <Pressable
+                  onPress={() => router.navigate("/explore")}
+                  style={[styles.premiumCta, { backgroundColor: theme.primary }]}
                 >
-                  {t("home.signedInAs", { email: email ?? "" })}
-                </ThemedText>
-              ) : null
-            ) : (
-              <Pressable
-                onPress={() => router.navigate("/explore")}
-                style={StyleSheet.flatten([
-                  styles.signInButton,
-                  { backgroundColor: theme.primary },
-                ])}
+                  <Ionicons
+                    name="sparkles"
+                    size={16}
+                    color={theme.primaryForeground}
+                  />
+                  <ThemedText
+                    type="smallBold"
+                    style={{ color: theme.primaryForeground }}
+                  >
+                    {t("home.signInCta")}
+                  </ThemedText>
+                </Pressable>
+              </View>
+            ) : installedGuides.length === 0 ? (
+              <ThemedText
+                type="small"
+                themeColor={heroOnDark ? undefined : "primary"}
+                style={[styles.wrapText, heroOnDark && styles.onDarkText]}
               >
-                <ThemedText
-                  type="smallBold"
-                  style={{ color: theme.primaryForeground }}
-                >
-                  {t("home.signInCta")}
-                </ThemedText>
-              </Pressable>
-            )}
+                {t("home.signedInAs", { email: email ?? "" })}
+              </ThemedText>
+            ) : null}
           </View>
 
           <EmergencyAnnouncementBanner />
@@ -211,52 +239,55 @@ export default function HomeScreen() {
 
           <View style={styles.tourList}>
             {tours.map((tour) => (
-              <View
-                key={tour.id}
-                style={[
-                  styles.tourCard,
-                  { backgroundColor: theme.backgroundElement },
-                ]}
-              >
-                {tour.coverUrl ? (
-                  <Image
-                    source={{ uri: tour.coverUrl }}
-                    style={styles.cover}
-                    contentFit="cover"
-                  />
-                ) : (
-                  <View
-                    style={[
-                      styles.cover,
-                      styles.coverFallback,
-                      { backgroundColor: theme.backgroundSelected },
-                    ]}
-                  />
-                )}
-                <View style={styles.tourMeta}>
-                  <ThemedText type="smallBold" style={styles.wrapText}>
-                    {tour.title}
-                  </ThemedText>
-                  <ThemedText
-                    type="small"
-                    themeColor="textSecondary"
-                    style={styles.wrapText}
-                  >
-                    {tour.slug}
-                  </ThemedText>
-                  {sessionToken ? (
-                    <TourDownloadButton
-                      tourId={tour.id}
-                      slug={tour.slug}
-                      title={tour.title}
-                      unlocked={unlockedTourIds.has(tour.id)}
-                      entitledVersions={entitledVersionsByTourId.get(tour.id)}
-                    />
-                  ) : null}
+              <View key={tour.id} style={styles.tourCardShadow}>
+                <View
+                  style={[
+                    styles.tourCard,
+                    { backgroundColor: theme.backgroundElement },
+                  ]}
+                >
+                  <View style={styles.coverWrap}>
+                    {tour.coverUrl ? (
+                      <Image
+                        source={{ uri: tour.coverUrl }}
+                        style={styles.cover}
+                        contentFit="cover"
+                      />
+                    ) : (
+                      <View
+                        style={[
+                          styles.cover,
+                          styles.coverFallback,
+                          { backgroundColor: theme.backgroundSelected },
+                        ]}
+                      />
+                    )}
+                  </View>
+
+                  <View style={styles.tourMeta}>
+                    <ThemedText
+                      type="subtitle"
+                      style={styles.cardTitle}
+                      numberOfLines={2}
+                    >
+                      {tour.title}
+                    </ThemedText>
+                    {sessionToken ? (
+                      <TourDownloadButton
+                        tourId={tour.id}
+                        slug={tour.slug}
+                        title={tour.title}
+                        unlocked={unlockedTourIds.has(tour.id)}
+                        entitledVersions={entitledVersionsByTourId.get(tour.id)}
+                      />
+                    ) : null}
+                  </View>
                 </View>
               </View>
             ))}
           </View>
+
+          <WhyBuyCard />
         </ScrollView>
       </SafeAreaView>
     </PageBackground>
@@ -281,20 +312,47 @@ const styles = StyleSheet.create({
   topBar: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     alignSelf: "stretch",
     paddingTop: Spacing.two,
+  },
+  brandTitle: {
+    fontSize: 18,
+    lineHeight: 24,
+    flexShrink: 1,
+    textAlign: "right",
+    marginLeft: Spacing.three,
   },
   header: {
     gap: Spacing.two,
     paddingTop: Spacing.three,
     alignSelf: "stretch",
   },
-  signInButton: {
-    alignSelf: "flex-start",
-    borderRadius: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
+  premiumCard: {
+    alignSelf: "stretch",
+    borderRadius: Spacing.four,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: Spacing.four,
+    gap: Spacing.two,
     marginTop: Spacing.one,
+  },
+  premiumIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: Spacing.one,
+  },
+  premiumCta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.two,
+    alignSelf: "flex-start",
+    borderRadius: 999,
+    paddingHorizontal: Spacing.four,
+    paddingVertical: Spacing.three,
+    marginTop: Spacing.two,
   },
   wrapText: {
     flexShrink: 1,
@@ -302,9 +360,15 @@ const styles = StyleSheet.create({
   },
   onDarkText: {
     color: "#ffffff",
+    textShadowColor: "rgba(0, 0, 0, 0.55)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
   },
   onDarkMuted: {
-    color: "rgba(255, 255, 255, 0.78)",
+    color: "rgba(255, 255, 255, 0.85)",
+    textShadowColor: "rgba(0, 0, 0, 0.5)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 5,
   },
   loader: {
     marginTop: Spacing.five,
@@ -333,22 +397,45 @@ const styles = StyleSheet.create({
   },
   tourList: {
     alignSelf: "stretch",
-    gap: Spacing.three,
+    gap: Spacing.four,
+  },
+  tourCardShadow: {
+    alignSelf: "stretch",
+    borderRadius: Spacing.four,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOpacity: 0.18,
+        shadowRadius: 16,
+        shadowOffset: { width: 0, height: 10 },
+      },
+      android: { elevation: 6 },
+      default: {},
+    }),
   },
   tourCard: {
     alignSelf: "stretch",
-    borderRadius: Spacing.three,
+    borderRadius: Spacing.four,
     overflow: "hidden",
+  },
+  coverWrap: {
+    width: "100%",
+    height: 180,
   },
   cover: {
     width: "100%",
-    height: 160,
+    height: "100%",
   },
   coverFallback: {
     opacity: 0.8,
   },
+  cardTitle: {
+    alignSelf: "stretch",
+    fontSize: 22,
+    lineHeight: 28,
+  },
   tourMeta: {
-    padding: Spacing.three,
-    gap: Spacing.one,
+    padding: Spacing.four,
+    gap: Spacing.three,
   },
 });

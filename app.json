@@ -8,7 +8,6 @@
     "scheme": "aureliaapp",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Aurelia uses your location to guide you along your downloaded walking tour route while the app is open."
       },
@@ -27,9 +26,7 @@
       ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "foregroundImage": "./assets/images/android-icon-foreground.png"
       },
       "predictiveBackGestureEnabled": false,
       "softwareKeyboardLayoutMode": "resize",
@@ -70,6 +67,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "2d8da654-cf10-4f38-8d23-48475a4cd614"
+      }
     }
   }
 }

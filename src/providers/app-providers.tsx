@@ -19,6 +19,7 @@ import { useLocaleStore } from "@/store/locale-store";
 import { useOnboardingStore } from "@/store/onboarding-store";
 import { useReleaseConfigStore } from "@/store/release-config-store";
 import { useSpotBookmarksStore } from "@/store/spot-bookmarks-store";
+import { useThemeStore } from "@/store/theme-store";
 import { useTourProgressStore } from "@/store/tour-progress-store";
 
 setupAxiosInterceptors();
@@ -36,6 +37,7 @@ export function AppProviders({ children }: AppProvidersProps) {
   const hydrateLocale = useLocaleStore((state) => state.hydrate);
   const hydrateOnboarding = useOnboardingStore((state) => state.hydrate);
   const hydrateKnowledge = useKnowledgeStore((state) => state.hydrate);
+  const hydrateTheme = useThemeStore((state) => state.hydrate);
 
   useEffect(() => {
     void hydrateAuth();
@@ -46,6 +48,7 @@ export function AppProviders({ children }: AppProvidersProps) {
     void hydrateLocale();
     void hydrateOnboarding();
     void hydrateKnowledge();
+    void hydrateTheme();
   }, [
     hydrateAuth,
     hydrateInstalledTours,
@@ -55,6 +58,7 @@ export function AppProviders({ children }: AppProvidersProps) {
     hydrateLocale,
     hydrateOnboarding,
     hydrateKnowledge,
+    hydrateTheme,
   ]);
 
   return (

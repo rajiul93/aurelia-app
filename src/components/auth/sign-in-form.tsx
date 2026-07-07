@@ -226,6 +226,8 @@ export function SignInForm({ onSignedIn }: SignInFormProps) {
   );
 }
 
+const FIELD_HEIGHT = 48;
+
 const styles = StyleSheet.create({
   card: {
     alignSelf: "stretch",
@@ -245,19 +247,20 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
+    height: FIELD_HEIGHT,
     borderWidth: 1,
     borderRadius: Spacing.two,
     paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    fontSize: 14,
+    fontSize: 15,
+    textAlignVertical: "center",
   },
   iconButton: {
-    minWidth: 72,
-    height: 44,
+    minWidth: 76,
+    height: FIELD_HEIGHT,
     borderRadius: Spacing.two,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: Spacing.two,
+    paddingHorizontal: Spacing.three,
   },
   codeStep: {
     gap: Spacing.two,
@@ -283,7 +286,7 @@ const styles = StyleSheet.create({
   },
   verifyButton: {
     minWidth: 96,
-    height: 44,
+    height: FIELD_HEIGHT,
     borderRadius: Spacing.two,
     alignItems: "center",
     justifyContent: "center",
