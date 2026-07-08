@@ -4,6 +4,10 @@ import { AppState } from "react-native";
 
 import { useStrings } from "@/hooks/use-strings";
 import {
+  resetArrivalVoice,
+  speakArrival,
+} from "@/lib/navigation/arrival-voice";
+import {
   resetOffRouteVoiceCooldown,
   speakOffRouteWarning,
   stopOffRouteWarning,
@@ -49,6 +53,7 @@ function handleLocationResult(
     onArriveSpot?: (spotId: string) => void;
     voiceEnabled: boolean;
     offRouteMessage: string;
+    arrivedMessage: string;
     language: string;
   },
 ) {
@@ -69,6 +74,9 @@ function handleLocationResult(
 
   if (result.shouldMarkArrived && result.arrivedSpotId) {
     void input.markSpotComplete(input.tourId, result.arrivedSpotId);
+    if (input.voiceEnabled) {
+      speakArrival(result.arrivedSpotId, input.arrivedMessage, input.language);
+    }
     input.onArriveSpot?.(result.arrivedSpotId);
   }
 }
@@ -103,11 +111,11 @@ export function useNavigationSession({
   const contentRef = useRef(content);
   contentRef.current = content;
 
+  // Navigation is available for any installed tour with usable geo data. The
+  // enableGpsNavigation remote flag no longer gates offline navigation; voice
+  // still respects enableVoiceGuidance below.
   const canNavigate =
-    enabled &&
-    remote.enableGpsNavigation &&
-    content &&
-    hasNavigationGeoData(content);
+    enabled && content && hasNavigationGeoData(content);
 
   useEffect(() => {
     setCompletedSpotIds(completedSpotIds);
@@ -158,6 +166,7 @@ export function useNavigationSession({
               onArriveSpot,
               voiceEnabled: remote.enableVoiceGuidance,
               offRouteMessage: t("nav.offRouteVoice"),
+              arrivedMessage: t("nav.arrivedVoice"),
               language,
             });
           }
@@ -186,6 +195,7 @@ export function useNavigationSession({
             onArriveSpot,
             voiceEnabled: remote.enableVoiceGuidance,
             offRouteMessage: t("nav.offRouteVoice"),
+            arrivedMessage: t("nav.arrivedVoice"),
             language,
           });
         },
@@ -215,6 +225,7 @@ export function useNavigationSession({
       subscriptionRef.current = null;
       stopOffRouteWarning();
       resetOffRouteVoiceCooldown();
+      resetArrivalVoice();
       appStateSubscription.remove();
       reset();
     };

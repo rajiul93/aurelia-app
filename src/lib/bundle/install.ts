@@ -7,7 +7,6 @@ import {
 } from "@/lib/bundle/collect-media-urls";
 import { cacheTourMediaFiles } from "@/lib/bundle/media-cache";
 import { deleteOfflineMapPack, ensureOfflineMapPack } from "@/lib/map/offline-pack";
-import { useReleaseConfigStore } from "@/store/release-config-store";
 import {
   getInstalledTourDirectory,
   getToursRootDirectory,
@@ -143,19 +142,18 @@ export async function installTourBundle(
   options.onProgress?.({ phase: "bundle", completed: 1, total: 1 });
 
   const content = bundle.content as BundleContent;
-  const enableGpsNavigation =
-    useReleaseConfigStore.getState().config.remote.enableGpsNavigation;
 
-  if (enableGpsNavigation) {
-    options.onProgress?.({ phase: "map", completed: 0, total: 100 });
-    await ensureOfflineMapPack(bundle.tourId, content, (completed, total) => {
-      options.onProgress?.({
-        phase: "map",
-        completed,
-        total,
-      });
+  // Always build the offline map pack so every downloaded tour works offline,
+  // independent of the enableGpsNavigation remote flag. ensureOfflineMapPack is
+  // non-fatal (it records a "failed" status rather than throwing).
+  options.onProgress?.({ phase: "map", completed: 0, total: 100 });
+  await ensureOfflineMapPack(bundle.tourId, content, (completed, total) => {
+    options.onProgress?.({
+      phase: "map",
+      completed,
+      total,
     });
-  }
+  });
 
   const mediaMap = await cacheTourMediaFiles(
     bundle.tourId,

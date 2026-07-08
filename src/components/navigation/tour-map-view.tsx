@@ -7,6 +7,7 @@ import {
   type CameraRef,
   type MapRef,
 } from "@maplibre/maplibre-react-native";
+import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
@@ -23,15 +24,28 @@ import {
   buildRouteCoordinates,
   splitRouteAtIndex,
 } from "@/lib/navigation/route-geometry";
+import { BrandColors } from "@/theme/colors";
 import type { BundleContent, BundleSpot, GeoPoint } from "@/types/bundle-content";
 
 const CAMERA_FOLLOW_MS = 320;
+
+// Dark fill mirrors the dark `backgroundElement` token; the start marker inverts
+// to a solid brand-gold fill so stop "1" stands out from the numbered rest.
+const STOP_FILL_DARK = "#1c1917";
+const STOP_LABEL_LIGHT = "#fef3c7";
 
 type TourMapViewProps = {
   tourId: string;
   content: BundleContent;
   orderedSpots: BundleSpot[];
   snapshot: NavigationSessionSnapshot | null;
+  onLoadError?: () => void;
+};
+
+type StopFeature = { properties?: { id?: string } | null };
+type StopPressEvent = {
+  features?: StopFeature[];
+  nativeEvent?: { features?: StopFeature[] };
 };
 
 function toLineFeature(coordinates: GeoPoint[], id: string) {
@@ -55,6 +69,7 @@ function toPointFeatures(spots: BundleSpot[]) {
         properties: {
           id: spot.id,
           index: index + 1,
+          isStart: index === 0,
         },
         geometry: {
           type: "Point" as const,
@@ -102,10 +117,13 @@ function toUserFeature(location: GeoPoint) {
 }
 
 export function TourMapView({
+  tourId,
   content,
   orderedSpots,
   snapshot,
+  onLoadError,
 }: TourMapViewProps) {
+  const router = useRouter();
   const mapRef = useRef<MapRef>(null);
   const cameraRef = useRef<CameraRef>(null);
   const mapReadyRef = useRef(false);
@@ -150,6 +168,20 @@ export function TourMapView({
     [orderedSpots],
   );
   const mapStyle = useMemo(() => getTourMapStyle(), []);
+
+  const handleStopPress = useCallback(
+    (event: StopPressEvent) => {
+      // Features may arrive flattened or under nativeEvent depending on the
+      // native bridge; read both. Each stop feature carries the spot id set in
+      // toPointFeatures.
+      const features = event.nativeEvent?.features ?? event.features;
+      const spotId = features?.[0]?.properties?.id;
+      if (typeof spotId === "string") {
+        router.push(`/tour/${tourId}/spot/${spotId}`);
+      }
+    },
+    [router, tourId],
+  );
 
   const fitTourArea = useCallback(
     (includeUser = false) => {
@@ -235,6 +267,11 @@ export function TourMapView({
           initialTourFitRef.current = true;
           void updateFootprintPoint();
         }}
+        onDidFailLoadingMap={() => {
+          // Offline, a missing base style/tiles leaves a blank map and the
+          // footprint layers never attach. Surface it so the caller can retry.
+          onLoadError?.();
+        }}
         onRegionDidChange={() => {
           void updateFootprintPoint();
         }}
@@ -307,15 +344,24 @@ export function TourMapView({
           </GeoJSONSource>
         ) : null}
 
-        <GeoJSONSource id="stops" data={stopFeatures}>
+        <GeoJSONSource
+          id="stops"
+          data={stopFeatures}
+          onPress={handleStopPress}
+        >
           <Layer
             id="stop-circles"
             type="circle"
             style={{
-              circleRadius: 10,
-              circleColor: "#1c1917",
-              circleStrokeColor: "#e1a566",
-              circleStrokeWidth: 2,
+              circleRadius: ["case", ["get", "isStart"], 13, 10],
+              circleColor: [
+                "case",
+                ["get", "isStart"],
+                BrandColors.primary,
+                STOP_FILL_DARK,
+              ],
+              circleStrokeColor: BrandColors.primary,
+              circleStrokeWidth: ["case", ["get", "isStart"], 3, 2],
             }}
           />
           <Layer
@@ -323,8 +369,13 @@ export function TourMapView({
             type="symbol"
             style={{
               textField: ["get", "index"],
-              textSize: 11,
-              textColor: "#fef3c7",
+              textSize: ["case", ["get", "isStart"], 13, 11],
+              textColor: [
+                "case",
+                ["get", "isStart"],
+                BrandColors.primaryForeground,
+                STOP_LABEL_LIGHT,
+              ],
             }}
           />
         </GeoJSONSource>

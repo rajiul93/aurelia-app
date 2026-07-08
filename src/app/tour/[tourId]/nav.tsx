@@ -1,5 +1,7 @@
+import { Ionicons } from "@react-native-vector-icons/ionicons";
+import { useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { lazy, Suspense, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -8,10 +10,12 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { CompassOverlay } from "@/components/navigation/compass-overlay";
 import { OffRouteBanner } from "@/components/navigation/off-route-banner";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Spacing } from "@/constants/theme";
+import { useDeviceHeading } from "@/hooks/use-device-heading";
 import { useNavigationApproachAudio } from "@/hooks/use-navigation-approach-audio";
 import { useNavigationSession } from "@/hooks/use-navigation-session";
 import { useInstalledTourView } from "@/hooks/use-installed-tour-view";
@@ -23,7 +27,9 @@ import {
 } from "@/lib/bundle/localize";
 import { orderSpotsByRoute } from "@/lib/bundle/route-order";
 import { isMapLibreNativeAvailable } from "@/lib/map/native-available";
+import { ensureOfflineMapPack, readMapPackMeta } from "@/lib/map/offline-pack";
 import { getNextIncompleteSpot } from "@/lib/navigation/proximity";
+import { queryKeys } from "@/lib/query/keys";
 import { useTourProgressStore } from "@/store/tour-progress-store";
 
 const TourMapView = lazy(() =>
@@ -36,6 +42,7 @@ export default function TourNavigationScreen() {
   const router = useRouter();
   const theme = useTheme();
   const { t } = useStrings();
+  const queryClient = useQueryClient();
   const { tourId } = useLocalSearchParams<{ tourId: string }>();
   const { data: content, isLoading, isError, preferences } =
     useInstalledTourView(tourId);
@@ -43,6 +50,8 @@ export default function TourNavigationScreen() {
     useTourProgressStore((state) => state.byTourId[tourId ?? ""]?.completedSpotIds) ??
     [];
   const [approachSpotId, setApproachSpotId] = useState<string | null>(null);
+  const [mapReloadKey, setMapReloadKey] = useState(0);
+  const [mapLoadFailed, setMapLoadFailed] = useState(false);
 
   const orderedSpots = useMemo(
     () =>
@@ -89,6 +98,26 @@ export default function TourNavigationScreen() {
     approachSpot,
     Boolean(approachSpotId && approachSpot),
   );
+
+  const heading = useDeviceHeading(canNavigate);
+
+  const handleRefresh = useCallback(() => {
+    setMapLoadFailed(false);
+    // Remount the map so MapLibre rebuilds the style and re-attaches every
+    // GeoJSON layer — the reliable recovery for a blank/partial offline map.
+    setMapReloadKey((key) => key + 1);
+    // Reload the installed tour content (route/footprint geometry) from disk.
+    void queryClient.invalidateQueries({ queryKey: queryKeys.installedTour.all });
+    // Rebuild the offline tile pack if it never completed.
+    if (tourId && content) {
+      void (async () => {
+        const meta = await readMapPackMeta(tourId);
+        if (!meta || meta.status !== "ready") {
+          await ensureOfflineMapPack(tourId, content);
+        }
+      })();
+    }
+  }, [content, queryClient, tourId]);
 
   if (isLoading) {
     return (
@@ -141,26 +170,52 @@ export default function TourNavigationScreen() {
         }
       >
         <TourMapView
+          key={mapReloadKey}
           tourId={tourId}
           content={content}
           orderedSpots={orderedSpots}
           snapshot={snapshot}
+          onLoadError={() => setMapLoadFailed(true)}
         />
       </Suspense>
 
       <SafeAreaView style={styles.overlay} edges={["top", "bottom"]} pointerEvents="box-none">
         <View style={styles.topBar}>
-          <Pressable
-            onPress={() => router.back()}
-            style={[
-              styles.backChip,
-              { backgroundColor: "rgba(28, 25, 23, 0.82)" },
-            ]}
-          >
-            <ThemedText type="smallBold" style={styles.onDarkText}>
-              {t("accessLock.goBack")}
-            </ThemedText>
-          </Pressable>
+          <View style={styles.topRow}>
+            <Pressable
+              onPress={() => router.back()}
+              style={[
+                styles.backChip,
+                { backgroundColor: "rgba(28, 25, 23, 0.82)" },
+              ]}
+            >
+              <ThemedText type="smallBold" style={styles.onDarkText}>
+                {t("accessLock.goBack")}
+              </ThemedText>
+            </Pressable>
+
+            <View style={styles.topRight}>
+              <Pressable
+                onPress={handleRefresh}
+                accessibilityLabel={t("nav.refresh")}
+                style={[
+                  styles.iconChip,
+                  {
+                    backgroundColor: mapLoadFailed
+                      ? theme.primary
+                      : "rgba(28, 25, 23, 0.82)",
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="refresh"
+                  size={20}
+                  color={mapLoadFailed ? theme.primaryForeground : "#ffffff"}
+                />
+              </Pressable>
+              <CompassOverlay heading={heading} />
+            </View>
+          </View>
           <View
             style={[
               styles.titleChip,
@@ -235,11 +290,28 @@ const styles = StyleSheet.create({
   topBar: {
     gap: Spacing.two,
   },
+  topRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+  },
+  topRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.two,
+  },
   backChip: {
     alignSelf: "flex-start",
     borderRadius: 999,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
+  },
+  iconChip: {
+    width: 44,
+    height: 44,
+    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
   },
   titleChip: {
     alignSelf: "stretch",

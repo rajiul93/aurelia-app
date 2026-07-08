@@ -285,6 +285,8 @@ const en = {
   "nav.offRouteHint": "Head back toward the route — about {distance} m away.",
   "nav.offRouteVoice":
     "You are moving away from the planned route. If this is intentional, you may continue. Otherwise, please return to the marked route.",
+  "nav.arrivedVoice": "You have arrived at this location.",
+  "nav.refresh": "Reload map",
 
   "spot.notFound": "Stop not found",
   "spot.indexOfTotal": "Stop {current} of {total}",
@@ -598,6 +600,8 @@ const es: Record<StringKey, string> = {
   "nav.offRouteHint": "Regresa hacia la ruta — a unos {distance} m.",
   "nav.offRouteVoice":
     "Te estás alejando de la ruta planificada. Si es intencional, puedes continuar. De lo contrario, regresa a la ruta marcada.",
+  "nav.arrivedVoice": "Has llegado a este lugar.",
+  "nav.refresh": "Recargar mapa",
   "spot.notFound": "Parada no encontrada",
   "spot.indexOfTotal": "Parada {current} de {total}",
   "spot.transcript": "Transcripción",
@@ -906,6 +910,8 @@ const fr: Record<StringKey, string> = {
   "nav.offRouteHint": "Revenez vers l'itinéraire — environ {distance} m.",
   "nav.offRouteVoice":
     "Vous vous éloignez de l'itinéraire prévu. Si c'est intentionnel, vous pouvez continuer. Sinon, veuillez revenir sur l'itinéraire marqué.",
+  "nav.arrivedVoice": "Vous êtes arrivé à cet endroit.",
+  "nav.refresh": "Recharger la carte",
   "spot.notFound": "Arrêt introuvable",
   "spot.indexOfTotal": "Arrêt {current} sur {total}",
   "spot.transcript": "Transcription",

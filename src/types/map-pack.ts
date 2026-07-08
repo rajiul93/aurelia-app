@@ -12,5 +12,8 @@ export type MapPackMeta = {
 };
 
 export const MAP_PACK_META_FILE = "map-pack-meta.json";
-export const MAP_MIN_ZOOM = 14;
-export const MAP_MAX_ZOOM = 16;
+// Widened so zoomed-out route fits (below the old 14) and the follow zoom (16)
+// both land on cached tiles offline; a blank base tile prevents the footprint
+// GeoJSON layers from attaching.
+export const MAP_MIN_ZOOM = 12;
+export const MAP_MAX_ZOOM = 17;
