@@ -81,6 +81,28 @@ export default function TourNavigationScreen() {
     )?.title;
   }, [nextSpot, preferences]);
 
+  // Localized stop names for the map tap popup, keyed by spot id.
+  const stopTitleById = useMemo(() => {
+    const titles: Record<string, string> = {};
+    if (!preferences) {
+      return titles;
+    }
+
+    orderedSpots.forEach((spot, index) => {
+      const title = pickAudienceTranslation(
+        spot.translations.map((entry) => ({
+          ...entry,
+          audience: entry.audience ?? "ADULTS",
+        })),
+        preferences.contentLanguage,
+        preferences.audience,
+      )?.title;
+      titles[spot.id] = title ?? `#${index + 1}`;
+    });
+
+    return titles;
+  }, [orderedSpots, preferences]);
+
   const approachSpot = useMemo(
     () => orderedSpots.find((spot) => spot.id === approachSpotId) ?? null,
     [approachSpotId, orderedSpots],
@@ -175,6 +197,7 @@ export default function TourNavigationScreen() {
           content={content}
           orderedSpots={orderedSpots}
           snapshot={snapshot}
+          stopTitleById={stopTitleById}
           onLoadError={() => setMapLoadFailed(true)}
         />
       </Suspense>

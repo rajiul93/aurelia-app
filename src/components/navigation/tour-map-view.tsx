@@ -4,6 +4,7 @@ import {
   Layer,
   LocationManager,
   Map,
+  Marker,
   type CameraRef,
   type MapRef,
 } from "@maplibre/maplibre-react-native";
@@ -12,6 +13,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { FootprintOverlay } from "@/components/navigation/footprint-overlay";
+import { StopCallout } from "@/components/navigation/stop-callout";
+import { StopPin } from "@/components/navigation/stop-pin";
+import { useStrings } from "@/hooks/use-strings";
 import {
   MAP_CAMERA_PADDING,
   getRouteMapBounds,
@@ -24,29 +28,32 @@ import {
   buildRouteCoordinates,
   splitRouteAtIndex,
 } from "@/lib/navigation/route-geometry";
-import { BrandColors } from "@/theme/colors";
 import type { BundleContent, BundleSpot, GeoPoint } from "@/types/bundle-content";
 
 const CAMERA_FOLLOW_MS = 320;
-
-// Dark fill mirrors the dark `backgroundElement` token; the start marker inverts
-// to a solid brand-gold fill so stop "1" stands out from the numbered rest.
-const STOP_FILL_DARK = "#1c1917";
-const STOP_LABEL_LIGHT = "#fef3c7";
 
 type TourMapViewProps = {
   tourId: string;
   content: BundleContent;
   orderedSpots: BundleSpot[];
   snapshot: NavigationSessionSnapshot | null;
+  /** Localized stop names keyed by spot id, used in the tap popup. */
+  stopTitleById?: Record<string, string>;
   onLoadError?: () => void;
 };
 
-type StopFeature = { properties?: { id?: string } | null };
-type StopPressEvent = {
-  features?: StopFeature[];
-  nativeEvent?: { features?: StopFeature[] };
+/** A stop with valid coordinates, plus its 1-based label along the route. */
+type StopPinModel = {
+  spot: BundleSpot;
+  label: number;
+  isStart: boolean;
 };
+
+function buildStopPins(spots: BundleSpot[]): StopPinModel[] {
+  return spots
+    .filter((spot) => spot.latitude !== null && spot.longitude !== null)
+    .map((spot, index) => ({ spot, label: index + 1, isStart: index === 0 }));
+}
 
 function toLineFeature(coordinates: GeoPoint[], id: string) {
   return {
@@ -56,26 +63,6 @@ function toLineFeature(coordinates: GeoPoint[], id: string) {
       type: "LineString" as const,
       coordinates: coordinates.map((point) => [point.lng, point.lat]),
     },
-  };
-}
-
-function toPointFeatures(spots: BundleSpot[]) {
-  return {
-    type: "FeatureCollection" as const,
-    features: spots
-      .filter((spot) => spot.latitude !== null && spot.longitude !== null)
-      .map((spot, index) => ({
-        type: "Feature" as const,
-        properties: {
-          id: spot.id,
-          index: index + 1,
-          isStart: index === 0,
-        },
-        geometry: {
-          type: "Point" as const,
-          coordinates: [spot.longitude!, spot.latitude!],
-        },
-      })),
   };
 }
 
@@ -121,15 +108,18 @@ export function TourMapView({
   content,
   orderedSpots,
   snapshot,
+  stopTitleById,
   onLoadError,
 }: TourMapViewProps) {
   const router = useRouter();
+  const { t } = useStrings();
   const mapRef = useRef<MapRef>(null);
   const cameraRef = useRef<CameraRef>(null);
   const mapReadyRef = useRef(false);
   const initialTourFitRef = useRef(false);
   const [layout, setLayout] = useState({ width: 0, height: 0 });
   const [footprintPoint, setFootprintPoint] = useState({ x: 0, y: 0 });
+  const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
 
   const routeCoordinates = useMemo(
     () => buildRouteCoordinates(content.tour.spots, content.route),
@@ -163,25 +153,20 @@ export function TourMapView({
     [walkTrail],
   );
 
-  const stopFeatures = useMemo(
-    () => toPointFeatures(orderedSpots),
-    [orderedSpots],
+  const stopPins = useMemo(() => buildStopPins(orderedSpots), [orderedSpots]);
+  const selectedPin = useMemo(
+    () => stopPins.find((pin) => pin.spot.id === selectedStopId) ?? null,
+    [stopPins, selectedStopId],
   );
   const mapStyle = useMemo(() => getTourMapStyle(), []);
 
-  const handleStopPress = useCallback(
-    (event: StopPressEvent) => {
-      // Features may arrive flattened or under nativeEvent depending on the
-      // native bridge; read both. Each stop feature carries the spot id set in
-      // toPointFeatures.
-      const features = event.nativeEvent?.features ?? event.features;
-      const spotId = features?.[0]?.properties?.id;
-      if (typeof spotId === "string") {
-        router.push(`/tour/${tourId}/spot/${spotId}`);
-      }
-    },
-    [router, tourId],
-  );
+  const openSelectedStopDetails = useCallback(() => {
+    if (!selectedPin) {
+      return;
+    }
+    setSelectedStopId(null);
+    router.push(`/tour/${tourId}/spot/${selectedPin.spot.id}`);
+  }, [router, selectedPin, tourId]);
 
   const fitTourArea = useCallback(
     (includeUser = false) => {
@@ -261,6 +246,7 @@ export function TourMapView({
         touchRotate={false}
         touchPitch={false}
         attribution={false}
+        onPress={() => setSelectedStopId(null)}
         onDidFinishLoadingMap={() => {
           mapReadyRef.current = true;
           fitTourArea(Boolean(displayLocation));
@@ -344,41 +330,38 @@ export function TourMapView({
           </GeoJSONSource>
         ) : null}
 
-        <GeoJSONSource
-          id="stops"
-          data={stopFeatures}
-          onPress={handleStopPress}
-        >
-          <Layer
-            id="stop-circles"
-            type="circle"
-            style={{
-              circleRadius: ["case", ["get", "isStart"], 13, 10],
-              circleColor: [
-                "case",
-                ["get", "isStart"],
-                BrandColors.primary,
-                STOP_FILL_DARK,
-              ],
-              circleStrokeColor: BrandColors.primary,
-              circleStrokeWidth: ["case", ["get", "isStart"], 3, 2],
-            }}
-          />
-          <Layer
-            id="stop-labels"
-            type="symbol"
-            style={{
-              textField: ["get", "index"],
-              textSize: ["case", ["get", "isStart"], 13, 11],
-              textColor: [
-                "case",
-                ["get", "isStart"],
-                BrandColors.primaryForeground,
-                STOP_LABEL_LIGHT,
-              ],
-            }}
-          />
-        </GeoJSONSource>
+        {stopPins.map((pin) => (
+          <Marker
+            key={pin.spot.id}
+            id={`stop-${pin.spot.id}`}
+            lngLat={[pin.spot.longitude!, pin.spot.latitude!]}
+            anchor="bottom"
+            onPress={() => setSelectedStopId(pin.spot.id)}
+          >
+            <StopPin
+              label={pin.label}
+              isStart={pin.isStart}
+              selected={pin.spot.id === selectedStopId}
+            />
+          </Marker>
+        ))}
+
+        {selectedPin ? (
+          <Marker
+            id={`stop-callout-${selectedPin.spot.id}`}
+            lngLat={[selectedPin.spot.longitude!, selectedPin.spot.latitude!]}
+            anchor="bottom"
+            offset={[0, -54]}
+          >
+            <StopCallout
+              label={selectedPin.label}
+              title={stopTitleById?.[selectedPin.spot.id] ?? `#${selectedPin.label}`}
+              viewDetailsLabel={t("nav.viewDetails")}
+              onViewDetails={openSelectedStopDetails}
+              onClose={() => setSelectedStopId(null)}
+            />
+          </Marker>
+        ) : null}
 
         {displayLocation ? (
           <GeoJSONSource
