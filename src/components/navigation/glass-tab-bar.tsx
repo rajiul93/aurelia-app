@@ -27,9 +27,13 @@ import { useTheme } from "@/hooks/use-theme";
 /**
  * Apple-style glass surface for the bar:
  * - iOS 26+: real Liquid Glass via GlassView.
- * - Everywhere else (Android, older iOS): a real frosted blur of the content
- *   scrolling behind it via BlurView (dimezisBlurView gives live blur on
- *   Android).
+ * - Older iOS: a real frosted blur via BlurView (native UIVisualEffectView; the
+ *   `blurMethod` prop is iOS-agnostic there).
+ * - Android: expo-blur's live blur (`dimezisBlurView`) now requires a
+ *   `blurTarget` ref to a `BlurTargetView` wrapping the content to blur — which
+ *   a floating tab bar can't supply — so requesting it just logs a warning and
+ *   falls back to no blur. Instead we render a plain translucent tinted surface
+ *   (see the opaque Android fill in GlassTabBar) so the bar stays legible.
  */
 function GlassSurface({
   scheme,
@@ -50,6 +54,16 @@ function GlassSurface({
     );
   }
 
+  // Android has no blur target, so a BlurView adds nothing over the tinted
+  // fill; use a plain View there and keep the real native blur on iOS.
+  if (Platform.OS === "android") {
+    return (
+      <View style={style} onLayout={onLayout}>
+        {children}
+      </View>
+    );
+  }
+
   return (
     <BlurView
       tint={
@@ -58,7 +72,6 @@ function GlassSurface({
           : "systemChromeMaterialLight"
       }
       intensity={60}
-      blurMethod="dimezisBlurView"
       style={style}
       onLayout={onLayout}
     >
@@ -130,11 +143,15 @@ export function GlassTabBar({
         style={[
           styles.bar,
           {
-            // Liquid Glass / BlurView provide the fill; keep only a faint tint
-            // over the blur for legibility so the frosted effect shows through.
+            // Liquid Glass / iOS BlurView provide a real frosted fill, so keep
+            // only a faint tint there. Android has no blur, so it needs a mostly
+            // opaque fill to stay legible over scrolling content.
             backgroundColor: liquidGlass
               ? "transparent"
-              : withAlpha(theme.backgroundElement, 0.2),
+              : withAlpha(
+                  theme.backgroundElement,
+                  Platform.OS === "android" ? 0.92 : 0.2,
+                ),
             borderColor: withAlpha(theme.text, 0.12),
           },
         ]}

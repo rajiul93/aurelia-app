@@ -77,6 +77,13 @@ Last updated: **2026-07-08**
   [src/hooks/use-navigation-session.ts](src/hooks/use-navigation-session.ts)
 - ✅ **Performance** — react-query `networkMode: "offlineFirst"`; map lazy-loaded; feature builders
   memoized. [src/lib/query/client.ts](src/lib/query/client.ts)
+- ✅ **Full-screen splash screen** — `splash-icon.png` shown edge-to-edge (`resizeMode="cover"`) via a
+  JS overlay held until offline bootstrap (fonts + all store hydration) completes, with a min-display
+  time (900 ms) and a fade-out; native splash (`app.json` `resizeMode: "cover"`, dark `#0c0a09` bg)
+  hands off seamlessly (no white/black flash). Bootstrap owns hydration and gates readiness.
+  [src/components/animated-splash.tsx](src/components/animated-splash.tsx),
+  [src/hooks/use-app-bootstrap.ts](src/hooks/use-app-bootstrap.ts),
+  [src/app/_layout.tsx](src/app/_layout.tsx)
 - ✅ **Backend Neon cold-start resilience** — `withDbRetry`/`isTransientDbError`, applied to
   `getConfig()`, plus 503 classification in the API error handler.
   [prisma-retry.ts](../admin-and-server-aurelia/src/lib/prisma-retry.ts),
@@ -202,6 +209,20 @@ Last updated: **2026-07-08**
 
 ## 12. Changelog
 
+- **2026-07-08** — **Fixed expo-blur tab-bar warning** (aurelia-app): removed
+  `blurMethod="dimezisBlurView"` from the `GlassTabBar` `BlurView`
+  ([glass-tab-bar.tsx](src/components/navigation/glass-tab-bar.tsx)). In expo-blur v57 that method
+  needs a `blurTarget` ref (unavailable to a floating tab bar), so it only logged "…fallback to none…"
+  and never actually blurred on Android. Android now renders a plain translucent surface (opaque
+  ~0.92 fill for legibility); iOS keeps its real native blur. No more console warning.
+- **2026-07-08** — **Full-screen splash screen** (aurelia-app): added `AnimatedSplash` (edge-to-edge
+  cover image + fade) and `useAppBootstrap` (fonts + all store hydration → `ready`, with a 900 ms
+  minimum display). `_layout.tsx` renders the app when ready and overlays the splash; hydration moved
+  out of `AppProviders`. Native splash set to `resizeMode: "cover"` (**needs a native rebuild** —
+  `npx expo run:android` — to take effect; JS overlay works without one). **Dev-env note:** on-device
+  visual verification was blocked because the emulator's expo-dev-client kept serving a stale
+  device-cached bundle on adb-driven launches (a fresh reload needs the in-app dev menu, or `adb
+  reverse tcp:8081 tcp:8081` + a real reload). Verified statically (tsc/lint/tests).
 - **2026-07-08** — **Teardrop stop pins + tap popup** (aurelia-app): replaced the flat GeoJSON
   circle/symbol stop markers with burgundy pin-shaped `Marker` views
   ([stop-pin.tsx](src/components/navigation/stop-pin.tsx)); tapping a pin opens a `StopCallout` popup
