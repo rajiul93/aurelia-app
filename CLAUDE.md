@@ -8,7 +8,7 @@
 
 **Status legend:** ✅ Completed · 🚧 In Progress · ⚠️ Known Issue · ⏳ Pending · ❌ Not Started
 
-Last updated: **2026-07-08**
+Last updated: **2026-07-11**
 
 ---
 
@@ -50,6 +50,17 @@ Last updated: **2026-07-08**
 - ✅ **Offline tiles/style + glyph caching, widened zoom 12–17** — pack caches style/glyphs/sprites/
   tiles; zoom range widened so fit/follow always hit cached tiles.
   [src/types/map-pack.ts](src/types/map-pack.ts), [src/lib/map/offline-pack.ts](src/lib/map/offline-pack.ts)
+- ✅ **Inline (local) map style — fixes "footprint appears only after 3–4 restarts"** — the live
+  `<Map>` now loads an **inline style object** (`getTourMapStyleObject()`) instead of a remote style
+  URL, so MapLibre needs **no network fetch for the style document**; the base style finishes loading
+  immediately and the footprint/route GeoJSON overlays (which only attach after the style loads) render
+  on the first open, offline. Vector tiles still come from the offline pack's cache of `/planet`. Adds:
+  a glyph/sprite-free **fallback style** + **bounded auto-retry** on `onDidFailLoadingMap` (remount, last
+  attempt uses the fallback) so a transient failure self-recovers without an app restart; and a
+  **pack warm-up effect** on the nav screen that builds the tile pack in the background if not yet ready.
+  [src/lib/map/style.ts](src/lib/map/style.ts),
+  [src/components/navigation/tour-map-view.tsx](src/components/navigation/tour-map-view.tsx),
+  [src/app/tour/[tourId]/nav.tsx](src/app/tour/[tourId]/nav.tsx)
 - ✅ **User live-location marker** — accuracy halo + gold dot + rotating Skia footprint, EMA-smoothed
   `displayLocation`/`displayBearing`, camera auto-follow.
   [src/components/navigation/tour-map-view.tsx](src/components/navigation/tour-map-view.tsx)
@@ -104,11 +115,17 @@ Last updated: **2026-07-08**
   `hasNavigationGeoData` → `hasCompleteSpotCoordinates` uses `.every()`, so one null-coord spot shows
   the "unavailable" fallback (no map, footprints, or markers).
   [src/lib/navigation/validate-geo.ts](src/lib/navigation/validate-geo.ts)
+- ✅ **~~Footprint appears only after 3–4 app restarts~~ FIXED** — root cause was the live `<Map>`
+  loading a **remote style URL**, whose style-document fetch stalled/failed offline so the base style
+  never finished loading and the footprint overlay (attaches only after style load) never rendered until
+  MapLibre's ambient cache warmed across restarts. Fixed by loading an **inline style object** (no doc
+  fetch) + fallback style + auto-retry + pack warm-up (see §2). Verify on-device (Airplane-Mode).
 - ✅→⚠️ **Stop numbers no longer depend on glyphs** — they're now RN `<Text>` inside pin `Marker`s, so
-  they render offline regardless of glyph caching. **However**, the base "liberty" style's own
-  place-name labels still request glyphs, and the Metro log shows `Failed to load glyph range 0-255 …
-  (HTTP 404)` — so base-map text labels may be missing offline (and even online if the glyphs endpoint
-  404s). Not blocking for stop pins/footprints; verify base-label expectations on-device.
+  they render offline regardless of glyph caching. **However**, the base style's own place-name labels
+  (`place-labels` symbol layer) still request glyphs, and the Metro log shows `Failed to load glyph
+  range 0-255 … (HTTP 404)` — so base-map text labels may be missing offline. Not blocking for stop
+  pins/footprints (the inline-style fix makes the map load regardless); to fully silence it, bundle
+  local fonts/sprite or drop the `place-labels` layer. Verify base-label expectations on-device.
 - ⚠️ **Hardware verification pending.** The emulator has no magnetometer or real GPS movement, and
   downloading a tour bundle needs the backend/auth flow — so offline rendering, compass rotation, and
   arrival voice are code-verified but not visually confirmed on-device.
@@ -139,6 +156,12 @@ Last updated: **2026-07-08**
   the existing `expo-speech` pattern.
 - **react-query `offlineFirst`** — disk-backed queries resolve immediately offline instead of being
   paused/retried by the default `online` network mode.
+- **Inline map style object for the live map** — passing a `StyleSpecification` object (not a URL) to
+  `<Map mapStyle={...}>` removes the remote **style-document** fetch, the single biggest cause of blank/
+  delayed offline maps. The overlay layers (footprint, pins) can only attach after the base style loads,
+  so making the style load network-free makes the footprint appear immediately. Tiles still come from the
+  offline pack. The pack is still created from `getTourMapStyle()` (URL form) because
+  `OfflineManager.createPack` needs a URL — both reference the same `/planet` source so caches match.
 - **Retry only idempotent DB operations** — `withDbRetry` wraps reads / id-keyed upserts; never
   non-idempotent writes (avoids double execution).
 
@@ -147,8 +170,10 @@ Last updated: **2026-07-08**
 ## 7. Do Not Change Without Consideration
 
 - **`@AGENTS.md` import on line 1 of this file** — injects the "Expo v57 docs" guardrail.
-- **MapLibre style URL and offline-pack zoom range must stay in sync** — pack creation and live
-  rendering must use the same `getTourMapStyle()`; mismatched zoom → blank offline tiles.
+- **Live style object and offline-pack style must reference the same source + zoom** — the live map uses
+  `getTourMapStyleObject()` (inline object, source `openfreemap` → `/planet`); the pack is created from
+  `getTourMapStyle()` (URL). Both must point at the **same `/planet` tiles** and the same zoom range
+  (`MAP_MIN_ZOOM`/`MAP_MAX_ZOOM`), or the live map requests tiles the pack never cached → blank offline.
 - **Footprint geometry stays local** — read from `content.json`; never re-introduce a network fetch on
   the render path.
 - **`withDbRetry` stays limited to idempotent operations** — do not wrap arbitrary route handlers or
@@ -159,7 +184,11 @@ Last updated: **2026-07-08**
 ## 8. Testing & Verification Status
 
 - ✅ TypeScript `tsc --noEmit` clean — both `aurelia-app` and `admin-and-server-aurelia`.
-- ✅ Unit tests **14/14 pass** (`pnpm test`, aurelia-app).
+- ✅ Unit tests **45/45 pass** (`pnpm test`, Vitest, aurelia-app) across 8 files — expanded from 14.
+  Zustand store tests (`tour-progress-store`, `spot-bookmarks-store`, `release-config-store` — storage
+  layer mocked via `vi.mock`), navigation edge cases (`navigation-edge.test.ts`), and **map style**
+  (`src/lib/map/style.test.ts`: inline style object shape, `/planet` source sync with the pack URL,
+  glyph/sprite-free fallback). Backend also has a Vitest suite (**88 tests**) — see its CLAUDE.md §10.
 - ✅ Lint — no new errors introduced (diffed against baseline).
 - ✅ Android dev build installed on emulator; **Metro bundles all 2144 modules** (no resolve/syntax
   errors).
@@ -209,6 +238,25 @@ Last updated: **2026-07-08**
 
 ## 12. Changelog
 
+- **2026-07-11** — **Fixed slow/unreliable footprint loading (needed 3–4 app restarts).** Root cause:
+  the live `<Map>` loaded a **remote style URL** (`openfreemap/styles/liberty`); offline/cold-start the
+  style-document fetch stalled or failed (`onDidFailLoadingMap`), so the base style never finished
+  loading and the footprint GeoJSON overlay (which only attaches after the style loads) never rendered
+  until the ambient cache warmed across restarts. Fix ([style.ts](src/lib/map/style.ts),
+  [tour-map-view.tsx](src/components/navigation/tour-map-view.tsx), [nav.tsx](src/app/tour/[tourId]/nav.tsx)):
+  (1) live map now loads an **inline style object** (`getTourMapStyleObject()`) → no style-document
+  network fetch → base style + overlays attach immediately offline; tiles still come from the offline
+  pack's `/planet` cache; (2) **glyph/sprite-free fallback style** + **bounded auto-retry** on load
+  failure (remount, last attempt = fallback) so a transient failure self-recovers without a restart;
+  (3) **pack warm-up effect** on the nav screen builds the tile pack in the background if not ready.
+  Added `src/lib/map/style.test.ts` (Vitest 39→**45**); `tsc` + lint clean. On-device Airplane-Mode
+  verification still pending.
+- **2026-07-11** — **Test suite Phase 1** (both repos). Mobile: extended Vitest from 14→**39 tests**
+  (7 files) — Zustand store tests (tour-progress, spot-bookmarks, release-config; storage mocked) and
+  navigation edge cases (`navigation-edge.test.ts`). Backend (admin-and-server-aurelia): stood up Vitest
+  from **zero → 88 tests** (config, coverage, `vitest-mock-extended` Prisma-mock seam) covering pricing,
+  bundle canonical-JSON/signing, prisma-retry, session/OTP hashing, RBAC, error model, slug, and Zod
+  schemas. Both `pnpm test` green; both `tsc --noEmit` clean. Component + E2E deferred to a later phase.
 - **2026-07-08** — **Fixed expo-blur tab-bar warning** (aurelia-app): removed
   `blurMethod="dimezisBlurView"` from the `GlassTabBar` `BlurView`
   ([glass-tab-bar.tsx](src/components/navigation/glass-tab-bar.tsx)). In expo-blur v57 that method

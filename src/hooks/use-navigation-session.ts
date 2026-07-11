@@ -1,5 +1,5 @@
 import * as Location from "expo-location";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AppState } from "react-native";
 
 import { useStrings } from "@/hooks/use-strings";
@@ -7,6 +7,10 @@ import {
   resetArrivalVoice,
   speakArrival,
 } from "@/lib/navigation/arrival-voice";
+import {
+  resolveBootstrapLocation,
+  toGpsFix,
+} from "@/lib/navigation/bootstrap-location";
 import {
   resetOffRouteVoiceCooldown,
   speakOffRouteWarning,
@@ -21,7 +25,6 @@ import { useRemoteConfig } from "@/store/release-config-store";
 import { useLocaleStore } from "@/store/locale-store";
 import { useTourProgressStore } from "@/store/tour-progress-store";
 import type { BundleContent } from "@/types/bundle-content";
-import type { RawGpsFix } from "@/lib/navigation/types";
 
 type UseNavigationSessionOptions = {
   tourId: string;
@@ -31,18 +34,9 @@ type UseNavigationSessionOptions = {
   onArriveSpot?: (spotId: string) => void;
 };
 
-const NO_COMPLETED_SPOTS: string[] = [];
+export type NavigationLocationStatus = "pending" | "ready" | "denied";
 
-function toGpsFix(position: Location.LocationObject): RawGpsFix {
-  return {
-    lat: position.coords.latitude,
-    lng: position.coords.longitude,
-    accuracy: position.coords.accuracy,
-    heading: position.coords.heading,
-    speed: position.coords.speed,
-    timestamp: position.timestamp,
-  };
-}
+const NO_COMPLETED_SPOTS: string[] = [];
 
 function handleLocationResult(
   result: LocationUpdateResult,
@@ -81,6 +75,14 @@ function handleLocationResult(
   }
 }
 
+function hasLocationFix(
+  snapshot: ReturnType<
+    typeof useNavigationSessionStore.getState
+  >["snapshot"],
+) {
+  return Boolean(snapshot?.displayLocation ?? snapshot?.rawLocation);
+}
+
 export function useNavigationSession({
   tourId,
   content,
@@ -109,6 +111,8 @@ export function useNavigationSession({
   const isTracking = useNavigationSessionStore((state) => state.isTracking);
   const subscriptionRef = useRef<Location.LocationSubscription | null>(null);
   const contentRef = useRef(content);
+  const [locationStatus, setLocationStatus] =
+    useState<NavigationLocationStatus>("pending");
   contentRef.current = content;
 
   // Navigation is available for any installed tour with usable geo data. The
@@ -123,6 +127,7 @@ export function useNavigationSession({
 
   useEffect(() => {
     if (!canNavigate || !contentRef.current) {
+      setLocationStatus("pending");
       return;
     }
 
@@ -130,8 +135,13 @@ export function useNavigationSession({
     const activeContent = contentRef.current;
 
     async function startTracking() {
+      setLocationStatus("pending");
+
       const permission = await Location.requestForegroundPermissionsAsync();
-      if (permission.status !== "granted" || cancelled) {
+      if (permission.status !== "granted") {
+        if (!cancelled) {
+          setLocationStatus("denied");
+        }
         return;
       }
 
@@ -151,28 +161,23 @@ export function useNavigationSession({
         completedSpotIds,
       });
 
-      try {
-        const initial = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.High,
-        });
+      const initial = await resolveBootstrapLocation();
 
-        if (!cancelled) {
-          const bootstrapResult = ingestBootstrapFix(toGpsFix(initial));
-          if (bootstrapResult) {
-            handleLocationResult(bootstrapResult, {
-              tourId,
-              markSpotComplete,
-              onApproachSpot,
-              onArriveSpot,
-              voiceEnabled: remote.enableVoiceGuidance,
-              offRouteMessage: t("nav.offRouteVoice"),
-              arrivedMessage: t("nav.arrivedVoice"),
-              language,
-            });
-          }
+      if (!cancelled && initial) {
+        const bootstrapResult = ingestBootstrapFix(toGpsFix(initial));
+        if (bootstrapResult) {
+          setLocationStatus("ready");
+          handleLocationResult(bootstrapResult, {
+            tourId,
+            markSpotComplete,
+            onApproachSpot,
+            onArriveSpot,
+            voiceEnabled: remote.enableVoiceGuidance,
+            offRouteMessage: t("nav.offRouteVoice"),
+            arrivedMessage: t("nav.arrivedVoice"),
+            language,
+          });
         }
-      } catch {
-        // Continue with watchPosition even if the first fix fails.
       }
 
       subscriptionRef.current = await Location.watchPositionAsync(
@@ -187,6 +192,8 @@ export function useNavigationSession({
           if (!result) {
             return;
           }
+
+          setLocationStatus("ready");
 
           handleLocationResult(result, {
             tourId,
@@ -228,6 +235,7 @@ export function useNavigationSession({
       resetArrivalVoice();
       appStateSubscription.remove();
       reset();
+      setLocationStatus("pending");
     };
   }, [
     canNavigate,
@@ -245,9 +253,15 @@ export function useNavigationSession({
     tourId,
   ]);
 
+  const hasFix = hasLocationFix(snapshot);
+
   return {
     canNavigate: Boolean(canNavigate),
     snapshot,
     isTracking,
+    locationStatus,
+    hasLocationFix: hasFix,
+    isAwaitingLocation:
+      canNavigate && locationStatus !== "denied" && !hasFix,
   };
 }

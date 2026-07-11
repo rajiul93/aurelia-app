@@ -1,7 +1,7 @@
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { lazy, Suspense, useCallback, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -108,7 +108,8 @@ export default function TourNavigationScreen() {
     [approachSpotId, orderedSpots],
   );
 
-  const { canNavigate, snapshot } = useNavigationSession({
+  const { canNavigate, snapshot, isAwaitingLocation, locationStatus } =
+    useNavigationSession({
     tourId: tourId ?? "",
     content: content ?? undefined,
     enabled: Boolean(tourId && content),
@@ -140,6 +141,27 @@ export default function TourNavigationScreen() {
       })();
     }
   }, [content, queryClient, tourId]);
+
+  // Warm the offline tile pack as soon as the tour content is available, so the
+  // base map (and therefore the footprint overlay) is cached and renders on the
+  // first open instead of only after several app restarts. No-op once ready.
+  useEffect(() => {
+    if (!tourId || !content) {
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      const meta = await readMapPackMeta(tourId);
+      if (!cancelled && (!meta || meta.status !== "ready")) {
+        await ensureOfflineMapPack(tourId, content);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [content, tourId]);
 
   if (isLoading) {
     return (
@@ -257,6 +279,31 @@ export default function TourNavigationScreen() {
         </View>
 
         <View style={styles.bottomBar}>
+          {locationStatus === "denied" ? (
+            <View
+              style={[
+                styles.statusChip,
+                { backgroundColor: "rgba(127, 29, 29, 0.88)" },
+              ]}
+            >
+              <ThemedText type="small" style={styles.onDarkText}>
+                {t("nav.locationDenied")}
+              </ThemedText>
+            </View>
+          ) : isAwaitingLocation ? (
+            <View
+              style={[
+                styles.statusChip,
+                { backgroundColor: "rgba(28, 25, 23, 0.82)" },
+              ]}
+            >
+              <ActivityIndicator color="#ffffff" size="small" />
+              <ThemedText type="smallBold" style={styles.onDarkText}>
+                {t("nav.locatingYou")}
+              </ThemedText>
+            </View>
+          ) : null}
+
           {snapshot?.status === "offRoute" ? (
             <OffRouteBanner distanceM={snapshot.distanceOffRouteM} />
           ) : null}
@@ -350,6 +397,15 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
+  },
+  statusChip: {
+    alignSelf: "stretch",
+    borderRadius: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.two,
   },
   listButton: {
     alignSelf: "stretch",

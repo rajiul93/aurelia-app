@@ -10,13 +10,9 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 
-type FootprintOverlayProps = {
-  screenX: number;
-  screenY: number;
+type FootprintMarkerProps = {
   bearing: number;
   moving: boolean;
-  width: number;
-  height: number;
 };
 
 function buildFootprintPath() {
@@ -27,35 +23,22 @@ function buildFootprintPath() {
 }
 
 const footprintPath = buildFootprintPath();
-const POSITION_ANIMATION_MS = 260;
 
-export function FootprintOverlay({
-  screenX,
-  screenY,
-  bearing,
-  moving,
-  width,
-  height,
-}: FootprintOverlayProps) {
+/**
+ * Animated footprint icon meant to live inside a MapLibre `<Marker>` at the
+ * user's coordinates. Keeping it in a marker avoids Android GLSurfaceView
+ * layering issues and removes fragile lat/lng → screen projection retries.
+ */
+export function FootprintMarker({ bearing, moving }: FootprintMarkerProps) {
   const pulse = useSharedValue(1);
-  const animatedX = useSharedValue(screenX);
-  const animatedY = useSharedValue(screenY);
   const animatedBearing = useSharedValue(bearing);
 
   useEffect(() => {
-    animatedX.value = withTiming(screenX, {
-      duration: POSITION_ANIMATION_MS,
-      easing: Easing.out(Easing.cubic),
-    });
-    animatedY.value = withTiming(screenY, {
-      duration: POSITION_ANIMATION_MS,
-      easing: Easing.out(Easing.cubic),
-    });
     animatedBearing.value = withTiming(bearing, {
-      duration: POSITION_ANIMATION_MS,
+      duration: 260,
       easing: Easing.out(Easing.cubic),
     });
-  }, [animatedBearing, animatedX, animatedY, bearing, screenX, screenY]);
+  }, [animatedBearing, bearing]);
 
   useEffect(() => {
     pulse.value = withRepeat(
@@ -76,19 +59,13 @@ export function FootprintOverlay({
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
-      { translateX: animatedX.value - 18 },
-      { translateY: animatedY.value - 18 },
       { rotate: `${animatedBearing.value - 90}deg` },
       { scale: pulse.value },
     ],
   }));
 
-  if (width <= 0 || height <= 0) {
-    return null;
-  }
-
   return (
-    <View pointerEvents="none" style={[styles.overlay, { width, height }]}>
+    <View pointerEvents="none" style={styles.container}>
       <Animated.View style={[styles.footprint, animatedStyle]}>
         <Canvas style={styles.canvas}>
           <Group>
@@ -105,11 +82,13 @@ export function FootprintOverlay({
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    ...StyleSheet.absoluteFill,
+  container: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
   },
   footprint: {
-    position: "absolute",
     width: 36,
     height: 36,
   },

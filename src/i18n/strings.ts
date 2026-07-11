@@ -288,6 +288,9 @@ const en = {
   "nav.arrivedVoice": "You have arrived at this location.",
   "nav.refresh": "Reload map",
   "nav.viewDetails": "View Details",
+  "nav.locatingYou": "Getting your location…",
+  "nav.locationDenied":
+    "Location permission is required for guided walk. Enable it in Settings.",
 
   "spot.notFound": "Stop not found",
   "spot.indexOfTotal": "Stop {current} of {total}",
@@ -604,6 +607,9 @@ const es: Record<StringKey, string> = {
   "nav.arrivedVoice": "Has llegado a este lugar.",
   "nav.refresh": "Recargar mapa",
   "nav.viewDetails": "Ver detalles",
+  "nav.locatingYou": "Obteniendo tu ubicación…",
+  "nav.locationDenied":
+    "Se necesita permiso de ubicación para la caminata guiada. Actívalo en Ajustes.",
   "spot.notFound": "Parada no encontrada",
   "spot.indexOfTotal": "Parada {current} de {total}",
   "spot.transcript": "Transcripción",
@@ -915,6 +921,9 @@ const fr: Record<StringKey, string> = {
   "nav.arrivedVoice": "Vous êtes arrivé à cet endroit.",
   "nav.refresh": "Recharger la carte",
   "nav.viewDetails": "Voir les détails",
+  "nav.locatingYou": "Localisation en cours…",
+  "nav.locationDenied":
+    "L'autorisation de localisation est requise pour la visite guidée. Activez-la dans Réglages.",
   "spot.notFound": "Arrêt introuvable",
   "spot.indexOfTotal": "Arrêt {current} sur {total}",
   "spot.transcript": "Transcription",

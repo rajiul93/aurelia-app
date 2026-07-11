@@ -6,13 +6,12 @@ import {
   Map,
   Marker,
   type CameraRef,
-  type MapRef,
 } from "@maplibre/maplibre-react-native";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 
-import { FootprintOverlay } from "@/components/navigation/footprint-overlay";
+import { FootprintMarker } from "@/components/navigation/footprint-overlay";
 import { StopCallout } from "@/components/navigation/stop-callout";
 import { StopPin } from "@/components/navigation/stop-pin";
 import { useStrings } from "@/hooks/use-strings";
@@ -22,7 +21,7 @@ import {
   mapBoundsToLngLatBounds,
   mergeBoundsWithPoint,
 } from "@/lib/map/camera";
-import { getTourMapStyle } from "@/lib/map/style";
+import { getFallbackMapStyleObject, getTourMapStyleObject } from "@/lib/map/style";
 import type { NavigationSessionSnapshot } from "@/lib/navigation/process-location-update";
 import {
   buildRouteCoordinates,
@@ -31,6 +30,12 @@ import {
 import type { BundleContent, BundleSpot, GeoPoint } from "@/types/bundle-content";
 
 const CAMERA_FOLLOW_MS = 320;
+/**
+ * How many times to silently remount the map after a style-load failure before
+ * surfacing the manual refresh. The final attempt swaps to the glyph/sprite-free
+ * fallback style so overlays still render offline.
+ */
+const MAX_STYLE_RETRIES = 2;
 
 type TourMapViewProps = {
   tourId: string;
@@ -113,13 +118,12 @@ export function TourMapView({
 }: TourMapViewProps) {
   const router = useRouter();
   const { t } = useStrings();
-  const mapRef = useRef<MapRef>(null);
   const cameraRef = useRef<CameraRef>(null);
   const mapReadyRef = useRef(false);
   const initialTourFitRef = useRef(false);
-  const [layout, setLayout] = useState({ width: 0, height: 0 });
-  const [footprintPoint, setFootprintPoint] = useState({ x: 0, y: 0 });
   const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
+  const styleRetryRef = useRef(0);
+  const [styleAttempt, setStyleAttempt] = useState(0);
 
   const routeCoordinates = useMemo(
     () => buildRouteCoordinates(content.tour.spots, content.route),
@@ -158,7 +162,16 @@ export function TourMapView({
     () => stopPins.find((pin) => pin.spot.id === selectedStopId) ?? null,
     [stopPins, selectedStopId],
   );
-  const mapStyle = useMemo(() => getTourMapStyle(), []);
+  // Inline style object → MapLibre loads it without a network fetch for the style
+  // document, so the map (and the footprint overlays on top) attach immediately
+  // offline. The last retry uses the sprite/glyph-free fallback style.
+  const mapStyle = useMemo(
+    () =>
+      styleAttempt >= MAX_STYLE_RETRIES
+        ? getFallbackMapStyleObject()
+        : getTourMapStyleObject(),
+    [styleAttempt],
+  );
 
   const openSelectedStopDetails = useCallback(() => {
     if (!selectedPin) {
@@ -188,24 +201,6 @@ export function TourMapView({
     [displayLocation, tourBounds],
   );
 
-  const updateFootprintPoint = useCallback(async () => {
-    const location = getDisplayLocation(snapshot);
-    if (!location || !mapRef.current) {
-      return;
-    }
-
-    try {
-      const point = await mapRef.current.project([location.lng, location.lat]);
-      setFootprintPoint({ x: point[0], y: point[1] });
-    } catch {
-      // Ignore projection errors while the map is still initializing.
-    }
-  }, [snapshot]);
-
-  useEffect(() => {
-    void updateFootprintPoint();
-  }, [snapshot, updateFootprintPoint]);
-
   useEffect(() => {
     void LocationManager.requestPermissions();
   }, []);
@@ -215,32 +210,23 @@ export function TourMapView({
       return;
     }
 
-    void updateFootprintPoint();
-
     cameraRef.current?.easeTo({
       center: [displayLocation.lng, displayLocation.lat],
       zoom: 16,
       duration: CAMERA_FOLLOW_MS,
     });
-  }, [displayLocation, updateFootprintPoint]);
+  }, [displayLocation]);
 
   const isMoving =
     snapshot?.status === "tracking" || snapshot?.status === "offRoute";
 
   return (
-    <View
-      style={styles.container}
-      onLayout={(event) => {
-        setLayout({
-          width: event.nativeEvent.layout.width,
-          height: event.nativeEvent.layout.height,
-        });
-      }}
-    >
+    <View style={styles.container}>
       <Map
-        ref={mapRef}
+        key={styleAttempt}
         style={styles.map}
         mapStyle={mapStyle}
+        {...(Platform.OS === "android" ? { androidView: "texture" as const } : {})}
         dragPan
         touchZoom
         touchRotate={false}
@@ -248,18 +234,23 @@ export function TourMapView({
         attribution={false}
         onPress={() => setSelectedStopId(null)}
         onDidFinishLoadingMap={() => {
+          styleRetryRef.current = 0;
           mapReadyRef.current = true;
           fitTourArea(Boolean(displayLocation));
           initialTourFitRef.current = true;
-          void updateFootprintPoint();
         }}
         onDidFailLoadingMap={() => {
           // Offline, a missing base style/tiles leaves a blank map and the
-          // footprint layers never attach. Surface it so the caller can retry.
+          // footprint layers never attach. Auto-retry a few times (remount via
+          // the key; the last attempt uses the fallback style) before surfacing
+          // the manual refresh, so the user no longer has to restart the app.
+          if (styleRetryRef.current < MAX_STYLE_RETRIES) {
+            styleRetryRef.current += 1;
+            const attempt = styleRetryRef.current;
+            setTimeout(() => setStyleAttempt((n) => n + 1), 300 * attempt);
+            return;
+          }
           onLoadError?.();
-        }}
-        onRegionDidChange={() => {
-          void updateFootprintPoint();
         }}
       >
         <Camera ref={cameraRef} initialViewState={initialViewState} />
@@ -338,11 +329,13 @@ export function TourMapView({
             anchor="bottom"
             onPress={() => setSelectedStopId(pin.spot.id)}
           >
-            <StopPin
-              label={pin.label}
-              isStart={pin.isStart}
-              selected={pin.spot.id === selectedStopId}
-            />
+            <View style={styles.stopPinHitArea}>
+              <StopPin
+                label={pin.label}
+                isStart={pin.isStart}
+                selected={pin.spot.id === selectedStopId}
+              />
+            </View>
           </Marker>
         ))}
 
@@ -364,44 +357,46 @@ export function TourMapView({
         ) : null}
 
         {displayLocation ? (
-          <GeoJSONSource
-            id="user-position"
-            data={toUserFeature(displayLocation)}
-          >
-            <Layer
-              id="user-position-accuracy"
-              type="circle"
-              style={{
-                circleRadius: 14,
-                circleColor: "rgba(225, 165, 102, 0.18)",
-                circleStrokeColor: "rgba(225, 165, 102, 0.45)",
-                circleStrokeWidth: 1,
-              }}
-            />
-            <Layer
-              id="user-position-dot"
-              type="circle"
-              style={{
-                circleRadius: 7,
-                circleColor: "#e1a566",
-                circleStrokeColor: "#ffffff",
-                circleStrokeWidth: 2,
-              }}
-            />
-          </GeoJSONSource>
+          <>
+            <GeoJSONSource
+              id="user-position"
+              data={toUserFeature(displayLocation)}
+            >
+              <Layer
+                id="user-position-accuracy"
+                type="circle"
+                style={{
+                  circleRadius: 14,
+                  circleColor: "rgba(225, 165, 102, 0.18)",
+                  circleStrokeColor: "rgba(225, 165, 102, 0.45)",
+                  circleStrokeWidth: 1,
+                }}
+              />
+              <Layer
+                id="user-position-dot"
+                type="circle"
+                style={{
+                  circleRadius: 7,
+                  circleColor: "#e1a566",
+                  circleStrokeColor: "#ffffff",
+                  circleStrokeWidth: 2,
+                }}
+              />
+            </GeoJSONSource>
+
+            <Marker
+              id="user-footprint"
+              lngLat={[displayLocation.lng, displayLocation.lat]}
+              anchor="center"
+            >
+              <FootprintMarker
+                bearing={displayLocation.bearing}
+                moving={isMoving}
+              />
+            </Marker>
+          </>
         ) : null}
       </Map>
-
-      {displayLocation ? (
-        <FootprintOverlay
-          screenX={footprintPoint.x}
-          screenY={footprintPoint.y}
-          bearing={displayLocation.bearing}
-          moving={isMoving}
-          width={layout.width}
-          height={layout.height}
-        />
-      ) : null}
     </View>
   );
 }
@@ -412,5 +407,9 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
+  },
+  stopPinHitArea: {
+    padding: 10,
+    alignItems: "center",
   },
 });
