@@ -1,6 +1,6 @@
 import type { AudienceType } from "@/constants/audiences";
 import { DEFAULT_AUDIENCE } from "@/constants/audiences";
-import type { DownloadMode } from "@/constants/download-mode";
+import { DEFAULT_DOWNLOAD_MODE } from "@/constants/download-mode";
 import type { AppLanguage } from "@/store/locale-store";
 import type {
   BundleAiKnowledge,
@@ -126,6 +126,35 @@ export function filterSearchDocuments(
       document.language === preferences.contentLanguage &&
       document.audience === preferences.audience,
   );
+}
+
+/**
+ * Chooses which download preferences to apply for an installed tour. The on-disk
+ * record (written at install) is authoritative for offline-first, with the
+ * in-memory store meta as a fallback. Returns null only when neither is known.
+ */
+export function resolveTourPreferences(
+  fromDisk: TourDownloadPreferences | null | undefined,
+  fromStore: TourDownloadPreferences | null | undefined,
+): TourDownloadPreferences | null {
+  return fromDisk ?? fromStore ?? null;
+}
+
+/**
+ * Last-resort preferences for a tour whose `content.json` is on disk but whose
+ * `bundle-meta.json` is missing or unreadable (interrupted install, corrupted
+ * record). Downloaded content must stay viewable in that state — rendering it
+ * with defaults beats telling the user the tour is "not installed" while the
+ * bundle sits on disk. FULL mode is deliberate: it filters nothing out.
+ */
+export function fallbackTourPreferences(
+  contentLanguage: AppLanguage,
+): TourDownloadPreferences {
+  return {
+    audience: DEFAULT_AUDIENCE,
+    contentLanguage,
+    downloadMode: DEFAULT_DOWNLOAD_MODE,
+  };
 }
 
 export function applyTourPreferences(

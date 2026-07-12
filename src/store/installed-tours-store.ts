@@ -30,14 +30,21 @@ export const useInstalledToursStore = create<InstalledToursState>(
     hydrated: false,
 
     async hydrate() {
-      const installed = await listInstalledTourMeta();
+      // Never let a disk-read hiccup leave the store silently un-hydrated (which
+      // would make installed tours look "not installed" offline). Always settle
+      // the `hydrated` flag; keep whatever we could read.
+      try {
+        const installed = await listInstalledTourMeta();
 
-      set({
-        installedByTourId: Object.fromEntries(
-          installed.map((entry) => [entry.tourId, entry]),
-        ),
-        hydrated: true,
-      });
+        set({
+          installedByTourId: Object.fromEntries(
+            installed.map((entry) => [entry.tourId, entry]),
+          ),
+          hydrated: true,
+        });
+      } catch {
+        set({ hydrated: true });
+      }
     },
 
     async install(bundle, tour, options) {

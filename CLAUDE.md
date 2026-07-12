@@ -50,6 +50,19 @@ Last updated: **2026-07-11**
 - ✅ **Offline tiles/style + glyph caching, widened zoom 12–17** — pack caches style/glyphs/sprites/
   tiles; zoom range widened so fit/follow always hit cached tiles.
   [src/types/map-pack.ts](src/types/map-pack.ts), [src/lib/map/offline-pack.ts](src/lib/map/offline-pack.ts)
+- ✅ **Offline tour = on-disk bundle is the source of truth — fixes "offline shows 'download the tour'"**
+  — the per-tour screens (index/nav/spot/installed-guide-card) previously gated content on the
+  **in-memory** installed-tours store (`useInstalledTourContent`/`useInstalledMediaMap` had
+  `enabled: Boolean(tourId && bundleId)`, and `useInstalledTourView` read `preferences` from the store).
+  So if that store wasn't populated on a cold **offline** launch (hydration reject/race/eviction), a
+  fully-downloaded tour on disk showed **"not installed / download"**. Now the queries are gated on
+  `tourId` only and load content **+** preferences directly from disk (`loadInstalledTour` reads
+  `content.json` + `bundle-meta.json`); the in-memory store is only a fallback / cache-buster. Also
+  hardened `installedToursStore.hydrate()` so a disk hiccup can never silently leave it empty.
+  [src/lib/bundle/load.ts](src/lib/bundle/load.ts),
+  [src/hooks/use-installed-tour-view.ts](src/hooks/use-installed-tour-view.ts),
+  [src/hooks/queries/use-installed-tour-content.ts](src/hooks/queries/use-installed-tour-content.ts),
+  [src/store/installed-tours-store.ts](src/store/installed-tours-store.ts)
 - ✅ **Inline (local) map style — fixes "footprint appears only after 3–4 restarts"** — the live
   `<Map>` now loads an **inline style object** (`getTourMapStyleObject()`) instead of a remote style
   URL, so MapLibre needs **no network fetch for the style document**; the base style finishes loading
@@ -156,6 +169,11 @@ Last updated: **2026-07-11**
   the existing `expo-speech` pattern.
 - **react-query `offlineFirst`** — disk-backed queries resolve immediately offline instead of being
   paused/retried by the default `online` network mode.
+- **On-disk bundle is the source of truth for offline availability** — "is this tour installed?" is
+  answered by the presence of `content.json`/`bundle-meta.json` on disk, not by the in-memory Zustand
+  store. Per-tour queries gate on `tourId` and read from disk; the store is a convenience/cache only.
+  This is required for an offline-first app: a downloaded tour must open with zero dependence on network
+  or on any in-memory state surviving a cold launch.
 - **Inline map style object for the live map** — passing a `StyleSpecification` object (not a URL) to
   `<Map mapStyle={...}>` removes the remote **style-document** fetch, the single biggest cause of blank/
   delayed offline maps. The overlay layers (footprint, pins) can only attach after the base style loads,
@@ -184,11 +202,11 @@ Last updated: **2026-07-11**
 ## 8. Testing & Verification Status
 
 - ✅ TypeScript `tsc --noEmit` clean — both `aurelia-app` and `admin-and-server-aurelia`.
-- ✅ Unit tests **45/45 pass** (`pnpm test`, Vitest, aurelia-app) across 8 files — expanded from 14.
-  Zustand store tests (`tour-progress-store`, `spot-bookmarks-store`, `release-config-store` — storage
-  layer mocked via `vi.mock`), navigation edge cases (`navigation-edge.test.ts`), and **map style**
-  (`src/lib/map/style.test.ts`: inline style object shape, `/planet` source sync with the pack URL,
-  glyph/sprite-free fallback). Backend also has a Vitest suite (**88 tests**) — see its CLAUDE.md §10.
+- ✅ Unit tests **49/49 pass** (`pnpm test`, Vitest, aurelia-app) across 9 files — expanded from 14.
+  Zustand store tests, navigation edge cases, **map style** (`src/lib/map/style.test.ts`), and
+  **content preferences** (`src/lib/bundle/content-preferences.test.ts`: `resolveTourPreferences` disk-
+  over-store precedence, the core offline-fix helper). Backend also has a Vitest suite (**88 tests**) —
+  see its CLAUDE.md §10.
 - ✅ Lint — no new errors introduced (diffed against baseline).
 - ✅ Android dev build installed on emulator; **Metro bundles all 2144 modules** (no resolve/syntax
   errors).
@@ -238,6 +256,25 @@ Last updated: **2026-07-11**
 
 ## 12. Changelog
 
+- **2026-07-12** — **Hardened the offline "not installed" path further** (follow-up to 2026-07-11, which
+  was still reported failing on a release APK). Remaining hole: `useInstalledTourView` returned `null`
+  content whenever `preferences` was `null`, and preferences live **only** in `bundle-meta.json` — so a
+  tour whose `content.json` is on disk but whose meta is missing/corrupt (interrupted install: meta is
+  written **last**, after map-pack + media caching) still rendered "Tour not installed offline". Added
+  `fallbackTourPreferences(language)` (default audience, app locale, **FULL** mode so nothing is filtered
+  out); the view now falls back to it whenever content is on disk. Vitest 49→**51**, `tsc` clean.
+  ⚠️ Still unverified on-device — note a release APK built via `gradlew assembleRelease` bundles the JS
+  present on disk **at build time**, so the 2026-07-11 fix only ships if the APK was rebuilt after it.
+- **2026-07-11** — **Fixed "offline shows 'download the tour'" for an already-downloaded tour.** Root
+  cause: an offline-first violation — the per-tour content/media queries gated on the **in-memory**
+  installed-tours store (`enabled: Boolean(tourId && bundleId)`) and `useInstalledTourView` read
+  `preferences` from that store, so if the store wasn't populated on a cold offline launch, a tour fully
+  present on disk reported as **not installed**. Fix: on-disk bundle is now the source of truth —
+  `loadInstalledTour` reads `content.json` + `bundle-meta.json`, the queries gate on `tourId` only, and
+  `useInstalledTourView` sources preferences from disk (store as fallback via `resolveTourPreferences`);
+  `useInstalledMediaMap` likewise gates on `tourId`. Also hardened `installedToursStore.hydrate()` to
+  never silently leave the store empty. Added `content-preferences.test.ts` (Vitest 45→**49**); `tsc` +
+  lint clean. On-device offline verification pending.
 - **2026-07-11** — **Fixed slow/unreliable footprint loading (needed 3–4 app restarts).** Root cause:
   the live `<Map>` loaded a **remote style URL** (`openfreemap/styles/liberty`); offline/cold-start the
   style-document fetch stalled or failed (`onDidFailLoadingMap`), so the base style never finished
