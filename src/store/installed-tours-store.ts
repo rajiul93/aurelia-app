@@ -33,18 +33,32 @@ export const useInstalledToursStore = create<InstalledToursState>(
       // Never let a disk-read hiccup leave the store silently un-hydrated (which
       // would make installed tours look "not installed" offline). Always settle
       // the `hydrated` flag; keep whatever we could read.
-      try {
-        const installed = await listInstalledTourMeta();
+      const delays = [0, 100, 300];
 
-        set({
-          installedByTourId: Object.fromEntries(
-            installed.map((entry) => [entry.tourId, entry]),
-          ),
-          hydrated: true,
-        });
-      } catch {
-        set({ hydrated: true });
+      for (const waitMs of delays) {
+        if (waitMs > 0) {
+          await new Promise((resolve) => setTimeout(resolve, waitMs));
+        }
+
+        try {
+          const installed = await listInstalledTourMeta();
+
+          set({
+            installedByTourId: Object.fromEntries(
+              installed.map((entry) => [entry.tourId, entry]),
+            ),
+            hydrated: true,
+          });
+
+          if (installed.length > 0) {
+            return;
+          }
+        } catch {
+          // Retry while the filesystem settles on cold start.
+        }
       }
+
+      set({ hydrated: true });
     },
 
     async install(bundle, tour, options) {

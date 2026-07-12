@@ -19,6 +19,12 @@ export function useInstalledTourContent(tourId: string | undefined) {
     queryKey: queryKeys.installedTour.detail(tourId ?? "", bundleId),
     queryFn: () => loadInstalledTour(tourId!),
     enabled: Boolean(tourId),
-    staleTime: 0,
+    // Disk-backed bundle only changes on install/update — keep it warm offline.
+    staleTime: Number.POSITIVE_INFINITY,
+    gcTime: 24 * 60 * 60 * 1000,
+    retry: 3,
+    retryDelay: (attempt) => Math.min(250, 50 * 2 ** attempt),
+    refetchOnMount: true,
+    refetchOnReconnect: false,
   });
 }

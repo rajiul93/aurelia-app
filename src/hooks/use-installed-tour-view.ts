@@ -41,5 +41,6 @@ export function useInstalledTourView(tourId: string | undefined) {
     data: viewContent,
     preferences,
     installed,
+    isResolving: query.isLoading || (query.isFetching && !viewContent),
   };
 }

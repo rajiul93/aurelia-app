@@ -35,7 +35,7 @@ export default function TourRouteScreen() {
   const theme = useTheme();
   const { t } = useStrings();
   const { tourId } = useLocalSearchParams<{ tourId: string }>();
-  const { data: content, isLoading, isError, preferences } =
+  const { data: content, isResolving, isError, preferences } =
     useInstalledTourView(tourId);
   const completedSpotIds = useTourProgressStore(
     (state) => state.byTourId[tourId ?? ""]?.completedSpotIds,
@@ -45,7 +45,7 @@ export default function TourRouteScreen() {
   );
   const bookmarkedSet = new Set(bookmarkedSpotIds);
 
-  if (isLoading) {
+  if (isResolving) {
     return (
       <ThemedView style={styles.centered}>
         <ActivityIndicator color={theme.primary} />
@@ -63,7 +63,6 @@ export default function TourRouteScreen() {
       </ThemedView>
     );
   }
-
   const contentLanguage = preferences?.contentLanguage ?? "en";
   const audience = preferences?.audience ?? "ADULTS";
   const tourTitle = localizeTourTitle(content.tour, contentLanguage, audience);

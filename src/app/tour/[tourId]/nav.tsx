@@ -44,7 +44,7 @@ export default function TourNavigationScreen() {
   const { t } = useStrings();
   const queryClient = useQueryClient();
   const { tourId } = useLocalSearchParams<{ tourId: string }>();
-  const { data: content, isLoading, isError, preferences } =
+  const { data: content, isResolving, isError, preferences } =
     useInstalledTourView(tourId);
   const completedSpotIds =
     useTourProgressStore((state) => state.byTourId[tourId ?? ""]?.completedSpotIds) ??
@@ -163,7 +163,7 @@ export default function TourNavigationScreen() {
     };
   }, [content, tourId]);
 
-  if (isLoading) {
+  if (isResolving) {
     return (
       <ThemedView style={styles.centered}>
         <ActivityIndicator color={theme.primary} />

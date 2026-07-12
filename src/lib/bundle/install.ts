@@ -1,11 +1,15 @@
 import { Directory, File } from "expo-file-system";
 
-import { toCanonicalJson } from "@/lib/bundle/canonical-json";
 import type { DownloadProgress } from "@/lib/bundle/download-progress";
 import {
   countTourStops
 } from "@/lib/bundle/collect-media-urls";
+import { readJsonFile, writeJsonFile } from "@/lib/bundle/disk-json";
 import { cacheTourMediaFiles } from "@/lib/bundle/media-cache";
+import {
+  normalizeInstalledTourMeta,
+  synthesizeInstalledTourMeta,
+} from "@/lib/bundle/synthesize-meta";
 import { deleteOfflineMapPack, ensureOfflineMapPack } from "@/lib/map/offline-pack";
 import {
   getInstalledTourDirectory,
@@ -17,6 +21,7 @@ import type { InstalledTourMeta, TourBundleDetail } from "@/types/tour-bundle";
 import type { TourDownloadPreferences } from "@/types/tour-preferences";
 
 const META_FILE = "bundle-meta.json";
+const CONTENT_FILE = "content.json";
 
 function ensureDirectory(directory: Directory) {
   if (directory.exists) {
@@ -40,24 +45,62 @@ function replaceDirectory(directory: Directory) {
   directory.create();
 }
 
-function writeJsonFile(
-  directory: Directory,
-  pathParts: string[],
-  value: unknown,
-) {
-  const fileName = pathParts[pathParts.length - 1]!;
-  let targetDir = directory;
+function buildInstallMeta(input: {
+  bundle: TourBundleDetail;
+  tour: { slug: string; title: string };
+  directory: Directory;
+  preferences: TourDownloadPreferences;
+  content: BundleContent;
+  mediaMap?: {
+    files: Record<string, unknown>;
+    failedUrls: string[];
+    cachedAt: string;
+  };
+}): InstalledTourMeta {
+  const mediaMap = input.mediaMap;
 
-  for (const segment of pathParts.slice(0, -1)) {
-    if (targetDir.list().some((entry) => entry.name === segment)) {
-      targetDir = new Directory(targetDir, segment);
-    } else {
-      targetDir = targetDir.createDirectory(segment);
-    }
+  return {
+    tourId: input.bundle.tourId,
+    slug: input.tour.slug,
+    title: input.tour.title,
+    bundleId: input.bundle.bundleId,
+    tourBundleVersion: input.bundle.tourBundleVersion,
+    mediaVersion: input.bundle.mediaVersion,
+    aiKnowledgeVersion: input.bundle.aiKnowledgeVersion,
+    routeVersion: input.bundle.routeVersion,
+    installedAt: new Date().toISOString(),
+    directoryUri: input.directory.uri,
+    localMediaFileCount: mediaMap ? Object.keys(mediaMap.files).length : 0,
+    localMediaFailedCount: mediaMap?.failedUrls.length ?? 0,
+    mediaCachedAt: mediaMap?.cachedAt ?? null,
+    totalStops: countTourStops(input.content, input.preferences),
+    downloadPreferences: input.preferences,
+  };
+}
+
+async function readMetaFromDirectory(
+  directory: Directory,
+): Promise<InstalledTourMeta | null> {
+  const metaFile = new File(directory, META_FILE);
+  const parsed = await readJsonFile<Partial<InstalledTourMeta>>(metaFile);
+  return parsed ? normalizeInstalledTourMeta(parsed, directory.uri) : null;
+}
+
+async function readMetaFromContentFallback(
+  directory: Directory,
+): Promise<InstalledTourMeta | null> {
+  const contentFile = new File(directory, CONTENT_FILE);
+  const content = await readJsonFile<BundleContent>(contentFile);
+
+  if (!content?.tour?.id) {
+    return null;
   }
 
-  const file = targetDir.createFile(fileName, "application/json");
-  file.write(toCanonicalJson(value));
+  return synthesizeInstalledTourMeta(
+    directory.uri,
+    content,
+    directory.name,
+  );
 }
 
 export { getInstalledTourDirectory } from "@/lib/bundle/tour-directory";
@@ -70,45 +113,23 @@ export async function listInstalledTourMeta() {
   }
 
   const installed: InstalledTourMeta[] = [];
+  const seenTourIds = new Set<string>();
 
   for (const entry of root.list()) {
     if (!(entry instanceof Directory)) {
       continue;
     }
 
-    const metaFile = new File(entry, META_FILE);
-    if (!metaFile.exists) {
+    const meta =
+      (await readMetaFromDirectory(entry)) ??
+      (await readMetaFromContentFallback(entry));
+
+    if (!meta || seenTourIds.has(meta.tourId)) {
       continue;
     }
 
-    try {
-      const meta = JSON.parse(
-        await metaFile.text(),
-      ) as Partial<InstalledTourMeta>;
-      installed.push({
-        tourId: meta.tourId!,
-        slug: meta.slug!,
-        title: meta.title!,
-        bundleId: meta.bundleId!,
-        tourBundleVersion: meta.tourBundleVersion ?? 0,
-        mediaVersion: meta.mediaVersion ?? 0,
-        aiKnowledgeVersion: meta.aiKnowledgeVersion ?? 0,
-        routeVersion: meta.routeVersion ?? 0,
-        installedAt: meta.installedAt ?? "",
-        directoryUri: meta.directoryUri ?? entry.uri,
-        localMediaFileCount: meta.localMediaFileCount ?? 0,
-        localMediaFailedCount: meta.localMediaFailedCount ?? 0,
-        mediaCachedAt: meta.mediaCachedAt ?? null,
-        totalStops: meta.totalStops ?? 0,
-        downloadPreferences: meta.downloadPreferences ?? {
-          audience: "ADULTS",
-          contentLanguage: "en",
-          downloadMode: "FULL",
-        },
-      });
-    } catch {
-      // Ignore corrupted install records.
-    }
+    seenTourIds.add(meta.tourId);
+    installed.push(meta);
   }
 
   return installed.sort((left, right) =>
@@ -143,6 +164,20 @@ export async function installTourBundle(
 
   const content = bundle.content as BundleContent;
 
+  // Persist the install record immediately after the bundle lands so a cold
+  // restart during map/media caching still finds the tour on disk offline.
+  writeJsonFile(
+    directory,
+    [META_FILE],
+    buildInstallMeta({
+      bundle,
+      tour,
+      directory,
+      preferences: options.preferences,
+      content,
+    }),
+  );
+
   // Always build the offline map pack so every downloaded tour works offline,
   // independent of the enableGpsNavigation remote flag. ensureOfflineMapPack is
   // non-fatal (it records a "failed" status rather than throwing).
@@ -169,23 +204,14 @@ export async function installTourBundle(
     },
   );
 
-  const meta: InstalledTourMeta = {
-    tourId: bundle.tourId,
-    slug: tour.slug,
-    title: tour.title,
-    bundleId: bundle.bundleId,
-    tourBundleVersion: bundle.tourBundleVersion,
-    mediaVersion: bundle.mediaVersion,
-    aiKnowledgeVersion: bundle.aiKnowledgeVersion,
-    routeVersion: bundle.routeVersion,
-    installedAt: new Date().toISOString(),
-    directoryUri: directory.uri,
-    localMediaFileCount: Object.keys(mediaMap.files).length,
-    localMediaFailedCount: mediaMap.failedUrls.length,
-    mediaCachedAt: mediaMap.cachedAt,
-    totalStops: countTourStops(content, options.preferences),
-    downloadPreferences: options.preferences,
-  };
+  const meta = buildInstallMeta({
+    bundle,
+    tour,
+    directory,
+    preferences: options.preferences,
+    content,
+    mediaMap,
+  });
 
   writeJsonFile(directory, [META_FILE], meta);
 

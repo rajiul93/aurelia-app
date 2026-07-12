@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 
 import { AccessEndedListener } from "@/components/access-ended-listener";
 import { EntitlementsRefreshListener } from "@/components/entitlements-refresh-listener";
+import { InstalledToursRehydrateListener } from "@/components/installed-tours-rehydrate-listener";
 import { KnowledgeGate } from "@/components/knowledge-gate";
 import { KnowledgeSyncListener } from "@/components/knowledge-sync-listener";
 import { MaintenanceGate } from "@/components/maintenance-gate";
@@ -27,6 +28,7 @@ export function AppProviders({ children }: AppProvidersProps) {
       <StripeProvider publishableKey={env.stripePublishableKey}>
         <ReleaseConfigSyncListener />
         <KnowledgeSyncListener />
+        <InstalledToursRehydrateListener />
         <AccessEndedListener />
         <EntitlementsRefreshListener />
         <MaintenanceGate>

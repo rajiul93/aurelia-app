@@ -4,23 +4,24 @@ import {
   buildSearchDocumentsFromContent,
   mergeSearchDocuments,
 } from "@/lib/bundle/build-search-documents";
+import { readJsonFile } from "@/lib/bundle/disk-json";
 import { getInstalledTourDirectory } from "@/lib/bundle/tour-directory";
+import {
+  normalizeInstalledTourMeta,
+  synthesizeInstalledTourMeta,
+} from "@/lib/bundle/synthesize-meta";
 import type { BundleContent } from "@/types/bundle-content";
 import type { InstalledTourMeta, SearchDocument } from "@/types/tour-bundle";
 import type { TourDownloadPreferences } from "@/types/tour-preferences";
 
 const META_FILE = "bundle-meta.json";
+const CONTENT_FILE = "content.json";
 
 export async function loadInstalledTourContent(tourId: string) {
   const directory = getInstalledTourDirectory(tourId);
-  const contentFile = new File(directory, "content.json");
+  const contentFile = new File(directory, CONTENT_FILE);
 
-  if (!contentFile.exists) {
-    return null;
-  }
-
-  const raw = await contentFile.text();
-  return JSON.parse(raw) as BundleContent;
+  return readJsonFile<BundleContent>(contentFile);
 }
 
 /**
@@ -33,16 +34,18 @@ export async function loadInstalledTourMeta(
 ): Promise<InstalledTourMeta | null> {
   const directory = getInstalledTourDirectory(tourId);
   const metaFile = new File(directory, META_FILE);
+  const parsed = await readJsonFile<Partial<InstalledTourMeta>>(metaFile);
 
-  if (!metaFile.exists) {
+  if (parsed) {
+    return normalizeInstalledTourMeta(parsed, directory.uri);
+  }
+
+  const content = await loadInstalledTourContent(tourId);
+  if (!content) {
     return null;
   }
 
-  try {
-    return JSON.parse(await metaFile.text()) as InstalledTourMeta;
-  } catch {
-    return null;
-  }
+  return synthesizeInstalledTourMeta(directory.uri, content, tourId);
 }
 
 export type InstalledTourBundle = {
@@ -59,14 +62,18 @@ export type InstalledTourBundle = {
 export async function loadInstalledTour(
   tourId: string,
 ): Promise<InstalledTourBundle | null> {
-  const content = await loadInstalledTourContent(tourId);
+  try {
+    const content = await loadInstalledTourContent(tourId);
 
-  if (!content) {
+    if (!content) {
+      return null;
+    }
+
+    const meta = await loadInstalledTourMeta(tourId);
+    return { content, preferences: meta?.downloadPreferences ?? null };
+  } catch {
     return null;
   }
-
-  const meta = await loadInstalledTourMeta(tourId);
-  return { content, preferences: meta?.downloadPreferences ?? null };
 }
 
 export async function loadInstalledTourSearchDocuments(tourId: string) {
@@ -76,9 +83,10 @@ export async function loadInstalledTourSearchDocuments(tourId: string) {
   let documents: SearchDocument[] = [];
 
   if (searchFile.exists) {
-    const raw = await searchFile.text();
-    const parsed = JSON.parse(raw) as { documents?: SearchDocument[] };
-    documents = parsed.documents ?? [];
+    const parsed = await readJsonFile<{ documents?: SearchDocument[] }>(
+      searchFile,
+    );
+    documents = parsed?.documents ?? [];
   }
 
   const content = await loadInstalledTourContent(tourId);
@@ -90,4 +98,9 @@ export async function loadInstalledTourSearchDocuments(tourId: string) {
   }
 
   return documents;
+}
+
+export async function isTourInstalledOnDisk(tourId: string) {
+  const content = await loadInstalledTourContent(tourId);
+  return content !== null;
 }

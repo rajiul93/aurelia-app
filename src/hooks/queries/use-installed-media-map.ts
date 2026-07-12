@@ -15,6 +15,10 @@ export function useInstalledMediaMap(tourId: string | undefined) {
     // Disk is the source of truth; bundleId only busts the cache. Do not gate on
     // it, so cached media resolves offline even before the store hydrates.
     enabled: Boolean(tourId),
-    staleTime: 0,
+    staleTime: Number.POSITIVE_INFINITY,
+    gcTime: 24 * 60 * 60 * 1000,
+    retry: 3,
+    retryDelay: (attempt) => Math.min(250, 50 * 2 ** attempt),
+    refetchOnReconnect: false,
   });
 }

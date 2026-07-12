@@ -39,7 +39,7 @@ export default function SpotDetailScreen() {
   }>();
   const { data: contentResponse } = useAppContent();
   const backgroundUrl = resolveAppBackgroundUrl(contentResponse?.data.assets);
-  const { data: content, isLoading, isError, preferences } =
+  const { data: content, isResolving, isError, preferences } =
     useInstalledTourView(tourId);
   const isComplete = useTourProgressStore((state) =>
     state.byTourId[tourId ?? ""]?.completedSpotIds.includes(spotId ?? ""),
@@ -50,7 +50,7 @@ export default function SpotDetailScreen() {
   );
   const toggleBookmark = useSpotBookmarksStore((state) => state.toggleBookmark);
 
-  if (isLoading) {
+  if (isResolving) {
     return (
       <ThemedView style={styles.centered}>
         <ActivityIndicator color={theme.primary} />
