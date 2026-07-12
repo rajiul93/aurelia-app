@@ -19,6 +19,7 @@ import { useDeviceHeading } from "@/hooks/use-device-heading";
 import { useNavigationApproachAudio } from "@/hooks/use-navigation-approach-audio";
 import { useNavigationSession } from "@/hooks/use-navigation-session";
 import { useInstalledTourView } from "@/hooks/use-installed-tour-view";
+import { useMapPackReady } from "@/hooks/use-map-pack-ready";
 import { useStrings } from "@/hooks/use-strings";
 import { useTheme } from "@/hooks/use-theme";
 import {
@@ -43,9 +44,16 @@ export default function TourNavigationScreen() {
   const theme = useTheme();
   const { t } = useStrings();
   const queryClient = useQueryClient();
-  const { tourId } = useLocalSearchParams<{ tourId: string }>();
-  const { data: content, isResolving, isError, preferences } =
-    useInstalledTourView(tourId);
+  const { tourId: routeTourId } = useLocalSearchParams<{ tourId: string }>();
+  const {
+    data: content,
+    rawContent,
+    isResolving,
+    hasRawContent,
+    tourId,
+    preferences,
+  } = useInstalledTourView(routeTourId);
+  const mapPackReady = useMapPackReady(tourId, rawContent ?? undefined);
   const completedSpotIds =
     useTourProgressStore((state) => state.byTourId[tourId ?? ""]?.completedSpotIds) ??
     [];
@@ -132,36 +140,36 @@ export default function TourNavigationScreen() {
     // Reload the installed tour content (route/footprint geometry) from disk.
     void queryClient.invalidateQueries({ queryKey: queryKeys.installedTour.all });
     // Rebuild the offline tile pack if it never completed.
-    if (tourId && content) {
+    if (tourId && rawContent) {
       void (async () => {
         const meta = await readMapPackMeta(tourId);
         if (!meta || meta.status !== "ready") {
-          await ensureOfflineMapPack(tourId, content);
+          await ensureOfflineMapPack(tourId, rawContent);
         }
       })();
     }
-  }, [content, queryClient, tourId]);
+  }, [queryClient, rawContent, tourId]);
 
-  // Warm the offline tile pack as soon as the tour content is available, so the
-  // base map (and therefore the footprint overlay) is cached and renders on the
-  // first open instead of only after several app restarts. No-op once ready.
+  // Warm the offline tile pack as soon as the tour content is available. The
+  // map mount is gated on useMapPackReady; this keeps pack status fresh if the
+  // user returns to nav after a failed first attempt.
   useEffect(() => {
-    if (!tourId || !content) {
+    if (!tourId || !rawContent || !mapPackReady) {
       return;
     }
 
     let cancelled = false;
     void (async () => {
       const meta = await readMapPackMeta(tourId);
-      if (!cancelled && (!meta || meta.status !== "ready")) {
-        await ensureOfflineMapPack(tourId, content);
+      if (!cancelled && meta?.status !== "ready") {
+        await ensureOfflineMapPack(tourId, rawContent);
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [content, tourId]);
+  }, [mapPackReady, rawContent, tourId]);
 
   if (isResolving) {
     return (
@@ -171,10 +179,24 @@ export default function TourNavigationScreen() {
     );
   }
 
-  if (isError || !content || !tourId) {
+  if (!hasRawContent || !content || !tourId) {
     return (
       <ThemedView style={styles.centered}>
         <ThemedText type="smallBold">{t("tour.notInstalled")}</ThemedText>
+        <ThemedText type="small" themeColor="textSecondary">
+          {t("tour.downloadFromHome")}
+        </ThemedText>
+      </ThemedView>
+    );
+  }
+
+  if (!mapPackReady) {
+    return (
+      <ThemedView style={styles.centered}>
+        <ActivityIndicator color={theme.primary} />
+        <ThemedText type="small" themeColor="textSecondary">
+          {t("nav.preparingMap")}
+        </ThemedText>
       </ThemedView>
     );
   }

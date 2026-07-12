@@ -1,38 +1,25 @@
-import { useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useCallback, useMemo } from "react";
 
 import { useEntitlements } from "@/hooks/queries/use-entitlements";
+import { isAccessActive } from "@/lib/entitlements/access";
+import { refreshEntitlements } from "@/lib/entitlements/refresh";
 import type { EntitledVersions } from "@/lib/bundle/version-compare";
 import { useAuthStore } from "@/store/auth-store";
-import type { Entitlements } from "@/types/auth";
+import { useEntitlementsStore } from "@/store/entitlements-store";
 
 export type TourLockReason = "access_inactive" | "tour_not_entitled" | null;
 
-function isAccessActive(entitlements: Entitlements | undefined) {
-  if (!entitlements) {
-    return true;
-  }
-
-  if (entitlements.status !== "ACTIVE") {
-    return false;
-  }
-
-  if (entitlements.expiresAt) {
-    return new Date(entitlements.expiresAt).getTime() > Date.now();
-  }
-
-  return true;
-}
-
 export function useEntitlementStatus() {
+  const queryClient = useQueryClient();
   const sessionToken = useAuthStore((state) => state.sessionToken);
-  const {
-    data: entitlementsResponse,
-    isLoading,
-    isFetching,
-    refetch,
-  } = useEntitlements();
+  const snapshot = useEntitlementsStore((state) => state.snapshot);
+  const { isLoading, isFetching } = useEntitlements();
 
-  const entitlements = entitlementsResponse?.data;
+  // The persisted snapshot is the source of truth. The query exists only to
+  // create it (or renew it once expired), so every access decision — including
+  // the expiry check — resolves offline with no network call.
+  const entitlements = snapshot?.entitlements;
   const isSignedIn = Boolean(sessionToken);
 
   const isActive = useMemo(
@@ -59,6 +46,11 @@ export function useEntitlementStatus() {
 
     return map;
   }, [entitlements]);
+
+  const refetchAccess = useCallback(
+    () => refreshEntitlements(queryClient),
+    [queryClient],
+  );
 
   function hasTour(tourId: string) {
     if (!isSignedIn) {
@@ -111,6 +103,6 @@ export function useEntitlementStatus() {
     isTourLocked,
     getTourLockReason,
     getEntitledVersions,
-    refetchAccess: refetch,
+    refetchAccess,
   };
 }

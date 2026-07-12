@@ -70,4 +70,11 @@ export type InstalledTourMeta = {
   mediaCachedAt: string | null;
   totalStops: number;
   downloadPreferences: TourDownloadPreferences;
+  /**
+   * Access window this bundle was downloaded under, copied from the entitlements
+   * snapshot at install time. Each bundle carries its own expiry so it can be
+   * locked and swept offline, without depending on any in-memory state. `null`
+   * means "no known expiry" — never expires.
+   */
+  accessExpiresAt: string | null;
 };

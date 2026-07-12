@@ -2,7 +2,7 @@ import { Directory, File } from "expo-file-system";
 
 import { toCanonicalJson } from "@/lib/bundle/canonical-json";
 
-const READ_RETRY_DELAYS_MS = [0, 50, 150];
+const READ_RETRY_DELAYS_MS = [0, 100, 300, 600, 1200];
 
 function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -44,11 +44,12 @@ export async function readJsonFile<T>(file: File): Promise<T | null> {
     }
 
     try {
-      if (!file.exists) {
-        return null;
+      // A false `exists` must keep retrying rather than return: on a cold start
+      // the filesystem can report a file missing for a moment, and reporting an
+      // installed tour as "not installed" is far worse than a few extra reads.
+      if (file.exists) {
+        return JSON.parse(await file.text()) as T;
       }
-
-      return JSON.parse(await file.text()) as T;
     } catch {
       // Retry while the filesystem settles on cold start.
     }

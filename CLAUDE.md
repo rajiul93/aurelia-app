@@ -8,7 +8,7 @@
 
 **Status legend:** ✅ Completed · 🚧 In Progress · ⚠️ Known Issue · ⏳ Pending · ❌ Not Started
 
-Last updated: **2026-07-11**
+Last updated: **2026-07-13**
 
 ---
 
@@ -38,6 +38,29 @@ Last updated: **2026-07-11**
 
 ## 2. Completed (✅)
 
+- ✅ **Offline access layer — a downloaded tour opens with ZERO API calls.** Previously every tour
+  screen sat behind [tour/[tourId]/_layout.tsx](src/app/tour/[tourId]/_layout.tsx) →
+  `useEntitlementStatus()` → `useEntitlements()`, a **live API call** cached only in react-query
+  *memory* (no persister), plus a per-foreground `invalidateQueries` — so access had to be re-fetched
+  on every cold start, and `expiresAt` was never stored on device. Now: entitlements are persisted to
+  disk as a **snapshot** (`aurelia/entitlements.json`) and hydrated at bootstrap; the entitlements
+  query is **disabled while the snapshot is unexpired**, so launching, foregrounding, or opening a
+  downloaded tour issues no request. The network is only touched at sign-in, purchase, an explicit
+  user refresh, or once the snapshot's window has expired — all via `refreshEntitlements()`
+  (`invalidateQueries` cannot refetch a disabled query).
+  [src/store/entitlements-store.ts](src/store/entitlements-store.ts),
+  [src/lib/entitlements/access.ts](src/lib/entitlements/access.ts),
+  [src/lib/entitlements/refresh.ts](src/lib/entitlements/refresh.ts),
+  [src/hooks/queries/use-entitlements.ts](src/hooks/queries/use-entitlements.ts),
+  [src/hooks/use-entitlement-status.ts](src/hooks/use-entitlement-status.ts)
+- ✅ **Offline access expiry — lock, then sweep.** `bundle-meta.json` now carries `accessExpiresAt`
+  (stamped from the snapshot at install), so each bundle knows its own access window without any
+  in-memory state. An expired tour locks immediately via the existing `TourAccessLockScreen`
+  (decision is local ⇒ works offline) and is deleted — bundle + media + map pack — by a sweep that
+  runs **once per app process** on cold start, giving the user a session to renew before the download
+  disappears. [src/lib/bundle/expiry.ts](src/lib/bundle/expiry.ts),
+  [src/components/installed-tours-rehydrate-listener.tsx](src/components/installed-tours-rehydrate-listener.tsx),
+  [src/lib/bundle/install.ts](src/lib/bundle/install.ts)
 - ✅ **Offline map pack always built on download** — offline pack creation decoupled from the
   `enableGpsNavigation` remote flag; runs for every download, non-fatal on failure.
   [src/lib/bundle/install.ts](src/lib/bundle/install.ts)
@@ -142,6 +165,12 @@ Last updated: **2026-07-11**
 - ⚠️ **Hardware verification pending.** The emulator has no magnetometer or real GPS movement, and
   downloading a tour bundle needs the backend/auth flow — so offline rendering, compass rotation, and
   arrival voice are code-verified but not visually confirmed on-device.
+- ⚠️ **Network-silence claim is code-verified, not device-verified.** No screen on the downloaded-tour
+  path (`_layout` → index → spot → nav) imports a service or `apiClient`, and the entitlements query is
+  disabled while the snapshot is valid — but the acceptance test is still to watch the network log on a
+  device: download → kill app → relaunch → open tour → open nav must produce **zero** `/api/v1/app/*`
+  requests. Note the browsing surfaces (home catalog, app content, release-config/knowledge sync) do
+  still call the API on launch — that is by design, they are online screens.
 - ⚠️ **Backend intermittent 500s = Neon cold starts.** Neon compute scales to zero after idle; the
   first request can fail with `XX000 "Control plane request failed"`. Now retried → transparent.
   **Frequent** 500s instead point to a **suspended Neon project (quota/billing)** — check the Neon
@@ -160,6 +189,18 @@ Last updated: **2026-07-11**
 ---
 
 ## 6. Technical Decisions (and why)
+
+- **Entitlements are snapshot-first, not query-first** — "does this device have access?" must be
+  answerable with the radio off. The persisted snapshot is the source of truth and the query exists
+  only to create or renew it. Consequence to remember: **the entitlements query is disabled while the
+  snapshot is valid, and a disabled query is never refetched by `invalidateQueries`** — any code that
+  needs fresh entitlements must call `refreshEntitlements()`.
+- **Each bundle stamps its own `accessExpiresAt`** — so expiry survives losing the snapshot and never
+  depends on store hydration. The *current* snapshot still wins when present (a renewal extends a
+  bundle stamped with an older expiry; a revoked tour expires even if its stamp hasn't run out).
+  With neither date known a tour is **not** expired — never delete a user's content on missing data.
+- **Expiry sweep runs once per process, not per foreground** — so a tour that expires mid-session
+  locks (a live, local check) and is only removed on the next launch.
 
 - **Always build the offline pack on download** — reliability: gating it behind a remote flag meant
   tours downloaded with the flag off had no tiles and rendered blank offline.
@@ -202,7 +243,10 @@ Last updated: **2026-07-11**
 ## 8. Testing & Verification Status
 
 - ✅ TypeScript `tsc --noEmit` clean — both `aurelia-app` and `admin-and-server-aurelia`.
-- ✅ Unit tests **49/49 pass** (`pnpm test`, Vitest, aurelia-app) across 9 files — expanded from 14.
+- ✅ Unit tests **69/69 pass** (`pnpm test`, Vitest, aurelia-app) across 13 files — expanded from 14.
+  Newest: `src/lib/entitlements/access.test.ts` (expiry / snapshot-usable gate),
+  `src/lib/bundle/expiry.test.ts` (lock+sweep rules incl. renewal extending an older stamp), and
+  `src/store/entitlements-store.test.ts` (hydrate / persist / clear, storage mocked).
   Zustand store tests, navigation edge cases, **map style** (`src/lib/map/style.test.ts`), and
   **content preferences** (`src/lib/bundle/content-preferences.test.ts`: `resolveTourPreferences` disk-
   over-store precedence, the core offline-fix helper). Backend also has a Vitest suite (**88 tests**) —
@@ -255,6 +299,21 @@ Last updated: **2026-07-11**
 ---
 
 ## 12. Changelog
+
+- **2026-07-13** — **Offline-first access layer: downloaded tour = zero API calls; local expiry.** The
+  "already downloaded but says *download the tour*" report had a second root cause beyond the content
+  read path: **access** was network-only. Every tour screen was gated on a live entitlements query held
+  in react-query memory (no persister) and re-invalidated on every foreground, and `expiresAt` was never
+  written to the device — so nothing about access could be decided offline. Fixed by persisting an
+  entitlements **snapshot** to disk (hydrated in `useAppBootstrap`), disabling the query while that
+  snapshot is unexpired, deleting the per-foreground refresh listener, and routing the legitimate
+  refresh moments (sign-in, purchase, explicit refresh) through `refreshEntitlements()`. Added
+  `accessExpiresAt` to `bundle-meta.json` + an expiry sweep (lock immediately, delete on next launch).
+  Also closed the two remaining disk-read holes: `readJsonFile` no longer short-circuits its retry loop
+  on a transient `!file.exists`, and the installed-content query no longer limits retries based on the
+  in-memory store. Spot detail now uses `useCachedAppContent()` (cache-only) so it cannot fire a request
+  on the tour path. Vitest 51→**69**; `tsc` clean; no new lint errors. ⚠️ On-device network-silence
+  verification still pending (see §4).
 
 - **2026-07-12** — **Hardened the offline "not installed" path further** (follow-up to 2026-07-11, which
   was still reported failing on a release APK). Remaining hole: `useInstalledTourView` returned `null`

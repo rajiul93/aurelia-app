@@ -1,24 +1,20 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { loadMediaCacheMap } from "@/lib/bundle/media-cache";
+import { normalizeRouteParam } from "@/lib/router/normalize-route-param";
 import { queryKeys } from "@/lib/query/keys";
-import { useInstalledToursStore } from "@/store/installed-tours-store";
 
-export function useInstalledMediaMap(tourId: string | undefined) {
-  const bundleId = useInstalledToursStore((state) =>
-    tourId ? state.installedByTourId[tourId]?.bundleId : undefined,
-  );
+export function useInstalledMediaMap(tourIdParam: string | string[] | undefined) {
+  const tourId = normalizeRouteParam(tourIdParam);
 
   return useQuery({
-    queryKey: [...queryKeys.installedTour.all, tourId ?? "", "media-map", bundleId ?? "none"],
+    queryKey: [...queryKeys.installedTour.detail(tourId ?? ""), "media-map"],
     queryFn: () => loadMediaCacheMap(tourId!),
-    // Disk is the source of truth; bundleId only busts the cache. Do not gate on
-    // it, so cached media resolves offline even before the store hydrates.
     enabled: Boolean(tourId),
     staleTime: Number.POSITIVE_INFINITY,
     gcTime: 24 * 60 * 60 * 1000,
     retry: 3,
-    retryDelay: (attempt) => Math.min(250, 50 * 2 ** attempt),
+    retryDelay: (attempt) => Math.min(500, 100 * 2 ** attempt),
     refetchOnReconnect: false,
   });
 }

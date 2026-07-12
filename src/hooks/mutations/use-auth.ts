@@ -1,9 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 
+import { refreshEntitlements } from "@/lib/entitlements/refresh";
 import { queryKeys } from "@/lib/query/keys";
 import { authService } from "@/services/auth.service";
 import { useAuthStore } from "@/store/auth-store";
+import { useEntitlementsStore } from "@/store/entitlements-store";
 import { useOnboardingStore } from "@/store/onboarding-store";
 
 export function useRequestOtp() {
@@ -21,9 +23,9 @@ export function useVerifyOtp() {
       authService.verifyOtp(email, code),
     onSuccess: async (response) => {
       await setSession(response.data.sessionToken, response.data.email);
-      void queryClient.invalidateQueries({
-        queryKey: queryKeys.entitlements.all,
-      });
+      // Sign-in is one of the few moments a network round-trip is warranted: it
+      // creates the snapshot every later access decision reads offline.
+      await refreshEntitlements(queryClient).catch(() => undefined);
       void queryClient.invalidateQueries({
         queryKey: queryKeys.versions.all,
       });
@@ -47,6 +49,7 @@ export function useSignOut() {
       }
 
       await clearSession();
+      await useEntitlementsStore.getState().clear();
       await resetOnboarding();
     },
     onSettled: () => {

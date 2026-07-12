@@ -16,6 +16,16 @@ export type OtpVerifyResult = {
   tours: Array<{ id: string; slug: string }>;
 };
 
+/**
+ * The last entitlements response persisted to disk. It is the offline source of
+ * truth for "does this device still have access?" — the app trusts it until
+ * `entitlements.expiresAt` passes, so opening a downloaded tour needs no network.
+ */
+export type EntitlementsSnapshot = {
+  entitlements: Entitlements;
+  fetchedAt: string;
+};
+
 export type Entitlements = {
   email: string;
   status: string;

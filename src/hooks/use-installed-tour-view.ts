@@ -8,20 +8,17 @@ import {
 import { useInstalledTourContent } from "@/hooks/queries/use-installed-tour-content";
 import { useInstalledToursStore } from "@/store/installed-tours-store";
 import { useLocaleStore } from "@/store/locale-store";
+import { normalizeRouteParam } from "@/lib/router/normalize-route-param";
 import type { TourDownloadPreferences } from "@/types/tour-preferences";
 
-export function useInstalledTourView(tourId: string | undefined) {
-  const query = useInstalledTourContent(tourId);
+export function useInstalledTourView(tourIdParam: string | string[] | undefined) {
+  const tourId = normalizeRouteParam(tourIdParam);
+  const query = useInstalledTourContent(tourIdParam);
   const installed = useInstalledToursStore(
     (state) => (tourId ? state.installedByTourId[tourId] : null) ?? null,
   );
   const language = useLocaleStore((state) => state.language);
 
-  // Preferences come from the on-disk install record first (source of truth,
-  // available offline even before the store hydrates), falling back to the
-  // in-memory store meta. If neither knows the tour but its content IS on disk,
-  // fall back to defaults rather than claiming the tour isn't installed —
-  // missing preferences must never hide a bundle the user already downloaded.
   const preferences: TourDownloadPreferences | null =
     resolveTourPreferences(
       query.data?.preferences,
@@ -36,11 +33,19 @@ export function useInstalledTourView(tourId: string | undefined) {
     return applyTourPreferences(query.data.content, preferences);
   }, [query.data, preferences]);
 
+  const hasRawContent = Boolean(query.data?.content);
+
   return {
     ...query,
+    tourId,
     data: viewContent,
     preferences,
     installed,
-    isResolving: query.isLoading || (query.isFetching && !viewContent),
+    hasRawContent,
+    rawContent: query.data?.content ?? null,
+    isResolving:
+      Boolean(tourId) &&
+      !hasRawContent &&
+      (query.isPending || query.isFetching),
   };
 }

@@ -22,7 +22,7 @@ import { usePurchaseStatus } from '@/hooks/queries/use-purchase-status';
 import { useSubscriptionConfig } from '@/hooks/queries/use-subscription-config';
 import { useStrings } from '@/hooks/use-strings';
 import { useTheme } from '@/hooks/use-theme';
-import { queryKeys } from '@/lib/query/keys';
+import { refreshEntitlements } from '@/lib/entitlements/refresh';
 import { computeSubscriptionPrice } from '@/lib/subscription-pricing';
 import { useAuthStore } from '@/store/auth-store';
 
@@ -77,9 +77,10 @@ export default function SubscribeScreen() {
 
   useEffect(() => {
     if (purchaseStatus === 'PAID') {
-      void queryClient.invalidateQueries({
-        queryKey: queryKeys.entitlements.me,
-      });
+      // A purchase changes the access window, so refresh the snapshot outright —
+      // invalidation would not refetch it (the query stays disabled while a valid
+      // snapshot exists).
+      void refreshEntitlements(queryClient).catch(() => undefined);
     }
   }, [purchaseStatus, queryClient]);
 

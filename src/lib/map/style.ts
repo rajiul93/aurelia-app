@@ -45,8 +45,6 @@ export function getTourMapStyleObject(): StyleSpecification {
         url: OPENFREEMAP_SOURCE_URL,
       },
     },
-    sprite: "https://tiles.openfreemap.org/sprites/ofm_f384/ofm",
-    glyphs: "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf",
     layers: [
       {
         id: "background",
@@ -90,22 +88,6 @@ export function getTourMapStyleObject(): StyleSpecification {
         source: "openfreemap",
         "source-layer": "building",
         paint: { "fill-color": "#292524", "fill-opacity": 0.35 },
-      },
-      {
-        id: "place-labels",
-        type: "symbol",
-        source: "openfreemap",
-        "source-layer": "place",
-        layout: {
-          "text-field": ["get", "name"],
-          "text-font": ["Noto Sans Regular"],
-          "text-size": 12,
-        },
-        paint: {
-          "text-color": "#d6d3d1",
-          "text-halo-color": "#1c1917",
-          "text-halo-width": 1,
-        },
       },
     ],
   } as unknown as StyleSpecification;

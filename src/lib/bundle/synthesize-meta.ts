@@ -32,6 +32,7 @@ export function normalizeInstalledTourMeta(
     mediaCachedAt: partial.mediaCachedAt ?? null,
     totalStops: partial.totalStops ?? 0,
     downloadPreferences: partial.downloadPreferences ?? DEFAULT_PREFERENCES,
+    accessExpiresAt: partial.accessExpiresAt ?? null,
   };
 }
 
@@ -62,5 +63,6 @@ export function synthesizeInstalledTourMeta(
     mediaCachedAt: null,
     totalStops: content.tour.spots.length,
     downloadPreferences: DEFAULT_PREFERENCES,
+    accessExpiresAt: null,
   };
 }

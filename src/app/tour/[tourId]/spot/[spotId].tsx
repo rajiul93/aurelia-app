@@ -18,7 +18,7 @@ import { GoldGradientButton } from "@/components/ui/gold-gradient-button";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Spacing } from "@/constants/theme";
-import { useAppContent } from "@/hooks/queries/use-app-content";
+import { useCachedAppContent } from "@/hooks/queries/use-app-content";
 import { useInstalledTourView } from "@/hooks/use-installed-tour-view";
 import { useStrings } from "@/hooks/use-strings";
 import { useTheme } from "@/hooks/use-theme";
@@ -37,16 +37,16 @@ export default function SpotDetailScreen() {
     tourId: string;
     spotId: string;
   }>();
-  const { data: contentResponse } = useAppContent();
+  const { data: contentResponse } = useCachedAppContent();
   const backgroundUrl = resolveAppBackgroundUrl(contentResponse?.data.assets);
-  const { data: content, isResolving, isError, preferences } =
+  const { data: content, isResolving, hasRawContent, tourId: resolvedTourId, preferences } =
     useInstalledTourView(tourId);
   const isComplete = useTourProgressStore((state) =>
-    state.byTourId[tourId ?? ""]?.completedSpotIds.includes(spotId ?? ""),
+    state.byTourId[resolvedTourId ?? ""]?.completedSpotIds.includes(spotId ?? ""),
   );
   const toggleComplete = useTourProgressStore((state) => state.toggleSpotComplete);
   const bookmarked = useSpotBookmarksStore((state) =>
-    state.byTourId[tourId ?? ""]?.includes(spotId ?? ""),
+    state.byTourId[resolvedTourId ?? ""]?.includes(spotId ?? ""),
   );
   const toggleBookmark = useSpotBookmarksStore((state) => state.toggleBookmark);
 
@@ -58,7 +58,7 @@ export default function SpotDetailScreen() {
     );
   }
 
-  if (isError || !content || !tourId || !spotId) {
+  if (!hasRawContent || !content || !resolvedTourId || !spotId) {
     return (
       <ThemedView style={styles.centered}>
         <ThemedText type="smallBold">{t("tour.notInstalled")}</ThemedText>
@@ -133,8 +133,8 @@ export default function SpotDetailScreen() {
                 total: spots.length,
               })}
               bookmarked={bookmarked}
-              onClose={() => router.push(`/tour/${tourId}`)}
-              onToggleBookmark={() => void toggleBookmark(tourId, spotId)}
+              onClose={() => router.push(`/tour/${resolvedTourId}`)}
+              onToggleBookmark={() => void toggleBookmark(resolvedTourId, spotId)}
             />
           </View>
 
@@ -153,7 +153,7 @@ export default function SpotDetailScreen() {
             ) : null}
 
             <View style={styles.audioBlock}>
-              <SpotAudioSection tourId={tourId} spot={spot} variant="immersive" />
+              <SpotAudioSection tourId={resolvedTourId} spot={spot} variant="immersive" />
             </View>
 
             {transcript ? (
@@ -167,7 +167,7 @@ export default function SpotDetailScreen() {
               </View>
             ) : null}
 
-            <SpotVisualMediaGallery tourId={tourId} spot={spot} onDark />
+            <SpotVisualMediaGallery tourId={resolvedTourId} spot={spot} onDark />
 
             {faqItems.length > 0 ? (
               <FaqAccordion
@@ -190,7 +190,7 @@ export default function SpotDetailScreen() {
             {previousSpot ? (
               <Pressable
                 onPress={() =>
-                  router.replace(`/tour/${tourId}/spot/${previousSpot.id}`)
+                  router.replace(`/tour/${resolvedTourId}/spot/${previousSpot.id}`)
                 }
               >
                 <ThemedText type="small" style={styles.footerLink}>
@@ -204,7 +204,7 @@ export default function SpotDetailScreen() {
             )}
 
             <Pressable
-              onPress={() => void toggleComplete(tourId, spotId)}
+              onPress={() => void toggleComplete(resolvedTourId, spotId)}
               style={styles.completeButton}
             >
               <Ionicons
@@ -222,14 +222,14 @@ export default function SpotDetailScreen() {
                 label={t("spot.next")}
                 showArrow
                 onPress={() =>
-                  router.replace(`/tour/${tourId}/spot/${nextSpot.id}`)
+                  router.replace(`/tour/${resolvedTourId}/spot/${nextSpot.id}`)
                 }
               />
             ) : (
               <GoldGradientButton
                 label={t("spot.done")}
                 showArrow
-                onPress={() => router.push(`/tour/${tourId}`)}
+                onPress={() => router.push(`/tour/${resolvedTourId}`)}
               />
             )}
           </View>

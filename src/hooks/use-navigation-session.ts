@@ -113,6 +113,7 @@ export function useNavigationSession({
   const contentRef = useRef(content);
   const [locationStatus, setLocationStatus] =
     useState<NavigationLocationStatus>("pending");
+  const [locationTimedOut, setLocationTimedOut] = useState(false);
   contentRef.current = content;
 
   // Navigation is available for any installed tour with usable geo data. The
@@ -124,6 +125,19 @@ export function useNavigationSession({
   useEffect(() => {
     setCompletedSpotIds(completedSpotIds);
   }, [completedSpotIds, setCompletedSpotIds]);
+
+  useEffect(() => {
+    if (!canNavigate || hasLocationFix(snapshot)) {
+      setLocationTimedOut(false);
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      setLocationTimedOut(true);
+    }, 15_000);
+
+    return () => clearTimeout(timeoutId);
+  }, [canNavigate, snapshot]);
 
   useEffect(() => {
     if (!canNavigate || !contentRef.current) {
@@ -182,9 +196,9 @@ export function useNavigationSession({
 
       subscriptionRef.current = await Location.watchPositionAsync(
         {
-          accuracy: Location.Accuracy.BestForNavigation,
-          timeInterval: 500,
-          distanceInterval: 1,
+          accuracy: Location.Accuracy.Balanced,
+          timeInterval: 2_000,
+          distanceInterval: 5,
         },
         (position) => {
           const result = ingestFix(toGpsFix(position));
@@ -262,6 +276,9 @@ export function useNavigationSession({
     locationStatus,
     hasLocationFix: hasFix,
     isAwaitingLocation:
-      canNavigate && locationStatus !== "denied" && !hasFix,
+      canNavigate &&
+      locationStatus !== "denied" &&
+      !hasFix &&
+      !locationTimedOut,
   };
 }

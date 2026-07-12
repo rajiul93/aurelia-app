@@ -76,13 +76,34 @@ export async function ensureOfflineMapPack(
   content: BundleContent,
   onProgress?: (completed: number, total: number) => void,
 ): Promise<MapPackMeta | null> {
+  const existingMeta = await readMapPackMeta(tourId);
+
+  if (existingMeta?.status === "ready") {
+    if (isMapLibreNativeAvailable()) {
+      try {
+        const OfflineManager = await loadOfflineManager();
+        const existingPack = await OfflineManager.getPack(existingMeta.packName);
+        if (existingPack) {
+          onProgress?.(100, 100);
+          return existingMeta;
+        }
+      } catch {
+        onProgress?.(100, 100);
+        return existingMeta;
+      }
+    } else {
+      onProgress?.(100, 100);
+      return existingMeta;
+    }
+  }
+
   const baseMeta = buildMapPackMeta(content);
 
   if (!baseMeta) {
     return null;
   }
 
-  writeMapPackMeta(tourId, baseMeta);
+  writeMapPackMeta(tourId, { ...baseMeta, status: "pending" });
   onProgress?.(0, 100);
 
   if (!isMapLibreNativeAvailable()) {
@@ -145,6 +166,11 @@ export async function ensureOfflineMapPack(
     onProgress?.(100, 100);
     return readyMeta;
   } catch (error) {
+    if (existingMeta?.status === "ready") {
+      onProgress?.(100, 100);
+      return existingMeta;
+    }
+
     const failedMeta: MapPackMeta = {
       ...baseMeta,
       status: "failed",

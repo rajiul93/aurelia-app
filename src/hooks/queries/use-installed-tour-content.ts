@@ -1,30 +1,34 @@
 import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData } from "@tanstack/react-query";
 
 import { loadInstalledTour } from "@/lib/bundle/load";
+import { normalizeRouteParam } from "@/lib/router/normalize-route-param";
 import { queryKeys } from "@/lib/query/keys";
-import { useInstalledToursStore } from "@/store/installed-tours-store";
 
-export function useInstalledTourContent(tourId: string | undefined) {
-  // bundleId is used only as a cache-buster (so a re-download/update refetches);
-  // it must NOT gate the query. The on-disk bundle is the source of truth for
-  // "installed", so the query runs whenever there is a tourId — even if the
-  // in-memory installed-tours store hasn't hydrated yet. This is what keeps a
-  // downloaded tour usable fully offline instead of falling back to "not
-  // installed / download the tour".
-  const bundleId = useInstalledToursStore((state) =>
-    tourId ? state.installedByTourId[tourId]?.bundleId : undefined,
-  );
+export function useInstalledTourContent(tourIdParam: string | string[] | undefined) {
+  const tourId = normalizeRouteParam(tourIdParam);
 
   return useQuery({
-    queryKey: queryKeys.installedTour.detail(tourId ?? "", bundleId),
-    queryFn: () => loadInstalledTour(tourId!),
+    queryKey: queryKeys.installedTour.detail(tourId ?? ""),
+    queryFn: async () => {
+      const bundle = await loadInstalledTour(tourId!);
+      if (!bundle) {
+        throw new Error(`Installed tour missing on disk: ${tourId}`);
+      }
+      return bundle;
+    },
     enabled: Boolean(tourId),
-    // Disk-backed bundle only changes on install/update — keep it warm offline.
-    staleTime: Number.POSITIVE_INFINITY,
+    staleTime: (query) =>
+      query.state.data ? Number.POSITIVE_INFINITY : 0,
     gcTime: 24 * 60 * 60 * 1000,
-    retry: 3,
-    retryDelay: (attempt) => Math.min(250, 50 * 2 ** attempt),
-    refetchOnMount: true,
+    // Disk reads are cheap and a false "not installed" is expensive, so retry
+    // regardless of what the in-memory store thinks — on a cold start it may not
+    // know about the tour yet.
+    retry: (failureCount) => failureCount < 8,
+    retryDelay: (attempt) => Math.min(2_000, 100 * 2 ** attempt),
+    refetchOnMount: (query) => !query.state.data,
     refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
+    placeholderData: keepPreviousData,
   });
 }

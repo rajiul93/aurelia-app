@@ -16,6 +16,7 @@ import {
   getToursRootDirectory,
 } from "@/lib/bundle/tour-directory";
 import { verifyTourBundle } from "@/lib/bundle/verify";
+import { useEntitlementsStore } from "@/store/entitlements-store";
 import type { BundleContent } from "@/types/bundle-content";
 import type { InstalledTourMeta, TourBundleDetail } from "@/types/tour-bundle";
 import type { TourDownloadPreferences } from "@/types/tour-preferences";
@@ -51,6 +52,7 @@ function buildInstallMeta(input: {
   directory: Directory;
   preferences: TourDownloadPreferences;
   content: BundleContent;
+  accessExpiresAt: string | null;
   mediaMap?: {
     files: Record<string, unknown>;
     failedUrls: string[];
@@ -75,6 +77,7 @@ function buildInstallMeta(input: {
     mediaCachedAt: mediaMap?.cachedAt ?? null,
     totalStops: countTourStops(input.content, input.preferences),
     downloadPreferences: input.preferences,
+    accessExpiresAt: input.accessExpiresAt,
   };
 }
 
@@ -164,6 +167,11 @@ export async function installTourBundle(
 
   const content = bundle.content as BundleContent;
 
+  // Stamp the bundle with the access window it was downloaded under, so expiry
+  // can be enforced offline from the bundle alone.
+  const accessExpiresAt =
+    useEntitlementsStore.getState().snapshot?.entitlements.expiresAt ?? null;
+
   // Persist the install record immediately after the bundle lands so a cold
   // restart during map/media caching still finds the tour on disk offline.
   writeJsonFile(
@@ -175,6 +183,7 @@ export async function installTourBundle(
       directory,
       preferences: options.preferences,
       content,
+      accessExpiresAt,
     }),
   );
 
@@ -210,6 +219,7 @@ export async function installTourBundle(
     directory,
     preferences: options.preferences,
     content,
+    accessExpiresAt,
     mediaMap,
   });
 

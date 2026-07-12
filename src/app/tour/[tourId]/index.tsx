@@ -35,13 +35,13 @@ export default function TourRouteScreen() {
   const theme = useTheme();
   const { t } = useStrings();
   const { tourId } = useLocalSearchParams<{ tourId: string }>();
-  const { data: content, isResolving, isError, preferences } =
+  const { data: content, isResolving, hasRawContent, tourId: resolvedTourId, preferences } =
     useInstalledTourView(tourId);
   const completedSpotIds = useTourProgressStore(
-    (state) => state.byTourId[tourId ?? ""]?.completedSpotIds,
+    (state) => state.byTourId[resolvedTourId ?? ""]?.completedSpotIds,
   );
   const bookmarkedSpotIds = useSpotBookmarksStore(
-    (state) => state.byTourId[tourId ?? ""] ?? NO_BOOKMARKS,
+    (state) => state.byTourId[resolvedTourId ?? ""] ?? NO_BOOKMARKS,
   );
   const bookmarkedSet = new Set(bookmarkedSpotIds);
 
@@ -53,7 +53,7 @@ export default function TourRouteScreen() {
     );
   }
 
-  if (isError || !content || !tourId) {
+  if (!hasRawContent || !content || !resolvedTourId) {
     return (
       <ThemedView style={styles.centered}>
         <ThemedText type="smallBold">{t("tour.notInstalled")}</ThemedText>
@@ -121,10 +121,10 @@ export default function TourRouteScreen() {
             <ProgressBar value={progressPercent} />
           </View>
 
-          <GuidedWalkSection tourId={tourId} content={content} />
+          <GuidedWalkSection tourId={resolvedTourId} content={content} />
 
           <Pressable
-            onPress={() => router.push(`/tour/${tourId}/chat`)}
+            onPress={() => router.push(`/tour/${resolvedTourId}/chat`)}
             style={[
               styles.askButton,
               {
@@ -171,7 +171,7 @@ export default function TourRouteScreen() {
                   isNext={isNext}
                   bookmarked={bookmarkedSet.has(spot.id)}
                   onPress={() =>
-                    router.push(`/tour/${tourId}/spot/${spot.id}`)
+                    router.push(`/tour/${resolvedTourId}/spot/${spot.id}`)
                   }
                 />
               );

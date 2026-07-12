@@ -60,9 +60,6 @@ export function useDownloadTour() {
       });
 
       void queryClient.invalidateQueries({
-        queryKey: queryKeys.entitlements.all,
-      });
-      void queryClient.invalidateQueries({
         queryKey: queryKeys.storage.summary,
       });
     },

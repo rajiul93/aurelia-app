@@ -7,6 +7,7 @@ import {
 import { useEffect, useState } from "react";
 
 import { useAuthStore } from "@/store/auth-store";
+import { useEntitlementsStore } from "@/store/entitlements-store";
 import { useInstalledToursStore } from "@/store/installed-tours-store";
 import { useKnowledgeStore } from "@/store/knowledge-store";
 import { useLocaleStore } from "@/store/locale-store";
@@ -49,6 +50,7 @@ export function useAppBootstrap(): boolean {
 
     void Promise.allSettled([
       useAuthStore.getState().hydrate(),
+      useEntitlementsStore.getState().hydrate(),
       useInstalledToursStore.getState().hydrate(),
       useTourProgressStore.getState().hydrate(),
       useSpotBookmarksStore.getState().hydrate(),

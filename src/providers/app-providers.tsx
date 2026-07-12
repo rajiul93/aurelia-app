@@ -3,7 +3,6 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
 import { AccessEndedListener } from "@/components/access-ended-listener";
-import { EntitlementsRefreshListener } from "@/components/entitlements-refresh-listener";
 import { InstalledToursRehydrateListener } from "@/components/installed-tours-rehydrate-listener";
 import { KnowledgeGate } from "@/components/knowledge-gate";
 import { KnowledgeSyncListener } from "@/components/knowledge-sync-listener";
@@ -30,7 +29,6 @@ export function AppProviders({ children }: AppProvidersProps) {
         <KnowledgeSyncListener />
         <InstalledToursRehydrateListener />
         <AccessEndedListener />
-        <EntitlementsRefreshListener />
         <MaintenanceGate>
           <OnboardingGate>
             <KnowledgeGate>{children}</KnowledgeGate>

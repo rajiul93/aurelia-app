@@ -20,6 +20,12 @@ describe("getTourMapStyleObject", () => {
     expect(style.layers.length).toBeGreaterThan(0);
   });
 
+  it("does not depend on remote sprites or glyphs (offline-safe)", () => {
+    const style = getTourMapStyleObject();
+    expect("glyphs" in style).toBe(false);
+    expect("sprite" in style).toBe(false);
+  });
+
   it("uses the openfreemap /planet vector source the offline pack caches", () => {
     expect(sourceUrl(getTourMapStyleObject())).toContain("/planet");
   });

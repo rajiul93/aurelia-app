@@ -33,7 +33,7 @@ export const useInstalledToursStore = create<InstalledToursState>(
       // Never let a disk-read hiccup leave the store silently un-hydrated (which
       // would make installed tours look "not installed" offline). Always settle
       // the `hydrated` flag; keep whatever we could read.
-      const delays = [0, 100, 300];
+      const delays = [0, 100, 300, 600, 1200];
 
       for (const waitMs of delays) {
         if (waitMs > 0) {

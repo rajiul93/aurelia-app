@@ -289,6 +289,7 @@ const en = {
   "nav.refresh": "Reload map",
   "nav.viewDetails": "View Details",
   "nav.locatingYou": "Getting your location…",
+  "nav.preparingMap": "Preparing offline map…",
   "nav.locationDenied":
     "Location permission is required for guided walk. Enable it in Settings.",
 
@@ -608,6 +609,7 @@ const es: Record<StringKey, string> = {
   "nav.refresh": "Recargar mapa",
   "nav.viewDetails": "Ver detalles",
   "nav.locatingYou": "Obteniendo tu ubicación…",
+  "nav.preparingMap": "Preparando mapa sin conexión…",
   "nav.locationDenied":
     "Se necesita permiso de ubicación para la caminata guiada. Actívalo en Ajustes.",
   "spot.notFound": "Parada no encontrada",
@@ -922,6 +924,7 @@ const fr: Record<StringKey, string> = {
   "nav.refresh": "Recharger la carte",
   "nav.viewDetails": "Voir les détails",
   "nav.locatingYou": "Localisation en cours…",
+  "nav.preparingMap": "Préparation de la carte hors ligne…",
   "nav.locationDenied":
     "L'autorisation de localisation est requise pour la visite guidée. Activez-la dans Réglages.",
   "spot.notFound": "Arrêt introuvable",

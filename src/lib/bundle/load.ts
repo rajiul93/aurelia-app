@@ -5,24 +5,21 @@ import {
   mergeSearchDocuments,
 } from "@/lib/bundle/build-search-documents";
 import { readJsonFile } from "@/lib/bundle/disk-json";
+import {
+  findTourContentByScanning,
+  loadInstalledTourContent,
+} from "@/lib/bundle/find-tour-on-disk";
 import { getInstalledTourDirectory } from "@/lib/bundle/tour-directory";
 import {
   normalizeInstalledTourMeta,
   synthesizeInstalledTourMeta,
 } from "@/lib/bundle/synthesize-meta";
-import type { BundleContent } from "@/types/bundle-content";
 import type { InstalledTourMeta, SearchDocument } from "@/types/tour-bundle";
 import type { TourDownloadPreferences } from "@/types/tour-preferences";
 
 const META_FILE = "bundle-meta.json";
-const CONTENT_FILE = "content.json";
 
-export async function loadInstalledTourContent(tourId: string) {
-  const directory = getInstalledTourDirectory(tourId);
-  const contentFile = new File(directory, CONTENT_FILE);
-
-  return readJsonFile<BundleContent>(contentFile);
-}
+export { loadInstalledTourContent } from "@/lib/bundle/find-tour-on-disk";
 
 /**
  * Reads a single tour's install record (`bundle-meta.json`) straight from disk.
@@ -40,16 +37,27 @@ export async function loadInstalledTourMeta(
     return normalizeInstalledTourMeta(parsed, directory.uri);
   }
 
-  const content = await loadInstalledTourContent(tourId);
-  if (!content) {
-    return null;
+  const scanned = await findTourContentByScanning(tourId);
+  if (scanned) {
+    const scannedMeta = await readJsonFile<Partial<InstalledTourMeta>>(
+      new File(scanned.directory, META_FILE),
+    );
+    if (scannedMeta) {
+      return normalizeInstalledTourMeta(scannedMeta, scanned.directory.uri);
+    }
+
+    return synthesizeInstalledTourMeta(
+      scanned.directory.uri,
+      scanned.content,
+      scanned.directory.name,
+    );
   }
 
-  return synthesizeInstalledTourMeta(directory.uri, content, tourId);
+  return null;
 }
 
 export type InstalledTourBundle = {
-  content: BundleContent;
+  content: import("@/types/bundle-content").BundleContent;
   preferences: TourDownloadPreferences | null;
 };
 
@@ -77,7 +85,8 @@ export async function loadInstalledTour(
 }
 
 export async function loadInstalledTourSearchDocuments(tourId: string) {
-  const directory = getInstalledTourDirectory(tourId);
+  const scanned = await findTourContentByScanning(tourId);
+  const directory = scanned?.directory ?? getInstalledTourDirectory(tourId);
   const searchFile = new File(directory, "search", "documents.json");
 
   let documents: SearchDocument[] = [];
@@ -89,7 +98,7 @@ export async function loadInstalledTourSearchDocuments(tourId: string) {
     documents = parsed?.documents ?? [];
   }
 
-  const content = await loadInstalledTourContent(tourId);
+  const content = scanned?.content ?? (await loadInstalledTourContent(tourId));
   if (content) {
     documents = mergeSearchDocuments(
       documents,

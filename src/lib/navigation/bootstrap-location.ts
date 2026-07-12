@@ -13,13 +13,22 @@ export function toGpsFix(position: Location.LocationObject): RawGpsFix {
   };
 }
 
-const LAST_KNOWN_MAX_AGE_MS = 5 * 60_000;
-const LAST_KNOWN_MAX_ACCURACY_M = 250;
+const LAST_KNOWN_MAX_AGE_MS = 30 * 60_000;
+const LAST_KNOWN_MAX_ACCURACY_M = 500;
+const CURRENT_FIX_TIMEOUT_MS = 6_000;
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number) {
+  return Promise.race<T | null>([
+    promise,
+    new Promise<null>((resolve) => {
+      setTimeout(() => resolve(null), timeoutMs);
+    }),
+  ]);
+}
 
 /**
  * Returns a location fix as quickly as possible: cached last-known first, then
- * a balanced-accuracy current fix. Avoids the long cold-start wait from
- * jumping straight to high-accuracy GPS on first guided-walk open.
+ * a balanced-accuracy current fix (with timeout so UI never hangs forever).
  */
 export async function resolveBootstrapLocation(): Promise<Location.LocationObject | null> {
   try {
@@ -36,9 +45,12 @@ export async function resolveBootstrapLocation(): Promise<Location.LocationObjec
   }
 
   try {
-    return await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.Balanced,
-    });
+    return await withTimeout(
+      Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      }),
+      CURRENT_FIX_TIMEOUT_MS,
+    );
   } catch {
     return null;
   }

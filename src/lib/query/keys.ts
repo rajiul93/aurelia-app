@@ -18,15 +18,11 @@ export const queryKeys = {
   },
   installedTour: {
     all: ["installed-tour"] as const,
-    detail: (tourId: string, bundleId?: string) =>
-      [...queryKeys.installedTour.all, tourId, bundleId ?? "none"] as const,
-    search: (tourId: string, bundleId?: string) =>
-      [
-        ...queryKeys.installedTour.all,
-        tourId,
-        "search",
-        bundleId ?? "none",
-      ] as const,
+    /** Stable per tour — do not include bundleId or cache busts on every hydrate. */
+    detail: (tourId: string) =>
+      [...queryKeys.installedTour.all, tourId] as const,
+    search: (tourId: string) =>
+      [...queryKeys.installedTour.all, tourId, "search"] as const,
   },
   storage: {
     summary: ["storage", "summary"] as const,

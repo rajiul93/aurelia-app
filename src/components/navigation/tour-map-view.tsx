@@ -162,9 +162,8 @@ export function TourMapView({
     () => stopPins.find((pin) => pin.spot.id === selectedStopId) ?? null,
     [stopPins, selectedStopId],
   );
-  // Inline style object → MapLibre loads it without a network fetch for the style
-  // document, so the map (and the footprint overlays on top) attach immediately
-  // offline. The last retry uses the sprite/glyph-free fallback style.
+  // Offline-safe inline style (no sprite/glyph fetches). Retries swap to the
+  // minimal fallback if tile attachment is still slow on cold start.
   const mapStyle = useMemo(
     () =>
       styleAttempt >= MAX_STYLE_RETRIES
