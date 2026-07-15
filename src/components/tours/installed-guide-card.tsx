@@ -25,14 +25,6 @@ type InstalledGuideCardProps = {
   entitledVersions?: EntitledVersions | null;
 };
 
-function getDisplayName(email: string | null) {
-  if (!email) {
-    return null;
-  }
-
-  const localPart = email.split("@")[0] ?? email;
-  return localPart.charAt(0).toUpperCase() + localPart.slice(1);
-}
 
 export function InstalledGuideCard({
   guide,
@@ -224,9 +216,6 @@ export function InstalledGuideCard({
   );
 }
 
-export function getGreetingName(email: string | null) {
-  return getDisplayName(email);
-}
 
 const styles = StyleSheet.create({
   card: {

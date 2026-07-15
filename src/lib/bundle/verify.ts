@@ -5,11 +5,15 @@ import type {
 
 import { checksumJson } from "@/lib/bundle/checksum";
 
+// Must reproduce exactly the object the server checksummed in
+// buildTourBundleArtifacts — same keys, or the canonical JSON differs and every
+// download fails verification. `bundleFormatVersion` is part of that body.
 function manifestBodyFromManifest(manifest: BundleManifest) {
   return {
     version: manifest.version,
     bundleId: manifest.bundleId,
     tourId: manifest.tourId,
+    bundleFormatVersion: manifest.bundleFormatVersion,
     createdAt: manifest.createdAt,
     languages: manifest.languages,
     tourBundleVersion: manifest.tourBundleVersion,

@@ -26,7 +26,10 @@ import {
   localizeTourTitle,
   pickAudienceTranslation,
 } from "@/lib/bundle/localize";
+import { FloorSelector } from "@/components/navigation/floor-selector";
+import { getFloorScope } from "@/lib/bundle/floor-routing";
 import { orderSpotsByRoute } from "@/lib/bundle/route-order";
+import { useFloorSelection } from "@/hooks/use-floor-selection";
 import { isMapLibreNativeAvailable } from "@/lib/map/native-available";
 import { ensureOfflineMapPack, readMapPackMeta } from "@/lib/map/offline-pack";
 import { getNextIncompleteSpot } from "@/lib/navigation/proximity";
@@ -44,7 +47,8 @@ export default function TourNavigationScreen() {
   const theme = useTheme();
   const { t } = useStrings();
   const queryClient = useQueryClient();
-  const { tourId: routeTourId } = useLocalSearchParams<{ tourId: string }>();
+  const { tourId: routeTourId, floorId: initialFloorId } =
+    useLocalSearchParams<{ tourId: string; floorId?: string }>();
   const {
     data: content,
     rawContent,
@@ -61,11 +65,18 @@ export default function TourNavigationScreen() {
   const [mapReloadKey, setMapReloadKey] = useState(0);
   const [mapLoadFailed, setMapLoadFailed] = useState(false);
 
-  const orderedSpots = useMemo(
-    () =>
-      content ? orderSpotsByRoute(content.tour.spots, content.route) : [],
-    [content],
-  );
+  // The walk runs on one floor: its spots, its route. Crossing floors is a
+  // transition point, not a route edge.
+  const { selectedFloorId, setSelectedFloorId, isMultiFloor } =
+    useFloorSelection(content ?? null, initialFloorId);
+  const orderedSpots = useMemo(() => {
+    if (!content) {
+      return [];
+    }
+
+    const scope = getFloorScope(content, selectedFloorId);
+    return orderSpotsByRoute(scope.spots, scope.route);
+  }, [content, selectedFloorId]);
   const completedSet = useMemo(
     () => new Set(completedSpotIds),
     [completedSpotIds],
@@ -118,11 +129,12 @@ export default function TourNavigationScreen() {
 
   const { canNavigate, snapshot, isAwaitingLocation, locationStatus } =
     useNavigationSession({
-    tourId: tourId ?? "",
-    content: content ?? undefined,
-    enabled: Boolean(tourId && content),
-    onApproachSpot: setApproachSpotId,
-  });
+      tourId: tourId ?? "",
+      content: content ?? undefined,
+      floorId: selectedFloorId,
+      enabled: Boolean(tourId && content),
+      onApproachSpot: setApproachSpotId,
+    });
 
   useNavigationApproachAudio(
     tourId ?? "",
@@ -239,6 +251,7 @@ export default function TourNavigationScreen() {
           key={mapReloadKey}
           tourId={tourId}
           content={content}
+          floorId={selectedFloorId}
           orderedSpots={orderedSpots}
           snapshot={snapshot}
           stopTitleById={stopTitleById}
@@ -298,6 +311,17 @@ export default function TourNavigationScreen() {
               </ThemedText>
             ) : null}
           </View>
+
+          {isMultiFloor && content && preferences && tourId ? (
+            <FloorSelector
+              tourId={tourId}
+              content={content}
+              selectedFloorId={selectedFloorId}
+              onSelectFloor={setSelectedFloorId}
+              language={preferences.contentLanguage}
+              audience={preferences.audience}
+            />
+          ) : null}
         </View>
 
         <View style={styles.bottomBar}>

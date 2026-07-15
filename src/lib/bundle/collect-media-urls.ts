@@ -43,6 +43,15 @@ export function collectMediaDownloadItems(
     );
   }
 
+  // Floor cover images back the home floor cards, so cache them for offline use
+  // in FULL mode alongside the tour cover. Not preference-filtered — one cover
+  // per floor, shared across audiences and languages.
+  if (preferences.downloadMode === "FULL") {
+    for (const floor of content.floors ?? []) {
+      addItem(items, seen, `floor-cover-${floor.id}`, floor.coverUrl);
+    }
+  }
+
   for (const spot of filtered.tour.spots) {
     for (const media of filterSpotMedia(spot.medias, preferences)) {
       addItem(items, seen, media.id, media.url);

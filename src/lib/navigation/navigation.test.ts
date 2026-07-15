@@ -75,7 +75,7 @@ describe("route geometry", () => {
   it("merges footprint segments into a continuous route", () => {
     const coordinates = buildRouteCoordinates(
       sampleContent.tour.spots,
-      sampleContent.route,
+      sampleContent.route ?? null,
     );
 
     expect(coordinates).toHaveLength(3);
@@ -86,7 +86,7 @@ describe("route geometry", () => {
   it("splits completed and upcoming route segments", () => {
     const coordinates = buildRouteCoordinates(
       sampleContent.tour.spots,
-      sampleContent.route,
+      sampleContent.route ?? null,
     );
     const split = splitRouteAtIndex(coordinates, 1);
 
@@ -112,7 +112,7 @@ describe("snap to route", () => {
   it("snaps a nearby point onto the route", () => {
     const coordinates = buildRouteCoordinates(
       sampleContent.tour.spots,
-      sampleContent.route,
+      sampleContent.route ?? null,
     );
     const snapped = snapToRoute(coordinates, { lat: 41.8904, lng: 12.4904 });
 
@@ -167,7 +167,7 @@ describe("off route", () => {
   it("detects when a point is far from the route", () => {
     const coordinates = buildRouteCoordinates(
       sampleContent.tour.spots,
-      sampleContent.route,
+      sampleContent.route ?? null,
     );
 
     expect(isOffRoute(coordinates, { lat: 41.895, lng: 12.495 }, 10)).toBe(true);
@@ -217,7 +217,7 @@ describe("walk trail", () => {
 describe("display bearing", () => {
   it("prefers device heading while moving", () => {
     const snapped = snapToRoute(
-      buildRouteCoordinates(sampleContent.tour.spots, sampleContent.route),
+      buildRouteCoordinates(sampleContent.tour.spots, sampleContent.route ?? null),
       { lat: 41.8905, lng: 12.4905 },
     );
 

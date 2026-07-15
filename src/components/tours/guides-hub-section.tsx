@@ -3,7 +3,6 @@ import { useRouter } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import {
-  getGreetingName,
   InstalledGuideCard,
 } from "@/components/tours/installed-guide-card";
 import { ThemedText } from "@/components/themed-text";
@@ -15,7 +14,6 @@ import type { InstalledTourMeta } from "@/types/tour-bundle";
 
 type GuidesHubSectionProps = {
   guides: InstalledTourMeta[];
-  email: string | null;
   coverUrlByTourId: Map<string, string | null | undefined>;
   onDarkBackground?: boolean;
   isTourLocked?: (tourId: string) => boolean;
@@ -24,7 +22,6 @@ type GuidesHubSectionProps = {
 
 export function GuidesHubSection({
   guides,
-  email,
   coverUrlByTourId,
   onDarkBackground = false,
   isTourLocked,
@@ -33,7 +30,6 @@ export function GuidesHubSection({
   const router = useRouter();
   const theme = useTheme();
   const { t, getTimeGreeting, guideFeatures } = useStrings();
-  const greetingName = getGreetingName(email);
 
   if (guides.length === 0) {
     return null;
@@ -41,46 +37,42 @@ export function GuidesHubSection({
 
   return (
     <View style={styles.container}>
-      {greetingName ? (
-        <View style={styles.greetingRow}>
-          <View style={styles.greeting}>
-            <ThemedText
-              type="small"
-              style={onDarkBackground ? styles.onDarkMuted : undefined}
-              themeColor={onDarkBackground ? undefined : "textSecondary"}
-            >
-              {getTimeGreeting()},
-            </ThemedText>
-            <ThemedText
-              type="subtitle"
-              style={[
-                styles.greetingName,
-                onDarkBackground ? styles.onDarkText : undefined,
-              ]}
-            >
-              {greetingName}
-            </ThemedText>
-          </View>
-          <Pressable
-            accessibilityLabel={t("guides.openSettings")}
-            onPress={() => router.push("/settings")}
+      {/*
+        Buyers are identified by phone now and we never collect a name, so the
+        greeting is the time of day alone — "Good morning, +8801712345678" would
+        be worse than no name at all.
+      */}
+      <View style={styles.greetingRow}>
+        <View style={styles.greeting}>
+          <ThemedText
+            type="subtitle"
             style={[
-              styles.settingsButton,
-              {
-                borderColor: onDarkBackground
-                  ? "rgba(255, 255, 255, 0.35)"
-                  : theme.backgroundSelected,
-              },
+              styles.greetingName,
+              onDarkBackground ? styles.onDarkText : undefined,
             ]}
           >
-            <Ionicons
-              name="settings-outline"
-              size={20}
-              color={onDarkBackground ? "#ffffff" : theme.primary}
-            />
-          </Pressable>
+            {getTimeGreeting()}
+          </ThemedText>
         </View>
-      ) : null}
+        <Pressable
+          accessibilityLabel={t("guides.openSettings")}
+          onPress={() => router.push("/settings")}
+          style={[
+            styles.settingsButton,
+            {
+              borderColor: onDarkBackground
+                ? "rgba(255, 255, 255, 0.35)"
+                : theme.backgroundSelected,
+            },
+          ]}
+        >
+          <Ionicons
+            name="settings-outline"
+            size={20}
+            color={onDarkBackground ? "#ffffff" : theme.primary}
+          />
+        </Pressable>
+      </View>
 
       <View
         style={[

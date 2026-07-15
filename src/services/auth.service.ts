@@ -7,22 +7,22 @@ import type {
   Entitlements,
   OtpRequestResult,
   OtpVerifyResult,
+  UnlockResult,
 } from "@/types/auth";
 
 export const authService = {
-  requestOtp(email: string) {
-    return apiClient
-      .post<ApiSuccess<OtpRequestResult>>("/auth/otp/request", { email })
-      .then((response) => response.data);
-  },
-
-  async verifyOtp(email: string, code: string) {
+  /**
+   * Unlock with the phone number and 4-digit PIN the seller sent by hand. This
+   * registers the device against the buyer's grant; the returned session token
+   * is what every later request uses, so the PIN is not asked for again.
+   */
+  async unlock(phone: string, pin: string) {
     const deviceId = await getOrCreateDeviceId();
 
     return apiClient
-      .post<ApiSuccess<OtpVerifyResult>>("/auth/otp/verify", {
-        email,
-        code,
+      .post<ApiSuccess<UnlockResult>>("/auth/unlock", {
+        phone,
+        pin,
         deviceId,
         deviceName: `${Platform.OS} device`,
         platform: Platform.OS === "ios" ? "ios" : "android",
@@ -30,17 +30,16 @@ export const authService = {
       .then((response) => response.data);
   },
 
+  // Email OTP sign-in is gone from the app: buyers are identified by phone now
+  // and we never hold their email. The server still exposes /auth/otp/* for
+  // grants that carry an email from a self-service Stripe purchase.
+
   getEntitlements() {
     return apiClient
       .get<ApiSuccess<Entitlements>>("/me/entitlements")
       .then((response) => response.data);
   },
 
-  revokeDevice() {
-    return apiClient
-      .post<ApiSuccess<{ revoked: boolean; deviceId: string }>>(
-        "/auth/device/revoke",
-      )
-      .then((response) => response.data);
-  },
+  // No self-revoke: only the seller can free a device slot, or one grant could
+  // be passed around indefinitely by swapping devices.
 };

@@ -7,7 +7,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { SignInForm } from "@/components/auth/sign-in-form";
+import { UnlockForm } from "@/components/auth/unlock-form";
 import { ThemedText } from "@/components/themed-text";
 import { Spacing } from "@/constants/theme";
 import { useStrings } from "@/hooks/use-strings";
@@ -66,8 +66,8 @@ export function CheckoutAuthSheet({
             {t("subscribe.checkoutHint", { amount: amountLabel })}
           </ThemedText>
 
-          <SignInForm
-            onSignedIn={() => {
+          <UnlockForm
+            onUnlocked={() => {
               onClose();
               onSignedIn();
             }}

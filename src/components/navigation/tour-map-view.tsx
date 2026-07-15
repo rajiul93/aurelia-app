@@ -15,6 +15,7 @@ import { FootprintMarker } from "@/components/navigation/footprint-overlay";
 import { StopCallout } from "@/components/navigation/stop-callout";
 import { StopPin } from "@/components/navigation/stop-pin";
 import { useStrings } from "@/hooks/use-strings";
+import { getFloorScope } from "@/lib/bundle/floor-routing";
 import {
   MAP_CAMERA_PADDING,
   getRouteMapBounds,
@@ -40,6 +41,8 @@ const MAX_STYLE_RETRIES = 2;
 type TourMapViewProps = {
   tourId: string;
   content: BundleContent;
+  /** The floor on show. Omitted means the tour's first (or only) floor. */
+  floorId?: string;
   orderedSpots: BundleSpot[];
   snapshot: NavigationSessionSnapshot | null;
   /** Localized stop names keyed by spot id, used in the tap popup. */
@@ -111,6 +114,7 @@ function toUserFeature(location: GeoPoint) {
 export function TourMapView({
   tourId,
   content,
+  floorId,
   orderedSpots,
   snapshot,
   stopTitleById,
@@ -125,10 +129,10 @@ export function TourMapView({
   const styleRetryRef = useRef(0);
   const [styleAttempt, setStyleAttempt] = useState(0);
 
-  const routeCoordinates = useMemo(
-    () => buildRouteCoordinates(content.tour.spots, content.route),
-    [content],
-  );
+  const routeCoordinates = useMemo(() => {
+    const scope = getFloorScope(content, floorId);
+    return buildRouteCoordinates(scope.spots, scope.route);
+  }, [content, floorId]);
   const tourBounds = useMemo(
     () => getRouteMapBounds(routeCoordinates),
     [routeCoordinates],

@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 
 import { useEntitlements } from "@/hooks/queries/use-entitlements";
-import { isAccessActive } from "@/lib/entitlements/access";
+import { hasActivePlan as computeHasActivePlan, isAccessActive } from "@/lib/entitlements/access";
 import { refreshEntitlements } from "@/lib/entitlements/refresh";
 import type { EntitledVersions } from "@/lib/bundle/version-compare";
 import { useAuthStore } from "@/store/auth-store";
@@ -24,6 +24,13 @@ export function useEntitlementStatus() {
 
   const isActive = useMemo(
     () => !isSignedIn || isAccessActive(entitlements),
+    [entitlements, isSignedIn],
+  );
+
+  // A real "has an active plan" signal, unlike `isActive` which is fail-open for
+  // a signed-out visitor. Gates the Buy-Plan / Why-Buy sections.
+  const hasActivePlan = useMemo(
+    () => computeHasActivePlan(isSignedIn, entitlements),
     [entitlements, isSignedIn],
   );
 
@@ -95,6 +102,7 @@ export function useEntitlementStatus() {
   return {
     isSignedIn,
     isActive,
+    hasActivePlan,
     isLoadingAccess: isSignedIn && isLoading && !entitlements,
     isFetchingAccess: isFetching,
     entitlements,

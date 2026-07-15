@@ -8,23 +8,17 @@ import { useAuthStore } from "@/store/auth-store";
 import { useEntitlementsStore } from "@/store/entitlements-store";
 import { useOnboardingStore } from "@/store/onboarding-store";
 
-export function useRequestOtp() {
-  return useMutation({
-    mutationFn: (email: string) => authService.requestOtp(email),
-  });
-}
-
-export function useVerifyOtp() {
+export function useUnlockTour() {
   const queryClient = useQueryClient();
   const setSession = useAuthStore((state) => state.setSession);
 
   return useMutation({
-    mutationFn: ({ email, code }: { email: string; code: string }) =>
-      authService.verifyOtp(email, code),
+    mutationFn: ({ phone, pin }: { phone: string; pin: string }) =>
+      authService.unlock(phone, pin),
     onSuccess: async (response) => {
-      await setSession(response.data.sessionToken, response.data.email);
-      // Sign-in is one of the few moments a network round-trip is warranted: it
-      // creates the snapshot every later access decision reads offline.
+      await setSession(response.data.sessionToken, response.data.phone);
+      // Unlocking is one of the few moments a network round-trip is warranted:
+      // it creates the snapshot every later access decision reads offline.
       await refreshEntitlements(queryClient).catch(() => undefined);
       void queryClient.invalidateQueries({
         queryKey: queryKeys.versions.all,
@@ -42,12 +36,9 @@ export function useSignOut() {
     mutationFn: async () => {
       useOnboardingStore.setState({ complete: false });
 
-      try {
-        await authService.revokeDevice();
-      } catch {
-        // Local sign-out should still succeed if the network call fails.
-      }
-
+      // Local only: the device keeps its slot on the seller's side. Freeing a
+      // slot is the seller's call, so signing out here must not do it silently —
+      // otherwise a buyer could hand the tour around by signing out each time.
       await clearSession();
       await useEntitlementsStore.getState().clear();
       await resetOnboarding();

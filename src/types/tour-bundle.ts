@@ -10,6 +10,8 @@ export type BundleManifest = {
   version: string;
   bundleId: string;
   tourId: string;
+  /** "1" (flat) or "2" (per-floor). Part of the checksummed body — see verify. */
+  bundleFormatVersion: string;
   checksum: string;
   signature: string;
   signatureAlgorithm: string;

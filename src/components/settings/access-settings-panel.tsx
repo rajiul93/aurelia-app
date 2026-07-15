@@ -23,7 +23,7 @@ export function AccessSettingsPanel() {
   const theme = useTheme();
   const { t } = useStrings();
   const sessionToken = useAuthStore((state) => state.sessionToken);
-  const email = useAuthStore((state) => state.email);
+  const phone = useAuthStore((state) => state.phone);
   const {
     entitlements,
     isActive,
@@ -70,9 +70,9 @@ export function AccessSettingsPanel() {
         <ActivityIndicator color={theme.primary} style={styles.loader} />
       ) : (
         <View style={styles.meta}>
-          {email ? (
+          {phone ? (
             <ThemedText type="small" themeColor="primary">
-              {email}
+              {phone}
             </ThemedText>
           ) : null}
           <ThemedText type="smallBold">{statusLabel}</ThemedText>

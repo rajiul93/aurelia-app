@@ -8,7 +8,7 @@
 
 **Status legend:** ✅ Completed · 🚧 In Progress · ⚠️ Known Issue · ⏳ Pending · ❌ Not Started
 
-Last updated: **2026-07-13**
+Last updated: **2026-07-14**
 
 ---
 
@@ -147,6 +147,13 @@ Last updated: **2026-07-13**
 
 ## 4. Known Issues (⚠️)
 
+- ⚠️ **In-app Stripe purchase now fails for a phone-only buyer.** Buyers are identified by phone and
+  carry no email, but Stripe needs one for the receipt — the server rejects a checkout without one
+  (*"An email address is required to complete the purchase."*). The **subscribe screen must collect an
+  email** and pass it in the checkout payload (the server already accepts an optional `email` and writes
+  it back onto the grant on payment). Until then, selling happens through the admin panel, which is the
+  intended flow. [src/app/subscribe.tsx](src/app/subscribe.tsx)
+
 - ⚠️ **A single stop missing coordinates blanks the whole map.** `canNavigate` →
   `hasNavigationGeoData` → `hasCompleteSpotCoordinates` uses `.every()`, so one null-coord spot shows
   the "unavailable" fallback (no map, footprints, or markers).
@@ -180,6 +187,16 @@ Last updated: **2026-07-13**
 
 ## 5. Pending / Future (⏳)
 
+**Multi-floor, remaining:**
+- ✅ **Floor switcher wired** and ✅ **floor names + cover images ship in the bundle** (2026-07-15).
+- ⏳ **Server does not send `spot.floorId`** — only `floor` (the number), so mobile matches spots to
+  floors by number. Emitting `floorId` from `toTourDto` would make the match exact (one line, additive).
+- ✅ **Floor cards on the home screen** and ✅ **`hasActivePlan` predicate** (2026-07-15).
+- ⏳ **Locked floor preview for non-buyers is not built.** Floors only appear once the bundle is
+  downloaded (which needs a plan), so a no-plan visitor sees Buy Plan + Why Buy, never a floor preview.
+  Showing a teaser floor list pre-purchase would need the catalog API to expose floors.
+
+**Other:**
 - ⏳ **Decouple map *display* from the GPS navigation gate** so footprints + valid markers render even
   when some stops have invalid coordinates (addresses issue #4.1).
 - ⏳ Continue improving offline load speed.
@@ -299,6 +316,100 @@ Last updated: **2026-07-13**
 ---
 
 ## 12. Changelog
+
+- **2026-07-15** — **Floor cover images now actually show (offline-first caching).** The covers reached
+  the bundle but never the screen — a two-part gap: (1) [collect-media-urls.ts](src/lib/bundle/collect-media-urls.ts)
+  gathered the tour cover and spot media for offline caching but **not floor covers**, so nothing was
+  downloaded locally; (2) the floor card and the nav floor switcher pointed `<Image>` at the **remote R2
+  url** instead of the cached copy, so on an offline-first app the image had no way to load. Fixed both:
+  floor covers are collected in FULL mode, and both `FloorCard` (home) and `FloorSelector` (nav) resolve
+  the url through **`useInstalledMediaUri`** (local cached file when present, remote as fallback) — the
+  same pattern spot media already used. ⚠️ **Existing installs must re-download** — their on-disk bundle
+  predates both the coverUrl and this caching. 3 new tests; `tsc` clean; 110 tests; lint at baseline.
+
+- **2026-07-15** — **Home screen redesigned around floors, gated by an active plan.** Per the product
+  spec: no tour cards — the home now shows **one premium card per floor** of each installed tour, and
+  tapping a card opens that floor (`/tour/{id}/nav?floorId=…`; `useFloorSelection` honours the deep-link
+  floor if it exists in the bundle). New pieces: [`FloorCard`](src/components/tours/floor-card.tsx)
+  (cover image + scrim, floor name, stop count, a **compass "Explore" chip** so it reads as openable,
+  soft shadow, rounded corners, press-in scale, `FadeInDown` staggered entrance) and
+  [`TourFloorCards`](src/components/tours/tour-floor-cards.tsx) (reads the on-disk bundle — no network —
+  and renders a card per floor; a v1/single-floor tour gets one whole-tour card).
+  - **Gating** uses a real **`hasActivePlan(isSignedIn, entitlements)`** predicate in
+    [access.ts](src/lib/entitlements/access.ts) — signed in + `isAccessActive` + at least one tour.
+    It is deliberately **not** `isActive` (which is fail-open, `true` when signed out): a Buy-Plan CTA
+    gated on `isActive` would hide from exactly the people it targets. The **Buy Plan** button (top) and
+    **Why Buy** (bottom) show only when `!hasActivePlan`, on both the home and the Account screen.
+  - Tours entitled but not yet downloaded show a compact **download** prompt (not a big cover card), so
+    the floor cards stay the visual focus while the download path still works. 4 new `hasActivePlan`
+    tests (incl. the fail-open trap); `tsc` clean; 107 tests; lint at baseline.
+  - **Dead code:** `GuidesHubSection` + `InstalledGuideCard` are no longer rendered by any screen (the
+    floor cards replaced them). Left in place for now — they carry progress-bar / update-banner /
+    "Ask Aurelia" patterns worth reusing on the floor cards later.
+  - ⏳ **Buy Plan routes to `/explore`** (the Account tab: unlock + subscribe). In-app Stripe is still
+    broken for phone-only buyers (§4), so this is really "unlock or contact support" today.
+
+- **2026-07-15** — **Floor cover images + the floor switcher is finally wired.** The server now ships
+  each floor's **`coverUrl`** and translated **name** in the v2 bundle (both already typed on
+  `BundleFloor`). `FloorSelector` was rewritten — it never compiled before (wrong theme API) — and now
+  renders a cover thumbnail + localized name per floor. It is **rendered in the nav screen** at last
+  (multi-floor tours only; single-floor returns null), driven by the `useFloorSelection` state that
+  Phase 0 already threaded through. So on a multi-floor tour you can now switch floors during the walk,
+  and each floor's route/map/spots follow. `tsc` clean; 103 tests passing.
+
+- **2026-07-15** — **Unlock replaces sign-in: phone number + 4-digit PIN.** We never hold the buyer's
+  email, so the app no longer signs in with one. The new [UnlockForm](src/components/auth/unlock-form.tsx)
+  takes the phone number and the 4-digit PIN the seller sent by hand, posts them to
+  `POST /auth/unlock`, and stores the returned session token in SecureStore — **the PIN is asked for
+  exactly once per device**, then never again. One step, nothing to send and wait for (the old flow was
+  email → send code → wait → type code). The email-OTP path (`SignInForm`, `useRequestOtp`,
+  `useVerifyOtp`, `authService.verifyOtp`) is **deleted from the app**; the server keeps the endpoints
+  for legacy email-bearing grants, but nothing here calls them.
+  - **Errors are shown verbatim from the server**, because it is the only side that knows *why*: a
+    wrong PIN and an unknown number deliberately say the same thing, and it also spells out a lockout
+    ("too many attempts"), an expiry, a not-yet-active date, and a full device list.
+  - **No self device-removal.** `authService.revokeDevice` is gone and sign-out is now **local only** —
+    the device keeps its slot on the seller's side. If the buyer could free their own slot, one grant
+    could be passed around indefinitely by signing out on each phone.
+  - **`useAuthStore.email` → `.phone`** (the SecureStore *key* stays `aurelia.sessionEmail`: renaming it
+    would strand the identity of anyone who already unlocked). `Entitlements.ticketCount` → `maxDevices`,
+    and it now carries `phone` + `activatedAt`.
+  - **The home greeting lost its name.** It was derived from the email's local part
+    ("rajiul@…" → "Rajiul"); a phone number has no name in it, and we never collect one, so the greeting
+    is now the time of day alone — "Good morning, +8801712345678" would be worse than no name.
+  - `tsc --noEmit` clean; 100 tests passing; lint at baseline.
+  - ⚠️ **In-app Stripe purchase is broken for phone-only buyers** — see §4.
+
+- **2026-07-15** — **Mobile reads v2 (per-floor) bundles; the silently-lost route is fixed.** The server
+  has been shipping **v2** bundles for a while (`content.floors[]`, each floor owning its route — there
+  is no top-level `content.route` any more), while mobile still read `content.route` in **nine** places.
+  That field is now `undefined`, and every consumer degraded *quietly* instead of throwing:
+  `buildRouteCoordinates`/`orderSpotsByRoute` fall back to spot `sortOrder` when handed no route, so the
+  map drew a **straight line through the stops with no footprint geometry**, off-route detection ran
+  against that fake line, and the stop order was whatever `sortOrder` said rather than what the route
+  said. Nothing crashed, which is why it went unnoticed. Fixed by resolving spots+route through the floor:
+  `getFloorScope(content, floorId?)` in [floor-routing.ts](src/lib/bundle/floor-routing.ts) (omitting the
+  floor means the first/only one, so v1 bundles and single-floor tours are unaffected), plus
+  `getAllFloorScopes`/`getAllRoutes`. `validate-geo`, `readiness`, `route-geometry`, `use-navigation-session`
+  and `TourMapView` now all take an optional `floorId`; `nav.tsx` owns the active floor via
+  `useFloorSelection` and passes it to the session and the map — so the **Phase-2 floor switcher is a
+  UI-only change**. Two scopes are deliberately different: the walk is **per floor**, while the stop list
+  and a spot's prev/next arrows **cross floors** (`orderSpotsAcrossFloors`), and the **offline map pack
+  covers every floor** (`buildNavigationMeta` aggregates all of them — floor-1-only bounds would crop
+  floor 2 out of the downloaded map). Also fixed `floor-selector.tsx`, which never compiled (10 TS errors
+  — it used a `theme.colors.*` / `Spacing.md` API that does not exist). **Note:** the server sends spots
+  with `floor` (the number) and **no `floorId`** ([tour.mapper.ts:126](../admin-and-server-aurelia/src/modules/tour/tour.mapper.ts#L126)),
+  and the builder drops floor names — so spot→floor matching falls back to the floor number, and floors
+  label as "Floor N". Both are covered by tests written against the **real** payload shape. 18 new tests;
+  `tsc --noEmit` clean; 100 tests passing.
+
+- **2026-07-14** — **Floor model + multi-floor tour architecture planned (backend + mobile).** Backend
+  designed `Tour → Floor → Spot` structure for indoor multi-level tours (Colosseum 4 floors). Each
+  floor has its own map, route, and spots. Mobile side: complete audit done (40 files identified).
+  Good news: `floor: number` already exists in `BundleSpot` type but **unused**. Implementation will add:
+  (1) Floor field validation on bundle load, (2) Optional floor selector UI on nav screen, (3) Floor-aware
+  spot grouping/filtering, (4) Per-floor map switching. All backward-compatible. Roadmap: admin floor
+  CRUD → bundle builder update → mobile floor UI. ⏳ Implementation pending.
 
 - **2026-07-13** — **Offline-first access layer: downloaded tour = zero API calls; local expiry.** The
   "already downloaded but says *download the tour*" report had a second root cause beyond the content

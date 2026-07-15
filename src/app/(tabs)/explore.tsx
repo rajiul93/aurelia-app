@@ -18,6 +18,7 @@ import { ThemedView } from '@/components/themed-view';
 import { WhyBuyCard } from '@/components/tours/why-buy-card';
 import { GoldBorderView } from '@/components/ui/gold-border-view';
 import { BottomTabInset, Spacing } from '@/constants/theme';
+import { useEntitlementStatus } from '@/hooks/use-entitlement-status';
 import { useStrings } from '@/hooks/use-strings';
 import { useTheme } from '@/hooks/use-theme';
 import { GoldGradientHorizontal } from '@/theme/gradients';
@@ -86,6 +87,7 @@ function SubscriptionCard({
 export default function AccountScreen() {
   const router = useRouter();
   const { t } = useStrings();
+  const { hasActivePlan } = useEntitlementStatus();
 
   return (
     <ThemedView style={styles.container}>
@@ -108,10 +110,13 @@ export default function AccountScreen() {
             </ThemedText>
           </View>
 
-          <SubscriptionCard
-            delay={90}
-            onPress={() => router.push('/subscribe')}
-          />
+          {/* Nothing to sell to someone who already has an active plan. */}
+          {!hasActivePlan ? (
+            <SubscriptionCard
+              delay={90}
+              onPress={() => router.push('/subscribe')}
+            />
+          ) : null}
           <Animated.View
             entering={FadeInDown.delay(20)
               .duration(420)
@@ -122,15 +127,17 @@ export default function AccountScreen() {
             <AccountPanel />
           </Animated.View>
 
-          <Animated.View
-            entering={FadeInDown.delay(150)
-              .duration(420)
-              .springify()
-              .damping(18)}
-            style={styles.cardWrap}
-          >
-            <WhyBuyCard />
-          </Animated.View>
+          {!hasActivePlan ? (
+            <Animated.View
+              entering={FadeInDown.delay(150)
+                .duration(420)
+                .springify()
+                .damping(18)}
+              style={styles.cardWrap}
+            >
+              <WhyBuyCard />
+            </Animated.View>
+          ) : null}
         </ScrollView>
       </SafeAreaView>
     </ThemedView>

@@ -1,4 +1,5 @@
-import type { BundleContent, GeoPoint } from "@/types/bundle-content";
+import { getAllFloorScopes, getFloorScope } from "@/lib/bundle/floor-routing";
+import type { BundleContent, BundleSpot, GeoPoint } from "@/types/bundle-content";
 
 import { buildRouteCoordinates } from "./route-geometry";
 import { computeMapBounds } from "./bounds";
@@ -7,10 +8,10 @@ function hasValidFootprint(footprintGeo: GeoPoint[] | null | undefined) {
   return Array.isArray(footprintGeo) && footprintGeo.length >= 2;
 }
 
-export function hasCompleteSpotCoordinates(content: BundleContent) {
+function spotsHaveCoordinates(spots: BundleSpot[]) {
   return (
-    content.tour.spots.length > 0 &&
-    content.tour.spots.every(
+    spots.length > 0 &&
+    spots.every(
       (spot) =>
         spot.latitude !== null &&
         spot.longitude !== null &&
@@ -20,13 +21,25 @@ export function hasCompleteSpotCoordinates(content: BundleContent) {
   );
 }
 
-export function hasCompleteRouteFootprints(content: BundleContent) {
-  if (content.tour.spots.length <= 1) {
+export function hasCompleteSpotCoordinates(
+  content: BundleContent,
+  floorId?: string,
+) {
+  return spotsHaveCoordinates(getFloorScope(content, floorId).spots);
+}
+
+export function hasCompleteRouteFootprints(
+  content: BundleContent,
+  floorId?: string,
+) {
+  const { spots, route } = getFloorScope(content, floorId);
+
+  if (spots.length <= 1) {
     return true;
   }
 
-  const edges = content.route?.edges ?? [];
-  const expectedEdges = content.tour.spots.length - 1;
+  const edges = route?.edges ?? [];
+  const expectedEdges = spots.length - 1;
 
   if (edges.length < expectedEdges) {
     return false;
@@ -35,24 +48,30 @@ export function hasCompleteRouteFootprints(content: BundleContent) {
   return edges.every((edge) => hasValidFootprint(edge.footprintGeo));
 }
 
-export function hasNavigationGeoData(content: BundleContent) {
-  const coordinates = buildRouteCoordinates(
-    content.tour.spots,
-    content.route,
-  );
+export function hasNavigationGeoData(content: BundleContent, floorId?: string) {
+  const { spots, route } = getFloorScope(content, floorId);
+  const coordinates = buildRouteCoordinates(spots, route);
 
-  return coordinates.length >= 2 && hasCompleteSpotCoordinates(content);
+  return coordinates.length >= 2 && spotsHaveCoordinates(spots);
 }
 
+/**
+ * Meta for the whole tour, not one floor: the offline map pack has to cover every
+ * floor's geography, and a tour is only "complete" if all of its floors are.
+ */
 export function buildNavigationMeta(content: BundleContent) {
-  const coordinates = buildRouteCoordinates(
-    content.tour.spots,
-    content.route,
+  const scopes = getAllFloorScopes(content);
+  const coordinates = scopes.flatMap((scope) =>
+    buildRouteCoordinates(scope.spots, scope.route),
   );
 
   return {
     mapBounds: computeMapBounds(coordinates),
-    hasCompleteFootprints: hasCompleteRouteFootprints(content),
-    hasCompleteCoordinates: hasCompleteSpotCoordinates(content),
+    hasCompleteFootprints: scopes.every((scope) =>
+      hasCompleteRouteFootprints(content, scope.floorId),
+    ),
+    hasCompleteCoordinates: scopes.every((scope) =>
+      spotsHaveCoordinates(scope.spots),
+    ),
   };
 }

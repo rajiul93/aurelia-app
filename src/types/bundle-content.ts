@@ -41,7 +41,10 @@ export type BundleSpot = {
   sortOrder: number;
   latitude: number | null;
   longitude: number | null;
+  /** The floor's number. Bundles built before floors carried ids only have this. */
   floor: number;
+  /** Absent in bundles installed before the server started emitting it. */
+  floorId?: string;
   includedInQuickTour: boolean;
   translations: Array<{
     language: AppLanguage;
@@ -84,6 +87,22 @@ export type BundleRoute = {
   edges: BundleRouteEdge[];
 };
 
+export type BundleFloorTranslation = {
+  language: AppLanguage;
+  audience: AudienceType;
+  name: string;
+};
+
+export type BundleFloor = {
+  id: string;
+  floorNo: number;
+  mapTileUrl?: string | null;
+  route: BundleRoute | null;
+  /** Both absent in bundles installed before the server started emitting them. */
+  translations?: BundleFloorTranslation[];
+  coverUrl?: string | null;
+};
+
 export type BundleTour = {
   id: string;
   slug: string;
@@ -114,9 +133,17 @@ export type BundleAiKnowledge = {
   translations: BundleAiKnowledgeTranslation[];
 };
 
+/**
+ * Bundle content supports both v1 (single route) and v2 (per-floor routes)
+ * v1: Has `route` at top level (flat structure)
+ * v2: Has `floors` array, each with its own `route`
+ */
 export type BundleContent = {
   tour: BundleTour;
-  route: BundleRoute | null;
+  // v1 bundle format (deprecated, for backward compatibility)
+  route?: BundleRoute | null;
+  // v2 bundle format (multi-floor)
+  floors?: BundleFloor[];
   navigation?: BundleNavigationMeta;
   aiKnowledge?: BundleAiKnowledge[];
   versions: {

@@ -1,3 +1,4 @@
+import { getFloorScope } from "@/lib/bundle/floor-routing";
 import type { BundleContent } from "@/types/bundle-content";
 
 import { buildRouteCoordinates } from "./route-geometry";
@@ -12,19 +13,18 @@ export type NavigationBlockReason =
 export function getNavigationBlockReason(
   content: BundleContent,
   enableGpsNavigation: boolean,
+  floorId?: string,
 ): NavigationBlockReason {
   if (!enableGpsNavigation) {
     return "gps_disabled";
   }
 
-  if (!hasCompleteSpotCoordinates(content)) {
+  if (!hasCompleteSpotCoordinates(content, floorId)) {
     return "missing_coordinates";
   }
 
-  const coordinates = buildRouteCoordinates(
-    content.tour.spots,
-    content.route,
-  );
+  const { spots, route } = getFloorScope(content, floorId);
+  const coordinates = buildRouteCoordinates(spots, route);
 
   if (coordinates.length < 2) {
     return "insufficient_route";
@@ -36,6 +36,7 @@ export function getNavigationBlockReason(
 export function canStartGuidedWalk(
   content: BundleContent,
   enableGpsNavigation: boolean,
+  floorId?: string,
 ) {
-  return getNavigationBlockReason(content, enableGpsNavigation) === null;
+  return getNavigationBlockReason(content, enableGpsNavigation, floorId) === null;
 }

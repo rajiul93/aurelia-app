@@ -24,7 +24,7 @@ import {
   localizeTourTitle,
   pickAudienceTranslation,
 } from "@/lib/bundle/localize";
-import { orderSpotsByRoute } from "@/lib/bundle/route-order";
+import { orderSpotsAcrossFloors } from "@/lib/bundle/route-order";
 import { useSpotBookmarksStore } from "@/store/spot-bookmarks-store";
 import { useTourProgressStore } from "@/store/tour-progress-store";
 
@@ -71,7 +71,7 @@ export default function TourRouteScreen() {
     contentLanguage,
     audience,
   );
-  const spots = orderSpotsByRoute(content.tour.spots, content.route);
+  const spots = orderSpotsAcrossFloors(content);
   const completedIds = completedSpotIds ?? [];
   const completedSet = new Set(completedIds);
   const progressPercent =

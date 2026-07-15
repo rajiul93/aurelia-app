@@ -46,7 +46,7 @@ const en = {
 
   "home.catalogSubtitle":
     "Free catalog — name and cover only. Sign in to unlock downloads.",
-  "home.signedInAs": "Signed in as {email}",
+  "home.signedInAs": "Unlocked with {phone}",
   "home.signInCta": "Sign in to unlock downloads",
   "home.premiumTitle": "Unlock full tours",
   "whyBuy.title": "Why buy this tour package?",
@@ -79,6 +79,13 @@ const en = {
   "home.publishHint": "Publish a tour in the admin panel to see it here.",
   "home.browseTours": "Browse tours",
   "home.tourCatalog": "Tour catalog",
+  "home.choosePlan": "Choose your plan",
+  "home.availableToDownload": "Available to download",
+  "floors.yourFloors": "Your floors",
+  "floors.explore": "Explore",
+  "floors.stop": "stop",
+  "floors.stops": "stops",
+  "floors.floorN": "Floor {number}",
   "home.announcement": "Announcement",
 
   "greeting.morning": "Good morning",
@@ -168,6 +175,13 @@ const en = {
   "subscribe.selectAtLeastOneTour": "Select at least one tour.",
   "subscribe.deviceCountUnavailable":
     "Pricing isn't configured yet for this many devices.",
+
+  "auth.unlockTitle": "Unlock your tour",
+  "auth.unlockHint":
+    "Enter the phone number and 4-digit PIN you were sent. This device is then remembered — you will not need the PIN again.",
+  "auth.phonePlaceholder": "Phone number",
+  "auth.pinPlaceholder": "4-digit PIN",
+  "auth.unlock": "Unlock",
 
   "auth.verifyEmail": "Verify your email",
   "auth.verifyEmailHint":
@@ -373,7 +387,7 @@ const es: Record<StringKey, string> = {
   "welcome.getStarted": "Comenzar",
   "home.catalogSubtitle":
     "Catálogo gratuito — solo nombre y portada. Inicia sesión para desbloquear descargas.",
-  "home.signedInAs": "Sesión iniciada como {email}",
+  "home.signedInAs": "Desbloqueado con {phone}",
   "home.signInCta": "Inicia sesión para desbloquear descargas",
   "home.premiumTitle": "Desbloquea tours completos",
   "whyBuy.title": "¿Por qué comprar este paquete de tour?",
@@ -408,6 +422,13 @@ const es: Record<StringKey, string> = {
   "home.publishHint": "Publica un tour en el panel admin para verlo aquí.",
   "home.browseTours": "Explorar tours",
   "home.tourCatalog": "Catálogo de tours",
+  "home.choosePlan": "Elige tu plan",
+  "home.availableToDownload": "Disponible para descargar",
+  "floors.yourFloors": "Tus plantas",
+  "floors.explore": "Explorar",
+  "floors.stop": "parada",
+  "floors.stops": "paradas",
+  "floors.floorN": "Planta {number}",
   "home.announcement": "Anuncio",
   "greeting.morning": "Buenos días",
   "greeting.afternoon": "Buenas tardes",
@@ -493,6 +514,13 @@ const es: Record<StringKey, string> = {
   "subscribe.selectAtLeastOneTour": "Selecciona al menos un tour.",
   "subscribe.deviceCountUnavailable":
     "Aún no hay precio configurado para esta cantidad de dispositivos.",
+
+  "auth.unlockTitle": "Desbloquea tu tour",
+  "auth.unlockHint":
+    "Introduce el número de teléfono y el PIN de 4 dígitos que te enviamos. Este dispositivo quedará registrado: no tendrás que volver a introducir el PIN.",
+  "auth.phonePlaceholder": "Número de teléfono",
+  "auth.pinPlaceholder": "PIN de 4 dígitos",
+  "auth.unlock": "Desbloquear",
 
   "auth.verifyEmail": "Verifica tu email",
   "auth.verifyEmailHint":
@@ -687,7 +715,7 @@ const fr: Record<StringKey, string> = {
   "welcome.getStarted": "Commencer",
   "home.catalogSubtitle":
     "Catalogue gratuit — nom et couverture uniquement. Connectez-vous pour débloquer les téléchargements.",
-  "home.signedInAs": "Connecté en tant que {email}",
+  "home.signedInAs": "Débloqué avec {phone}",
   "home.signInCta": "Connectez-vous pour débloquer les téléchargements",
   "home.premiumTitle": "Débloquez les visites complètes",
   "whyBuy.title": "Pourquoi acheter ce forfait de visite ?",
@@ -723,6 +751,13 @@ const fr: Record<StringKey, string> = {
     "Publiez une visite dans le panneau admin pour la voir ici.",
   "home.browseTours": "Parcourir les visites",
   "home.tourCatalog": "Catalogue des visites",
+  "home.choosePlan": "Choisissez votre forfait",
+  "home.availableToDownload": "Disponible au téléchargement",
+  "floors.yourFloors": "Vos étages",
+  "floors.explore": "Explorer",
+  "floors.stop": "arrêt",
+  "floors.stops": "arrêts",
+  "floors.floorN": "Étage {number}",
   "home.announcement": "Annonce",
   "greeting.morning": "Bonjour",
   "greeting.afternoon": "Bon après-midi",
@@ -808,6 +843,13 @@ const fr: Record<StringKey, string> = {
   "subscribe.selectAtLeastOneTour": "Sélectionnez au moins une visite.",
   "subscribe.deviceCountUnavailable":
     "Aucun tarif configuré pour ce nombre d'appareils pour l'instant.",
+
+  "auth.unlockTitle": "Débloquez votre visite",
+  "auth.unlockHint":
+    "Saisissez le numéro de téléphone et le code PIN à 4 chiffres qui vous ont été envoyés. Cet appareil sera mémorisé : le PIN ne vous sera plus demandé.",
+  "auth.phonePlaceholder": "Numéro de téléphone",
+  "auth.pinPlaceholder": "PIN à 4 chiffres",
+  "auth.unlock": "Débloquer",
 
   "auth.verifyEmail": "Vérifiez votre e-mail",
   "auth.verifyEmailHint":

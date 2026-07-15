@@ -15,11 +15,11 @@ import { ScreenHeader } from '@/components/screen-header';
 import { CheckoutAuthSheet } from '@/components/subscribe/checkout-auth-sheet';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { COLOSSEUM_TOUR_ID } from '@/constants/tours';
 import { Spacing } from '@/constants/theme';
 import { useCheckout } from '@/hooks/mutations/use-checkout';
-import { useCatalogTours } from '@/hooks/queries/use-catalog';
-import { usePurchaseStatus } from '@/hooks/queries/use-purchase-status';
 import { useSubscriptionConfig } from '@/hooks/queries/use-subscription-config';
+import { usePurchaseStatus } from '@/hooks/queries/use-purchase-status';
 import { useStrings } from '@/hooks/use-strings';
 import { useTheme } from '@/hooks/use-theme';
 import { refreshEntitlements } from '@/lib/entitlements/refresh';
@@ -48,11 +48,9 @@ export default function SubscribeScreen() {
     isLoading: configLoading,
     isError: configError,
   } = useSubscriptionConfig();
-  const { data: toursResponse, isLoading: toursLoading } = useCatalogTours();
   const checkout = useCheckout();
 
   const config = configResponse?.data;
-  const tours = toursResponse?.data ?? [];
 
   const [selectedPlanIdOverride, setSelectedPlanIdOverride] = useState<
     string | null
@@ -60,7 +58,6 @@ export default function SubscribeScreen() {
   const selectedPlanId = selectedPlanIdOverride ?? config?.plans[0]?.id ?? null;
 
   const [deviceCount, setDeviceCount] = useState(1);
-  const [selectedTourIds, setSelectedTourIds] = useState<string[]>([]);
   const [purchaseId, setPurchaseId] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>('form');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -118,22 +115,9 @@ export default function SubscribeScreen() {
     };
   }, [config, selectedPlanId, deviceCount]);
 
-  function toggleTour(tourId: string) {
-    setSelectedTourIds((current) =>
-      current.includes(tourId)
-        ? current.filter((id) => id !== tourId)
-        : [...current, tourId],
-    );
-  }
-
   function validateCheckoutSelection() {
     if (!selectedPlanId || !priceBreakdown) {
       setErrorMessage(t('subscribe.errorGeneric'));
-      return false;
-    }
-
-    if (selectedTourIds.length === 0) {
-      setErrorMessage(t('subscribe.selectAtLeastOneTour'));
       return false;
     }
 
@@ -163,18 +147,13 @@ export default function SubscribeScreen() {
       return;
     }
 
-    if (selectedTourIds.length === 0) {
-      setErrorMessage(t('subscribe.selectAtLeastOneTour'));
-      return;
-    }
-
     setPhase('processing');
 
     try {
       const result = await checkout.mutateAsync({
         planId: selectedPlanId,
         deviceCount,
-        tourIds: selectedTourIds,
+        tourIds: [COLOSSEUM_TOUR_ID],
       });
 
       const { error: initError } = await initPaymentSheet({
@@ -366,40 +345,6 @@ export default function SubscribeScreen() {
                   );
                 })}
               </View>
-
-              <ThemedText type="smallBold">
-                {t('subscribe.toursLabel')}
-              </ThemedText>
-              {toursLoading ? (
-                <ActivityIndicator color={theme.primary} />
-              ) : null}
-              {!toursLoading && tours.length === 0 ? (
-                <ThemedText type="small" themeColor="textSecondary">
-                  {t('subscribe.noToursAvailable')}
-                </ThemedText>
-              ) : null}
-              {tours.map((tour) => {
-                const checked = selectedTourIds.includes(tour.id);
-                return (
-                  <Pressable
-                    key={tour.id}
-                    onPress={() => toggleTour(tour.id)}
-                    style={[
-                      styles.tourRow,
-                      {
-                        borderColor: checked
-                          ? theme.primary
-                          : theme.backgroundSelected,
-                        backgroundColor: checked
-                          ? theme.backgroundSelected
-                          : 'transparent',
-                      },
-                    ]}
-                  >
-                    <ThemedText type="small">{tour.title}</ThemedText>
-                  </Pressable>
-                );
-              })}
 
               {priceBreakdown ? (
                 <View

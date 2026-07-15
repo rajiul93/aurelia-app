@@ -5,13 +5,29 @@ export type OtpRequestResult = {
   devHint?: string;
 };
 
+/**
+ * What a successful phone + PIN unlock returns. The session token is stored in
+ * SecureStore, so the PIN is never needed again on this device.
+ */
+export type UnlockResult = {
+  sessionToken: string;
+  sessionId: string;
+  deviceId: string;
+  phone: string;
+  activatedAt: string;
+  expiresAt: string;
+  maxDevices: number;
+  activeDeviceCount: number;
+  tours: Array<{ id: string; slug: string }>;
+};
+
 export type OtpVerifyResult = {
   sessionToken: string;
   sessionId: string;
   deviceId: string;
-  email: string;
+  email: string | null;
   expiresAt: string;
-  ticketCount: number;
+  maxDevices: number;
   activeDeviceCount: number;
   tours: Array<{ id: string; slug: string }>;
 };
@@ -27,10 +43,12 @@ export type EntitlementsSnapshot = {
 };
 
 export type Entitlements = {
-  email: string;
+  phone: string;
+  email: string | null;
   status: string;
+  activatedAt: string;
   expiresAt: string;
-  ticketCount: number;
+  maxDevices: number;
   activeDeviceCount: number;
   seatsRemaining: number;
   allowSubscriptionFeatures: boolean;

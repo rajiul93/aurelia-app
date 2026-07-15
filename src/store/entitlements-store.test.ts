@@ -16,10 +16,12 @@ vi.mock("@/lib/entitlements/storage", () => ({
 }));
 
 const ENTITLEMENTS: Entitlements = {
-  email: "user@example.com",
+  phone: "+8801712345678",
+  email: null,
   status: "ACTIVE",
+  activatedAt: "2020-01-01T00:00:00.000Z",
   expiresAt: "2026-12-01T00:00:00.000Z",
-  ticketCount: 1,
+  maxDevices: 1,
   activeDeviceCount: 1,
   seatsRemaining: 1,
   allowSubscriptionFeatures: true,

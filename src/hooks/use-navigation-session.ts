@@ -19,6 +19,7 @@ import {
 import { buildRouteCoordinates } from "@/lib/navigation/route-geometry";
 import type { LocationUpdateResult } from "@/lib/navigation/process-location-update";
 import { hasNavigationGeoData } from "@/lib/navigation/validate-geo";
+import { getFloorScope } from "@/lib/bundle/floor-routing";
 import { orderSpotsByRoute } from "@/lib/bundle/route-order";
 import { useNavigationSessionStore } from "@/store/navigation-session-store";
 import { useRemoteConfig } from "@/store/release-config-store";
@@ -29,6 +30,8 @@ import type { BundleContent } from "@/types/bundle-content";
 type UseNavigationSessionOptions = {
   tourId: string;
   content: BundleContent | undefined;
+  /** The floor being walked. Omitted means the tour's first (or only) floor. */
+  floorId?: string;
   enabled?: boolean;
   onApproachSpot?: (spotId: string) => void;
   onArriveSpot?: (spotId: string) => void;
@@ -86,6 +89,7 @@ function hasLocationFix(
 export function useNavigationSession({
   tourId,
   content,
+  floorId,
   enabled = true,
   onApproachSpot,
   onArriveSpot,
@@ -120,7 +124,7 @@ export function useNavigationSession({
   // enableGpsNavigation remote flag no longer gates offline navigation; voice
   // still respects enableVoiceGuidance below.
   const canNavigate =
-    enabled && content && hasNavigationGeoData(content);
+    enabled && content && hasNavigationGeoData(content, floorId);
 
   useEffect(() => {
     setCompletedSpotIds(completedSpotIds);
@@ -159,14 +163,9 @@ export function useNavigationSession({
         return;
       }
 
-      const orderedSpots = orderSpotsByRoute(
-        activeContent.tour.spots,
-        activeContent.route,
-      );
-      const routeCoordinates = buildRouteCoordinates(
-        activeContent.tour.spots,
-        activeContent.route,
-      );
+      const scope = getFloorScope(activeContent, floorId);
+      const orderedSpots = orderSpotsByRoute(scope.spots, scope.route);
+      const routeCoordinates = buildRouteCoordinates(scope.spots, scope.route);
 
       startSession({
         tourId,
@@ -253,6 +252,7 @@ export function useNavigationSession({
     };
   }, [
     canNavigate,
+    floorId,
     ingestBootstrapFix,
     ingestFix,
     language,

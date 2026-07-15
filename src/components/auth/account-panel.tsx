@@ -1,7 +1,7 @@
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 
 import { AccessEndedBanner } from "@/components/auth/access-ended-banner";
-import { SignInForm } from "@/components/auth/sign-in-form";
+import { UnlockForm } from "@/components/auth/unlock-form";
 import { ThemedText } from "@/components/themed-text";
 import { Spacing } from "@/constants/theme";
 import { useSignOut } from "@/hooks/mutations/use-auth";
@@ -13,7 +13,7 @@ import { useAuthStore } from "@/store/auth-store";
 export function AccountPanel() {
   const theme = useTheme();
   const { t } = useStrings();
-  const email = useAuthStore((state) => state.email);
+  const phone = useAuthStore((state) => state.phone);
   const sessionToken = useAuthStore((state) => state.sessionToken);
   const signOut = useSignOut();
   const {
@@ -27,7 +27,7 @@ export function AccountPanel() {
     return (
       <View style={styles.signedOut}>
         <AccessEndedBanner />
-        <SignInForm />
+        <UnlockForm />
       </View>
     );
   }
@@ -44,7 +44,7 @@ export function AccountPanel() {
           {t("account.signedIn")}
         </ThemedText>
         <ThemedText type="small" themeColor="primary" style={styles.wrapText}>
-          {email}
+          {phone}
         </ThemedText>
 
         {isLoading ? (
@@ -60,8 +60,8 @@ export function AccountPanel() {
         {entitlements ? (
           <View style={styles.metaBlock}>
             <ThemedText type="small" themeColor="textSecondary" style={styles.wrapText}>
-              {entitlements.ticketCount}{" "}
-              {entitlements.ticketCount === 1
+              {entitlements.maxDevices}{" "}
+              {entitlements.maxDevices === 1
                 ? t("account.ticket")
                 : t("account.tickets")}{" "}
               · {entitlements.activeDeviceCount}{" "}

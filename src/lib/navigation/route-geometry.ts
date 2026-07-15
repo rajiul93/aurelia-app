@@ -1,5 +1,6 @@
 import type { Feature, LineString } from "geojson";
 
+import { getFloorScope } from "@/lib/bundle/floor-routing";
 import type {
   BundleContent,
   BundleRoute,
@@ -79,11 +80,14 @@ export function buildRouteCoordinates(
   return coordinates;
 }
 
-export function buildRouteLineString(content: BundleContent): Feature<LineString> {
-  const coordinates = buildRouteCoordinates(
-    content.tour.spots,
-    content.route,
-  ).map((point) => [point.lng, point.lat] as [number, number]);
+export function buildRouteLineString(
+  content: BundleContent,
+  floorId?: string,
+): Feature<LineString> {
+  const { spots, route } = getFloorScope(content, floorId);
+  const coordinates = buildRouteCoordinates(spots, route).map(
+    (point) => [point.lng, point.lat] as [number, number],
+  );
 
   return {
     type: "Feature",

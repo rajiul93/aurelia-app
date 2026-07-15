@@ -24,7 +24,7 @@ import { useStrings } from "@/hooks/use-strings";
 import { useTheme } from "@/hooks/use-theme";
 import { resolveAppBackgroundUrl } from "@/lib/app-content/resolve-asset";
 import { pickAudienceTranslation } from "@/lib/bundle/localize";
-import { orderSpotsByRoute } from "@/lib/bundle/route-order";
+import { orderSpotsAcrossFloors } from "@/lib/bundle/route-order";
 import { useSpotBookmarksStore } from "@/store/spot-bookmarks-store";
 import { useTourProgressStore } from "@/store/tour-progress-store";
 
@@ -66,7 +66,7 @@ export default function SpotDetailScreen() {
     );
   }
 
-  const spots = orderSpotsByRoute(content.tour.spots, content.route);
+  const spots = orderSpotsAcrossFloors(content);
   const spotIndex = spots.findIndex((spot) => spot.id === spotId);
   const spot = spots[spotIndex];
 

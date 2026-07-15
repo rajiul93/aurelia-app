@@ -1,4 +1,22 @@
-import type { BundleRoute, BundleSpot } from "@/types/bundle-content";
+import type {
+  BundleContent,
+  BundleRoute,
+  BundleSpot,
+} from "@/types/bundle-content";
+
+import { getAllFloorScopes } from "./floor-routing";
+
+/**
+ * Every stop in the tour, walking order: floor by floor, and within a floor in
+ * that floor's route order. This is the whole-tour list — the stop list and the
+ * prev/next arrows on a spot, which cross floors. Navigation itself stays on one
+ * floor and uses `orderSpotsByRoute` with that floor's scope.
+ */
+export function orderSpotsAcrossFloors(content: BundleContent): BundleSpot[] {
+  return getAllFloorScopes(content).flatMap((scope) =>
+    orderSpotsByRoute(scope.spots, scope.route),
+  );
+}
 
 export function orderSpotsByRoute(
   spots: BundleSpot[],

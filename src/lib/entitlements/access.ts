@@ -38,6 +38,28 @@ export function isAccessActive(
 }
 
 /**
+ * Whether the user actually holds a usable plan right now: signed in, access
+ * ACTIVE and unexpired, and carrying at least one tour.
+ *
+ * Deliberately stricter than `isAccessActive`, which is fail-open (returns true
+ * for a signed-out visitor and for missing entitlements). Gating the Buy-Plan /
+ * Why-Buy sections on `isAccessActive` would hide them from exactly the people
+ * they are meant for — so those use this instead.
+ */
+export function hasActivePlan(
+  isSignedIn: boolean,
+  entitlements: Entitlements | null | undefined,
+  now: number = Date.now(),
+) {
+  return (
+    isSignedIn &&
+    Boolean(entitlements) &&
+    isAccessActive(entitlements, now) &&
+    (entitlements?.tours.length ?? 0) > 0
+  );
+}
+
+/**
  * Whether the persisted snapshot still covers the current moment. While it does,
  * the app must not call the entitlements API at all — that is the whole point of
  * the snapshot.
