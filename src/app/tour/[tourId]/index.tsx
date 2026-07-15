@@ -123,26 +123,49 @@ export default function TourRouteScreen() {
 
           <GuidedWalkSection tourId={resolvedTourId} content={content} />
 
-          <Pressable
-            onPress={() => router.push(`/tour/${resolvedTourId}/chat`)}
-            style={[
-              styles.askButton,
-              {
-                backgroundColor: theme.backgroundElement,
-                borderColor: theme.backgroundSelected,
-              },
-            ]}
-          >
-            <Ionicons
-              name="chatbubble-ellipses-outline"
-              size={20}
-              color={theme.primary}
-            />
-            <ThemedText type="smallBold">{t("tour.askAurelia")}</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary" style={styles.askHint}>
-              {t("tour.askAureliaHint")}
-            </ThemedText>
-          </Pressable>
+          <View style={styles.helpSection}>
+            <Pressable
+              onPress={() => router.push(`/find-host/${resolvedTourId}`)}
+              style={[
+                styles.helpButton,
+                {
+                  backgroundColor: theme.backgroundElement,
+                  borderColor: theme.backgroundSelected,
+                },
+              ]}
+            >
+              <Ionicons
+                name="person-outline"
+                size={20}
+                color={theme.primary}
+              />
+              <ThemedText type="smallBold">{t("tour.findHost") || "Find Your Host"}</ThemedText>
+              <ThemedText type="small" themeColor="textSecondary" style={styles.askHint}>
+                {t("tour.findHostHint") || "Locate an on-site assistant"}
+              </ThemedText>
+            </Pressable>
+
+            <Pressable
+              onPress={() => router.push(`/tour/${resolvedTourId}/chat`)}
+              style={[
+                styles.askButton,
+                {
+                  backgroundColor: theme.backgroundElement,
+                  borderColor: theme.backgroundSelected,
+                },
+              ]}
+            >
+              <Ionicons
+                name="chatbubble-ellipses-outline"
+                size={20}
+                color={theme.primary}
+              />
+              <ThemedText type="smallBold">{t("tour.askAurelia")}</ThemedText>
+              <ThemedText type="small" themeColor="textSecondary" style={styles.askHint}>
+                {t("tour.askAureliaHint")}
+              </ThemedText>
+            </Pressable>
+          </View>
 
           <ThemedText type="smallBold" style={styles.sectionTitle}>
             {t("tour.chooseStop")}
@@ -222,6 +245,17 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     gap: Spacing.two,
+  },
+  helpSection: {
+    gap: Spacing.two,
+    alignSelf: "stretch",
+  },
+  helpButton: {
+    alignSelf: "stretch",
+    borderWidth: 1,
+    borderRadius: Spacing.three,
+    padding: Spacing.four,
+    gap: Spacing.one,
   },
   askButton: {
     alignSelf: "stretch",

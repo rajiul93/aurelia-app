@@ -12,6 +12,7 @@ import { FloorCardSkeleton } from "@/components/tours/floor-card-skeleton";
 import { TourDownloadButton } from "@/components/tours/tour-download-button";
 import { TourFloorCards } from "@/components/tours/tour-floor-cards";
 import { WhyBuyCard } from "@/components/tours/why-buy-card";
+import { FindHostCard } from "@/components/home/find-host-card";
 import { GlassCard } from "@/components/ui/glass-card";
 import { BottomTabInset, Spacing } from "@/constants/theme";
 import { useAppContent } from "@/hooks/queries/use-app-content";
@@ -270,6 +271,16 @@ export default function HomeScreen() {
               {t("home.publishHint")}
             </ThemedText>
           </GlassCard>
+        ) : null}
+
+        {/* Find Your Host card: show when there are installed guides */}
+        {showFloorsSection && installedGuides.length > 0 ? (
+          <View style={styles.section}>
+            <FindHostCard
+              tourId={installedGuides[0].tourId}
+              delay={installedGuides.length * 120 + 200}
+            />
+          </View>
         ) : null}
 
         {/* Why Buy lives only where there is still a reason to sell. */}

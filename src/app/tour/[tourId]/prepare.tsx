@@ -200,25 +200,51 @@ export default function TourPrepareScreen() {
           ) : null}
 
           {!isDownloading ? (
-            <Pressable
-              onPress={() => void handleDownload()}
-              style={[styles.cta, { backgroundColor: theme.primary }]}
-            >
-              <Ionicons
-                name={
-                  isUpdateMode
-                    ? "cloud-upload-outline"
-                    : "cloud-download-outline"
-                }
-                size={18}
-                color={theme.primaryForeground}
-              />
-              <ThemedText type="smallBold" style={{ color: theme.primaryForeground }}>
-                {isUpdateMode
-                  ? t("download.updateOfflineTour")
-                  : t("download.downloadForOffline")}
-              </ThemedText>
-            </Pressable>
+            <>
+              <Pressable
+                onPress={() => router.push(`/find-host/${tourId}`)}
+                style={[styles.helpButton, { borderColor: theme.primary }]}
+              >
+                <Ionicons
+                  name="help-circle-outline"
+                  size={18}
+                  color={theme.primary}
+                />
+                <View style={{ flex: 1 }}>
+                  <ThemedText type="smallBold" style={{ color: theme.primary }}>
+                    Need Help at the Site?
+                  </ThemedText>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    Find an Aurelia host on-site
+                  </ThemedText>
+                </View>
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color={theme.primary}
+                />
+              </Pressable>
+
+              <Pressable
+                onPress={() => void handleDownload()}
+                style={[styles.cta, { backgroundColor: theme.primary }]}
+              >
+                <Ionicons
+                  name={
+                    isUpdateMode
+                      ? "cloud-upload-outline"
+                      : "cloud-download-outline"
+                  }
+                  size={18}
+                  color={theme.primaryForeground}
+                />
+                <ThemedText type="smallBold" style={{ color: theme.primaryForeground }}>
+                  {isUpdateMode
+                    ? t("download.updateOfflineTour")
+                    : t("download.downloadForOffline")}
+                </ThemedText>
+              </Pressable>
+            </>
           ) : null}
         </ScrollView>
       </SafeAreaView>
@@ -384,6 +410,16 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     fontSize: 18,
     lineHeight: 24,
+  },
+  helpButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.three,
+    borderRadius: Spacing.three,
+    borderWidth: 2,
+    paddingVertical: Spacing.three,
+    paddingHorizontal: Spacing.three,
+    marginBottom: Spacing.two,
   },
   cta: {
     flexDirection: "row",
