@@ -5,7 +5,6 @@ import {
   getDefaultFloorId,
   getFloorIds,
   isMultiFloor,
-  getMapTileUrlForFloor,
 } from "./floor-routing";
 
 describe("FloorRouting", () => {
@@ -39,7 +38,6 @@ describe("FloorRouting", () => {
       {
         id: "floor-1",
         floorNo: 1,
-        mapTileUrl: "https://example.com/floor1",
         route: {
           id: "route-1",
           edges: [],
@@ -48,7 +46,6 @@ describe("FloorRouting", () => {
       {
         id: "floor-2",
         floorNo: 2,
-        mapTileUrl: "https://example.com/floor2",
         route: {
           id: "route-2",
           edges: [],
@@ -118,26 +115,6 @@ describe("FloorRouting", () => {
 
     it("should return true for v2 multi-floor", () => {
       expect(isMultiFloor(mockV2Content)).toBe(true);
-    });
-  });
-
-  describe("getMapTileUrlForFloor", () => {
-    it("should return null for v1 format", () => {
-      const url = getMapTileUrlForFloor(mockV1Content, "any-id");
-      expect(url).toBeNull();
-    });
-
-    it("should return correct map URL for v2 floor", () => {
-      const url1 = getMapTileUrlForFloor(mockV2Content, "floor-1");
-      const url2 = getMapTileUrlForFloor(mockV2Content, "floor-2");
-
-      expect(url1).toBe("https://example.com/floor1");
-      expect(url2).toBe("https://example.com/floor2");
-    });
-
-    it("should return null for non-existent floor", () => {
-      const url = getMapTileUrlForFloor(mockV2Content, "floor-999");
-      expect(url).toBeNull();
     });
   });
 });

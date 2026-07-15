@@ -13,17 +13,3 @@ export function getSpotMediaByType(
         left.sortOrder - right.sortOrder || left.id.localeCompare(right.id),
     );
 }
-
-export function spotHasMedia(spot: BundleSpot) {
-  return spot.medias.some((media) => Boolean(media.url));
-}
-
-/** @deprecated Use getSpotMediaByType(spot, "AUDIO") */
-export function getSpotAudioMedia(spot: BundleSpot): BundleSpotMedia | null {
-  return getSpotMediaByType(spot, "AUDIO")[0] ?? null;
-}
-
-/** @deprecated Use getSpotMediaByType(spot, "IMAGE") */
-export function getSpotHeroImage(spot: BundleSpot): BundleSpotMedia | null {
-  return getSpotMediaByType(spot, "IMAGE")[0] ?? null;
-}

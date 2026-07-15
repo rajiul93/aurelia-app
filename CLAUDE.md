@@ -8,7 +8,7 @@
 
 **Status legend:** ✅ Completed · 🚧 In Progress · ⚠️ Known Issue · ⏳ Pending · ❌ Not Started
 
-Last updated: **2026-07-14**
+Last updated: **2026-07-15**
 
 ---
 
@@ -317,6 +317,74 @@ Last updated: **2026-07-14**
 
 ## 12. Changelog
 
+- **2026-07-15** — **Dropped unfinished web platform stub.** Product is native-only (no EAS web
+  profile; MapLibre/offline GPS tour is not a web target). Deleted Expo-template residue
+  `app-tabs.web.tsx`, `external-link.tsx`, `use-color-scheme.web.ts`; removed `expo-symbols`,
+  `expo-web-browser`, `react-dom`, `react-native-web`, the `web` script, and `app.json` `web`
+  config. Kept defensive `Platform.OS === "web"` branches in secure-storage. NativeWind stack
+  still deferred. `tsc` clean.
+
+- **2026-07-15** — **Audit follow-up: deleted leftover dead helpers.** Removed unused
+  `tour-navigation.ts` (0 importers: `getTourStopsPath` / deprecated `getContinueTourPath`) and
+  unused `spot-media.ts` exports (`spotHasMedia`, deprecated `getSpotAudioMedia` /
+  `getSpotHeroImage`). Live callers already use `getSpotMediaByType`. Web / NativeWind decision
+  still deferred. `tsc` clean.
+
+- **2026-07-15** — **Dropped unused `mapTileUrl` from bundle floor type.** Server no longer emits it
+  (column dropped); `BundleFloor.mapTileUrl` and `getMapTileUrlForFloor` removed. MapLibre still uses
+  OpenFreeMap for outdoor GPS — reintroduce a dedicated indoor-tile field only when floor plans are
+  rendered. Floor routing / scope tests updated; full suite green.
+
+- **2026-07-15** — **Relevant Ionicons on primary app buttons.** Extended
+  `GoldGradientButton` with a leading `icon` prop; wired icons across unlock,
+  download/open/update, subscribe, access-lock, map stop-list / go-back, welcome
+  Get Started, account sign-out, stop callout View Details, spot prev/next/done,
+  settings refresh/remove/theme/language chips, maintenance, and home retry.
+  Buttons that already had icons (guided walk, Ask Aurelia, etc.) left as-is.
+  `tsc` clean.
+
+- **2026-07-15** — **Floor stop-list "Map Explore" is now a premium cover card.** Replaced the flat
+  gold CTA row with the same [`FloorCard`](src/components/tours/floor-card.tsx) language as home
+  (cover + scrim + soft shadow + explore chip). Uses the floor's cached cover via
+  `useInstalledMediaUri`; `FloorCard` gained optional `subtitle` / `exploreIcon` so the map hint can
+  replace the stop-count line. `tsc` clean.
+
+- **2026-07-15** — **Cleanup Batch B: drop `@expo/ui` + compress branding PNGs.** Removed unused
+  `@expo/ui` (zero JS imports; was still Expo-autolinked into native builds — a full native rebuild
+  is needed for the binary size drop). Losslessly recompressed `assets/images/icon.png`
+  (1254→1024 px, **1.0 MB → 645 KB**) and `splash-icon.png` (**1.3 MB → 1.0 MB**) via oxipng; also
+  tightened `android-icon-foreground.png`. Web/NativeWind still deferred. `tsc` clean; 110 tests.
+
+- **2026-07-15** — **Batch A dead-code / unused-package cleanup.** Grep-verified removals only (no
+  web/NativeWind/Skia cuts). Deleted orphaned UI: `GuidesHubSection`, `InstalledGuideCard`,
+  `SpotMediaGallery` (superseded by `SpotVisualMediaGallery`), Expo template leftovers `HintRow` +
+  `Collapsible`, and unused `assets/map/aurelia-tourism-style.json` (live map style is inline). Also
+  removed orphaned `guideFeature.*` i18n (en/es/fr), `useStrings().guideFeatures`, and
+  `constants/guide-features.ts`. Dropped `@turf/turf` (code already uses modular `@turf/*`) and
+  unused `prettier-plugin-tailwindcss`. Left alone: `app-tabs.web.tsx` / `external-link.tsx` /
+  `expo-symbols` / `expo-web-browser` (web platform resolution), NativeWind stack, `@expo/ui`.
+  `tsc` clean; **110** tests pass.
+
+- **2026-07-15** — **Spot Details close button now really goes back.** The top-left X hard-coded
+  `router.push('/tour/[tourId]')` — a leftover from when spots were only ever opened from the tour index.
+  It always jumped to the all-floors overview (and `push`, so it grew the stack) instead of returning
+  where the user came from. Now `router.canGoBack() ? router.back() : router.replace('/tour/[tourId]')`
+  — returns to the floor page / map / search result it was opened from, with the index only as a
+  no-history (deep-link) fallback. Prev/next use `router.replace`, so the back target stays the opener
+  even after paging through spots. The button itself stays (it is the only way to close the page); only
+  the stale destination changed. (The footer **"Done"** on the last spot still `push`es to the tour
+  index — deliberate "finish → overview", left as-is.) `tsc` clean; 110 tests.
+
+- **2026-07-15** — **Floor card now opens a floor page (list-first), not straight to the map.** New flow:
+  Home → Floor card → **floor page** → (Map Explore | Spot List → Spot details). New route
+  [tour/[tourId]/floor/[floorId].tsx](src/app/tour/[tourId]/floor/[floorId].tsx): a **"Map Explore" card**
+  at the top (opens the existing map view via `/tour/[tourId]/nav?floorId=…` — the map's logic/behaviour
+  is untouched, it just receives the floor) and, below it, the **floor-scoped stop list** built from
+  `getFloorScope` + `orderSpotsByRoute` so only that floor's spots appear (never another floor's), each
+  opening spot details. Home floor cards now route here instead of to `nav`; a v1/single-floor
+  whole-tour card routes to the tour index (its all-spots overview). `tsc` clean; 110 tests; lint at
+  baseline. (Spot-details prev/next still spans floors — the spec scoped only the *list*.)
+
 - **2026-07-15** — **Floor cover images now actually show (offline-first caching).** The covers reached
   the bundle but never the screen — a two-part gap: (1) [collect-media-urls.ts](src/lib/bundle/collect-media-urls.ts)
   gathered the tour cover and spot media for offline caching but **not floor covers**, so nothing was
@@ -343,9 +411,8 @@ Last updated: **2026-07-14**
   - Tours entitled but not yet downloaded show a compact **download** prompt (not a big cover card), so
     the floor cards stay the visual focus while the download path still works. 4 new `hasActivePlan`
     tests (incl. the fail-open trap); `tsc` clean; 107 tests; lint at baseline.
-  - **Dead code:** `GuidesHubSection` + `InstalledGuideCard` are no longer rendered by any screen (the
-    floor cards replaced them). Left in place for now — they carry progress-bar / update-banner /
-    "Ask Aurelia" patterns worth reusing on the floor cards later.
+  - **Dead code (removed 2026-07-15):** `GuidesHubSection` + `InstalledGuideCard` and related orphans
+    were deleted in a verified cleanup pass (see changelog).
   - ⏳ **Buy Plan routes to `/explore`** (the Account tab: unlock + subscribe). In-app Stripe is still
     broken for phone-only buyers (§4), so this is really "unlock or contact support" today.
 

@@ -1,3 +1,4 @@
+import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
@@ -33,6 +34,7 @@ export function LanguageSettingsPanel() {
       <View style={styles.languageRow}>
         {languages.map((item) => {
           const active = item === language;
+          const color = active ? theme.primaryForeground : theme.text;
 
           return (
             <Pressable
@@ -47,12 +49,8 @@ export function LanguageSettingsPanel() {
                 },
               ]}
             >
-              <ThemedText
-                type="smallBold"
-                style={{
-                  color: active ? theme.primaryForeground : theme.text,
-                }}
-              >
+              <Ionicons name="language-outline" size={14} color={color} />
+              <ThemedText type="smallBold" style={{ color }}>
                 {languageLabel(item)}
               </ThemedText>
             </Pressable>
@@ -76,6 +74,9 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   languageChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.one,
     borderRadius: 999,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,

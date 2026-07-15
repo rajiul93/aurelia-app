@@ -3,7 +3,7 @@
  *
  * Two bundle shapes are in the wild and both must keep working:
  * - v1: one `content.route`, no `floors` — what older installs on disk look like.
- * - v2: `content.floors[]`, each floor owning its route and map tiles.
+ * - v2: `content.floors[]`, each floor owning its route.
  */
 
 import type {
@@ -76,13 +76,6 @@ export function getSpotsForFloor(
   return spots.filter((spot) =>
     spot.floorId ? spot.floorId === floorId : spot.floor === floor.floorNo,
   );
-}
-
-export function getMapTileUrlForFloor(
-  content: BundleContent,
-  floorId: string,
-): string | null {
-  return findFloor(content, floorId)?.mapTileUrl ?? null;
 }
 
 /** One floor's spots and route — everything the map and the walk run on. */

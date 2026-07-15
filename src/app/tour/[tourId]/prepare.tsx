@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from "react-native";
@@ -203,6 +204,15 @@ export default function TourPrepareScreen() {
               onPress={() => void handleDownload()}
               style={[styles.cta, { backgroundColor: theme.primary }]}
             >
+              <Ionicons
+                name={
+                  isUpdateMode
+                    ? "cloud-upload-outline"
+                    : "cloud-download-outline"
+                }
+                size={18}
+                color={theme.primaryForeground}
+              />
               <ThemedText type="smallBold" style={{ color: theme.primaryForeground }}>
                 {isUpdateMode
                   ? t("download.updateOfflineTour")
@@ -304,7 +314,10 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   cta: {
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.two,
     borderRadius: Spacing.three,
     paddingVertical: Spacing.three,
     marginTop: Spacing.two,

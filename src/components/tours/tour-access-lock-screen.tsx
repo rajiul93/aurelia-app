@@ -62,6 +62,11 @@ export function TourAccessLockScreen({
                 onPress={() => router.navigate("/subscribe")}
                 style={[styles.button, { backgroundColor: theme.primary }]}
               >
+                <Ionicons
+                  name="card-outline"
+                  size={18}
+                  color={theme.primaryForeground}
+                />
                 <ThemedText type="smallBold" style={{ color: theme.primaryForeground }}>
                   {t("accessLock.subscribe")}
                 </ThemedText>
@@ -72,12 +77,18 @@ export function TourAccessLockScreen({
               onPress={() => router.navigate("/explore")}
               style={[styles.button, { backgroundColor: theme.primary }]}
             >
+              <Ionicons
+                name="person-outline"
+                size={18}
+                color={theme.primaryForeground}
+              />
               <ThemedText type="smallBold" style={{ color: theme.primaryForeground }}>
                 {t("accessLock.openAccount")}
               </ThemedText>
             </Pressable>
 
             <Pressable onPress={() => router.back()} style={styles.textButton}>
+              <Ionicons name="arrow-back" size={16} color={theme.primary} />
               <ThemedText type="linkPrimary">{t("accessLock.goBack")}</ThemedText>
             </Pressable>
           </View>
@@ -115,12 +126,18 @@ const styles = StyleSheet.create({
   },
   button: {
     alignSelf: "stretch",
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.two,
     borderRadius: Spacing.two,
     paddingVertical: Spacing.three,
     marginTop: Spacing.two,
   },
   textButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.one,
     paddingVertical: Spacing.two,
   },
 });

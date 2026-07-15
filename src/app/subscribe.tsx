@@ -1,3 +1,4 @@
+import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useStripe } from '@stripe/stripe-react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
@@ -201,6 +202,11 @@ export default function SubscribeScreen() {
                 onPress={() => router.back()}
                 style={[styles.button, { backgroundColor: theme.primary }]}
               >
+                <Ionicons
+                  name="checkmark"
+                  size={18}
+                  color={theme.primaryForeground}
+                />
                 <ThemedText
                   type="smallBold"
                   style={{ color: theme.primaryForeground }}
@@ -234,6 +240,11 @@ export default function SubscribeScreen() {
                 onPress={() => setPhase('form')}
                 style={[styles.button, { backgroundColor: theme.primary }]}
               >
+                <Ionicons
+                  name="refresh"
+                  size={18}
+                  color={theme.primaryForeground}
+                />
                 <ThemedText
                   type="smallBold"
                   style={{ color: theme.primaryForeground }}
@@ -411,6 +422,11 @@ export default function SubscribeScreen() {
                 disabled={checkout.isPending}
                 style={[styles.button, { backgroundColor: theme.primary }]}
               >
+                <Ionicons
+                  name={!sessionToken ? 'lock-open-outline' : 'card-outline'}
+                  size={18}
+                  color={theme.primaryForeground}
+                />
                 <ThemedText
                   type="smallBold"
                   style={{ color: theme.primaryForeground }}
@@ -507,7 +523,10 @@ const styles = StyleSheet.create({
   },
   button: {
     alignSelf: 'stretch',
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.two,
     borderRadius: Spacing.two,
     paddingVertical: Spacing.three,
   },

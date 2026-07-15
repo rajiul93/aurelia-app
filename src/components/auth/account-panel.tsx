@@ -1,3 +1,4 @@
+import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 
 import { AccessEndedBanner } from "@/components/auth/access-ended-banner";
@@ -113,7 +114,10 @@ export function AccountPanel() {
           {signOut.isPending ? (
             <ActivityIndicator color={theme.text} />
           ) : (
-            <ThemedText type="smallBold">{t("account.signOut")}</ThemedText>
+            <>
+              <Ionicons name="log-out-outline" size={16} color={theme.text} />
+              <ThemedText type="smallBold">{t("account.signOut")}</ThemedText>
+            </>
           )}
         </Pressable>
       </View>
@@ -150,6 +154,9 @@ const styles = StyleSheet.create({
   },
   signOutButton: {
     alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.two,
     borderWidth: 1,
     borderRadius: Spacing.two,
     paddingHorizontal: Spacing.three,

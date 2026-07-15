@@ -59,7 +59,6 @@ const v2: BundleContent = {
     {
       id: "floor-1",
       floorNo: 1,
-      mapTileUrl: "https://example.com/floor1",
       translations: [
         { language: "en", audience: "ADULTS", name: "Ground Floor" },
         { language: "es", audience: "ADULTS", name: "Planta Baja" },
@@ -84,7 +83,6 @@ const v2: BundleContent = {
     {
       id: "floor-2",
       floorNo: 2,
-      mapTileUrl: "https://example.com/floor2",
       route: {
         id: "route-2",
         edges: [

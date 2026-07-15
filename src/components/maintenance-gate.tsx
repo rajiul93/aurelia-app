@@ -1,3 +1,4 @@
+import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { usePathname, useRouter } from "expo-router";
 import { ReactNode } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
@@ -38,6 +39,11 @@ export function MaintenanceGate({ children }: MaintenanceGateProps) {
             onPress={() => router.push("/settings")}
             style={[styles.button, { backgroundColor: theme.primary }]}
           >
+            <Ionicons
+              name="settings-outline"
+              size={18}
+              color={theme.primaryForeground}
+            />
             <ThemedText
               type="smallBold"
               style={{ color: theme.primaryForeground }}
@@ -69,6 +75,9 @@ const styles = StyleSheet.create({
   },
   button: {
     alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.two,
     borderRadius: Spacing.two,
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.three,

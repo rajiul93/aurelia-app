@@ -96,7 +96,6 @@ export type BundleFloorTranslation = {
 export type BundleFloor = {
   id: string;
   floorNo: number;
-  mapTileUrl?: string | null;
   route: BundleRoute | null;
   /** Both absent in bundles installed before the server started emitting them. */
   translations?: BundleFloorTranslation[];

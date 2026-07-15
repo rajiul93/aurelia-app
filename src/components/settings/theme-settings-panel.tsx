@@ -1,3 +1,5 @@
+import { Ionicons } from "@react-native-vector-icons/ionicons";
+import type { ComponentProps } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
@@ -7,6 +9,15 @@ import { useTheme } from "@/hooks/use-theme";
 import { useThemeStore, type ThemeMode } from "@/store/theme-store";
 
 const MODES: ThemeMode[] = ["system", "light", "dark"];
+
+const MODE_ICONS: Record<
+  ThemeMode,
+  ComponentProps<typeof Ionicons>["name"]
+> = {
+  system: "phone-portrait-outline",
+  light: "sunny-outline",
+  dark: "moon-outline",
+};
 
 export function ThemeSettingsPanel() {
   const theme = useTheme();
@@ -29,6 +40,7 @@ export function ThemeSettingsPanel() {
       <View style={styles.row}>
         {MODES.map((item) => {
           const active = item === mode;
+          const color = active ? theme.primaryForeground : theme.text;
 
           return (
             <Pressable
@@ -43,10 +55,8 @@ export function ThemeSettingsPanel() {
                 },
               ]}
             >
-              <ThemedText
-                type="smallBold"
-                style={{ color: active ? theme.primaryForeground : theme.text }}
-              >
+              <Ionicons name={MODE_ICONS[item]} size={14} color={color} />
+              <ThemedText type="smallBold" style={{ color }}>
                 {label[item]}
               </ThemedText>
             </Pressable>
@@ -70,6 +80,9 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.one,
     borderRadius: 999,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,

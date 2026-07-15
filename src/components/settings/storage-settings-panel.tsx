@@ -1,3 +1,4 @@
+import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
@@ -56,6 +57,7 @@ export function StorageSettingsPanel() {
             {getApiErrorMessage(error, t("storage.couldNotRead"))}
           </ThemedText>
           <Pressable onPress={() => void refetch()} style={styles.textButton}>
+            <Ionicons name="refresh" size={14} color={theme.primary} />
             <ThemedText type="linkPrimary">
               {isFetching ? t("common.refreshing") : t("common.tryAgain")}
             </ThemedText>
@@ -136,6 +138,7 @@ export function StorageSettingsPanel() {
                     onPress={() => confirmRemoveTour(tour.tourId, tour.title)}
                     style={styles.removeButton}
                   >
+                    <Ionicons name="trash-outline" size={14} color="#dc2626" />
                     <ThemedText type="smallBold" style={styles.removeText}>
                       {t("storage.remove")}
                     </ThemedText>
@@ -168,6 +171,9 @@ const styles = StyleSheet.create({
   },
   textButton: {
     alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.one,
     paddingVertical: Spacing.one,
   },
   warningBanner: {
@@ -200,6 +206,9 @@ const styles = StyleSheet.create({
     gap: Spacing.half,
   },
   removeButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.one,
     paddingHorizontal: Spacing.two,
     paddingVertical: Spacing.one,
   },

@@ -133,7 +133,14 @@ export default function SpotDetailScreen() {
                 total: spots.length,
               })}
               bookmarked={bookmarked}
-              onClose={() => router.push(`/tour/${resolvedTourId}`)}
+              // Return to wherever the user opened this spot from — the floor
+              // page, the map, a search result. Only fall back to the tour index
+              // when there is no history (e.g. a deep link straight to a spot).
+              onClose={() =>
+                router.canGoBack()
+                  ? router.back()
+                  : router.replace(`/tour/${resolvedTourId}`)
+              }
               onToggleBookmark={() => void toggleBookmark(resolvedTourId, spotId)}
             />
           </View>
@@ -192,7 +199,9 @@ export default function SpotDetailScreen() {
                 onPress={() =>
                   router.replace(`/tour/${resolvedTourId}/spot/${previousSpot.id}`)
                 }
+                style={styles.footerNav}
               >
+                <Ionicons name="chevron-back" size={16} color="#ffffff" />
                 <ThemedText type="small" style={styles.footerLink}>
                   {t("spot.previous")}
                 </ThemedText>
@@ -220,7 +229,7 @@ export default function SpotDetailScreen() {
             {nextSpot ? (
               <GoldGradientButton
                 label={t("spot.next")}
-                showArrow
+                icon="arrow-forward"
                 onPress={() =>
                   router.replace(`/tour/${resolvedTourId}/spot/${nextSpot.id}`)
                 }
@@ -228,7 +237,7 @@ export default function SpotDetailScreen() {
             ) : (
               <GoldGradientButton
                 label={t("spot.done")}
-                showArrow
+                icon="checkmark"
                 onPress={() => router.push(`/tour/${resolvedTourId}`)}
               />
             )}
@@ -293,6 +302,11 @@ const styles = StyleSheet.create({
   },
   footerLink: {
     color: "rgba(255,255,255,0.7)",
+  },
+  footerNav: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
   },
   footerLinkDisabled: {
     color: "rgba(255,255,255,0.3)",

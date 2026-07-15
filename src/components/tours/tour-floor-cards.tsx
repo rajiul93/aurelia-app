@@ -81,7 +81,7 @@ export function TourFloorCards({ tourId, baseDelay = 0 }: TourFloorCardsProps) {
         coverUrl={rawContent.tour.coverMedia?.url}
         stopCount={rawContent.tour.spots.length}
         delay={baseDelay}
-        onPress={() => router.push(`/tour/${tourId}/nav`)}
+        onPress={() => router.push(`/tour/${tourId}`)}
       />
     );
   }
@@ -99,7 +99,7 @@ export function TourFloorCards({ tourId, baseDelay = 0 }: TourFloorCardsProps) {
           coverUrl={floor.coverUrl}
           stopCount={getSpotsForFloor(rawContent, floor.id).length}
           delay={baseDelay + index * 80}
-          onPress={() => router.push(`/tour/${tourId}/nav?floorId=${floor.id}`)}
+          onPress={() => router.push(`/tour/${tourId}/floor/${floor.id}`)}
         />
       ))}
     </>

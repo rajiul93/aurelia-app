@@ -97,6 +97,7 @@ export default function HomeScreen() {
             >
               <GoldGradientButton
                 label={t("home.choosePlan")}
+                icon="ticket-outline"
                 onPress={() => router.push("/explore")}
                 showArrow
                 style={styles.buyPlanButton}
@@ -212,6 +213,11 @@ export default function HomeScreen() {
                 onPress={() => void refetch()}
                 style={[styles.retryButton, { backgroundColor: theme.primary }]}
               >
+                <Ionicons
+                  name="refresh"
+                  size={16}
+                  color={theme.primaryForeground}
+                />
                 <ThemedText
                   type="smallBold"
                   style={{ color: theme.primaryForeground }}
@@ -385,6 +391,9 @@ const styles = StyleSheet.create({
   },
   retryButton: {
     alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.two,
     borderRadius: Spacing.two,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,

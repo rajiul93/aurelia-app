@@ -1,3 +1,4 @@
+import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
@@ -102,7 +103,10 @@ export function AccessSettingsPanel() {
         {isFetchingAccess ? (
           <ActivityIndicator color={theme.text} />
         ) : (
-          <ThemedText type="smallBold">{t("settings.refreshAccess")}</ThemedText>
+          <>
+            <Ionicons name="refresh" size={16} color={theme.text} />
+            <ThemedText type="smallBold">{t("settings.refreshAccess")}</ThemedText>
+          </>
         )}
       </Pressable>
     </View>
@@ -124,12 +128,15 @@ const styles = StyleSheet.create({
   },
   refreshButton: {
     alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.two,
     borderWidth: 1,
     borderRadius: Spacing.two,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     marginTop: Spacing.one,
     minWidth: 140,
-    alignItems: "center",
   },
 });

@@ -1,3 +1,4 @@
+import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { Image } from "expo-image";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -93,6 +94,11 @@ export default function WelcomeScreen() {
                       },
                     ]}
                   >
+                    <Ionicons
+                      name="language-outline"
+                      size={14}
+                      color={active ? theme.primary : theme.text}
+                    />
                     <ThemedText
                       type="smallBold"
                       style={{ color: active ? theme.primary : theme.text }}
@@ -112,6 +118,11 @@ export default function WelcomeScreen() {
             <ThemedText type="smallBold" style={{ color: theme.primaryForeground }}>
               {t("welcome.getStarted")}
             </ThemedText>
+            <Ionicons
+              name="arrow-forward"
+              size={18}
+              color={theme.primaryForeground}
+            />
           </Pressable>
         </ScrollView>
       </SafeAreaView>
@@ -164,13 +175,19 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   languageChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.one,
     borderWidth: 1,
     borderRadius: Spacing.three,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
   },
   cta: {
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.two,
     borderRadius: Spacing.three,
     paddingVertical: Spacing.three,
   },

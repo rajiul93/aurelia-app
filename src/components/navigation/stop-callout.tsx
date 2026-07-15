@@ -43,6 +43,7 @@ export function StopCallout({
           style={styles.button}
           accessibilityRole="button"
         >
+          <Ionicons name="information-circle-outline" size={16} color="#ffffff" />
           <Text style={styles.buttonText}>{viewDetailsLabel}</Text>
         </Pressable>
       </View>
@@ -100,7 +101,10 @@ const styles = StyleSheet.create({
     backgroundColor: STOP_PIN_COLOR,
     borderRadius: 10,
     paddingVertical: 10,
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
   },
   buttonText: {
     color: "#ffffff",

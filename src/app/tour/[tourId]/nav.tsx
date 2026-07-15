@@ -228,6 +228,7 @@ export default function TourNavigationScreen() {
           onPress={() => router.back()}
           style={[styles.backButton, { borderColor: theme.backgroundSelected }]}
         >
+          <Ionicons name="arrow-back" size={16} color={theme.text} />
           <ThemedText type="smallBold">{t("accessLock.goBack")}</ThemedText>
         </Pressable>
       </ThemedView>
@@ -269,6 +270,7 @@ export default function TourNavigationScreen() {
                 { backgroundColor: "rgba(28, 25, 23, 0.82)" },
               ]}
             >
+              <Ionicons name="arrow-back" size={16} color="#ffffff" />
               <ThemedText type="smallBold" style={styles.onDarkText}>
                 {t("accessLock.goBack")}
               </ThemedText>
@@ -376,6 +378,7 @@ export default function TourNavigationScreen() {
               { backgroundColor: theme.primary },
             ]}
           >
+            <Ionicons name="list" size={18} color={theme.primaryForeground} />
             <ThemedText type="smallBold" style={{ color: theme.primaryForeground }}>
               {t("nav.openStopList")}
             </ThemedText>
@@ -418,6 +421,9 @@ const styles = StyleSheet.create({
   },
   backChip: {
     alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.one,
     borderRadius: 999,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
@@ -457,9 +463,15 @@ const styles = StyleSheet.create({
     alignSelf: "stretch",
     borderRadius: Spacing.two,
     paddingVertical: Spacing.three,
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.two,
   },
   backButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.two,
     borderWidth: 1,
     borderRadius: Spacing.two,
     paddingHorizontal: Spacing.three,

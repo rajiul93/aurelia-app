@@ -1,3 +1,4 @@
+import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { useRouter } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
 
@@ -78,6 +79,11 @@ export function TourDownloadButton({
             { backgroundColor: theme.primary },
           ])}
         >
+          <Ionicons
+            name="map-outline"
+            size={16}
+            color={theme.primaryForeground}
+          />
           <ThemedText
             type="smallBold"
             style={{ color: theme.primaryForeground }}
@@ -86,6 +92,7 @@ export function TourDownloadButton({
           </ThemedText>
         </Pressable>
         <Pressable onPress={openPrepare} style={styles.textButton}>
+          <Ionicons name="options-outline" size={14} color={theme.primary} />
           <ThemedText type="linkPrimary">{t("download.changeOptions")}</ThemedText>
         </Pressable>
       </View>
@@ -95,6 +102,7 @@ export function TourDownloadButton({
   const label = installed
     ? t("download.updateOfflineTour")
     : t("download.downloadForOffline");
+  const icon = installed ? "cloud-upload-outline" : "cloud-download-outline";
 
   return (
     <View style={styles.actions}>
@@ -105,6 +113,7 @@ export function TourDownloadButton({
           { backgroundColor: theme.primary },
         ])}
       >
+        <Ionicons name={icon} size={16} color={theme.primaryForeground} />
         <ThemedText type="smallBold" style={{ color: theme.primaryForeground }}>
           {label}
         </ThemedText>
@@ -129,10 +138,16 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
     marginTop: Spacing.one,
     minWidth: 160,
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.two,
   },
   textButton: {
     alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.one,
     paddingVertical: Spacing.one,
   },
 });

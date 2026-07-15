@@ -1,3 +1,4 @@
+import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -121,12 +122,19 @@ export function UnlockForm({ onUnlocked }: UnlockFormProps) {
           {unlock.isPending ? (
             <ActivityIndicator color={theme.primaryForeground} />
           ) : (
-            <ThemedText
-              type="smallBold"
-              style={{ color: theme.primaryForeground }}
-            >
-              {t("auth.unlock")}
-            </ThemedText>
+            <>
+              <Ionicons
+                name="lock-open-outline"
+                size={18}
+                color={theme.primaryForeground}
+              />
+              <ThemedText
+                type="smallBold"
+                style={{ color: theme.primaryForeground }}
+              >
+                {t("auth.unlock")}
+              </ThemedText>
+            </>
           )}
         </Pressable>
 
@@ -179,8 +187,10 @@ const styles = StyleSheet.create({
   unlockButton: {
     height: FIELD_HEIGHT,
     borderRadius: Spacing.two,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: Spacing.two,
     marginTop: Spacing.one,
   },
   errorText: {

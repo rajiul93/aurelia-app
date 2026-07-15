@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 
-import { GUIDE_FEATURE_ICONS } from "@/constants/guide-features";
 import type { AudienceType } from "@/constants/audiences";
 import type { DownloadMode } from "@/constants/download-mode";
 import { useAppContent } from "@/hooks/queries/use-app-content";
@@ -35,29 +34,6 @@ const LANGUAGE_KEYS: Record<AppLanguage, StringKey> = {
   fr: "language.fr",
 };
 
-const GUIDE_FEATURE_KEYS = [
-  {
-    icon: GUIDE_FEATURE_ICONS.audio,
-    titleKey: "guideFeature.audio.title" as StringKey,
-    descriptionKey: "guideFeature.audio.description" as StringKey,
-  },
-  {
-    icon: GUIDE_FEATURE_ICONS.transcript,
-    titleKey: "guideFeature.transcript.title" as StringKey,
-    descriptionKey: "guideFeature.transcript.description" as StringKey,
-  },
-  {
-    icon: GUIDE_FEATURE_ICONS.images,
-    titleKey: "guideFeature.images.title" as StringKey,
-    descriptionKey: "guideFeature.images.description" as StringKey,
-  },
-  {
-    icon: GUIDE_FEATURE_ICONS.chat,
-    titleKey: "guideFeature.chat.title" as StringKey,
-    descriptionKey: "guideFeature.chat.description" as StringKey,
-  },
-] as const;
-
 export function useStrings() {
   const language = useLocaleStore((state) => state.language);
   const { data: contentResponse } = useAppContent();
@@ -90,11 +66,6 @@ export function useStrings() {
       downloadModeLabel: (mode: DownloadMode) => t(DOWNLOAD_MODE_LABEL_KEYS[mode]),
       downloadModeDescription: (mode: DownloadMode) =>
         t(DOWNLOAD_MODE_DESCRIPTION_KEYS[mode]),
-      guideFeatures: GUIDE_FEATURE_KEYS.map((feature) => ({
-        icon: feature.icon,
-        title: t(feature.titleKey),
-        description: t(feature.descriptionKey),
-      })),
       getTimeGreeting,
     };
   }, [language, remoteStrings]);
