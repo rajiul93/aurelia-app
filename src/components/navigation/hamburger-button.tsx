@@ -1,32 +1,42 @@
 import { Ionicons } from "@react-native-vector-icons/ionicons";
-import { Pressable, StyleSheet } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 
 import { useDrawerStore } from "@/store/drawer-store";
-import { useTheme } from "@/hooks/use-theme";
 
 export function HamburgerButton() {
-  const theme = useTheme();
   const openDrawer = useDrawerStore((state) => state.openDrawer);
 
   return (
     <Pressable
       accessibilityLabel="Open menu"
       accessibilityRole="button"
-      hitSlop={8}
+      hitSlop={6}
       onPress={openDrawer}
-      style={styles.button}
+      style={({ pressed }) => [
+        styles.pressable,
+        { opacity: pressed ? 0.7 : 1 },
+      ]}
     >
-      <Ionicons name="menu" size={26} color={theme.primary} />
+      <View style={styles.button}>
+        <Ionicons name="menu" size={24} color="#ffffff" />
+      </View>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
+  pressable: {
+    alignSelf: "flex-start",
+  },
   button: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    marginLeft: -6,
+    // Soft watermark wash — readable without a hard card
+    backgroundColor: "rgba(255, 255, 255, 0.18)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255, 255, 255, 0.28)",
   },
 });

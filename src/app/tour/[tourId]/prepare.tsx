@@ -115,7 +115,7 @@ export default function TourPrepareScreen() {
   }
 
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView transparent style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <ScreenHeader
@@ -235,7 +235,9 @@ function Section({
 }) {
   return (
     <View style={styles.section}>
-      <ThemedText type="smallBold">{title}</ThemedText>
+      <ThemedText type="smallBold" style={styles.sectionTitle}>
+        {title}
+      </ThemedText>
       <View style={styles.optionList}>{children}</View>
     </View>
   );
@@ -257,20 +259,67 @@ function OptionCard({
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="radio"
+      accessibilityState={{ selected }}
       style={[
         styles.optionCard,
-        {
-          borderColor: selected ? theme.primary : theme.backgroundSelected,
-          backgroundColor: selected ? `${theme.primary}18` : theme.backgroundElement,
-        },
+        selected
+          ? {
+              borderColor: theme.primary,
+              backgroundColor: theme.primary,
+            }
+          : {
+              borderColor: "rgba(255, 255, 255, 0.22)",
+              backgroundColor: "rgba(28, 25, 23, 0.55)",
+            },
       ]}
     >
-      <ThemedText type="smallBold">{label}</ThemedText>
-      {description ? (
-        <ThemedText type="small" themeColor="textSecondary">
-          {description}
-        </ThemedText>
-      ) : null}
+      <View style={styles.optionRow}>
+        <View
+          style={[
+            styles.radioOuter,
+            {
+              borderColor: selected
+                ? theme.primaryForeground
+                : "rgba(255, 255, 255, 0.45)",
+              backgroundColor: selected
+                ? theme.primaryForeground
+                : "transparent",
+            },
+          ]}
+        >
+          {selected ? (
+            <Ionicons
+              name="checkmark"
+              size={12}
+              color={theme.primary}
+            />
+          ) : null}
+        </View>
+
+        <View style={styles.optionCopy}>
+          <ThemedText
+            type="smallBold"
+            style={{
+              color: selected ? theme.primaryForeground : "#ffffff",
+            }}
+          >
+            {label}
+          </ThemedText>
+          {description ? (
+            <ThemedText
+              type="small"
+              style={{
+                color: selected
+                  ? "rgba(26, 18, 8, 0.72)"
+                  : "rgba(255, 255, 255, 0.7)",
+              }}
+            >
+              {description}
+            </ThemedText>
+          ) : null}
+        </View>
+      </View>
     </Pressable>
   );
 }
@@ -286,14 +335,37 @@ const styles = StyleSheet.create({
   section: {
     gap: Spacing.two,
   },
+  sectionTitle: {
+    color: "#ffffff",
+    textShadowColor: "rgba(0, 0, 0, 0.45)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
   optionList: {
     gap: Spacing.two,
   },
   optionCard: {
-    borderWidth: 1,
+    borderWidth: 2,
     borderRadius: Spacing.three,
     padding: Spacing.three,
-    gap: Spacing.one,
+  },
+  optionRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: Spacing.three,
+  },
+  radioOuter: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 1,
+  },
+  optionCopy: {
+    flex: 1,
+    gap: Spacing.half,
   },
   progressCard: {
     borderRadius: Spacing.three,

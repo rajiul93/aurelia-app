@@ -153,7 +153,7 @@ export default function TourChatScreen() {
     keyboardHeight > 0 ? Spacing.two : Math.max(insets.bottom, Spacing.two);
 
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView transparent style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <View
           style={[

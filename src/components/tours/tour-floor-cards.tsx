@@ -2,6 +2,7 @@ import { useRouter } from "expo-router";
 
 import { FloorCard } from "@/components/tours/floor-card";
 import { useInstalledMediaUri } from "@/hooks/use-installed-media-uri";
+import { useEntitlementStatus } from "@/hooks/use-entitlement-status";
 import { useInstalledTourView } from "@/hooks/use-installed-tour-view";
 import { useStrings } from "@/hooks/use-strings";
 import { getFloorName, getSpotsForFloor } from "@/lib/bundle/floor-routing";
@@ -19,6 +20,7 @@ type FloorCardItemProps = {
   coverUrl?: string | null;
   stopCount: number;
   delay: number;
+  locked: boolean;
   onPress: () => void;
 };
 
@@ -34,6 +36,7 @@ function FloorCardItem({
   coverUrl,
   stopCount,
   delay,
+  locked,
   onPress,
 }: FloorCardItemProps) {
   const { t } = useStrings();
@@ -46,6 +49,8 @@ function FloorCardItem({
       stopCount={stopCount}
       stopLabel={stopCount === 1 ? t("floors.stop") : t("floors.stops")}
       exploreLabel={t("floors.explore")}
+      locked={locked}
+      lockedLabel={t("floors.locked")}
       delay={delay}
       onPress={onPress}
     />
@@ -56,11 +61,17 @@ function FloorCardItem({
  * The floor cards for one installed tour. Reads the on-disk bundle, so it only
  * renders content the user has actually downloaded — no network. A single-floor
  * (or v1) tour shows one card for the whole tour.
+ *
+ * Cards stay visible after sign-out (covers are already on disk) but are locked
+ * until the user unlocks again with an active plan for this tour.
  */
 export function TourFloorCards({ tourId, baseDelay = 0 }: TourFloorCardsProps) {
   const router = useRouter();
   const { t } = useStrings();
+  const { isSignedIn, isTourLocked } = useEntitlementStatus();
   const { rawContent, preferences } = useInstalledTourView(tourId);
+  // Disk alone must never unlock floors — signed-out visitors always see Locked.
+  const locked = !isSignedIn || isTourLocked(tourId);
 
   if (!rawContent || !preferences) {
     return null;
@@ -72,7 +83,16 @@ export function TourFloorCards({ tourId, baseDelay = 0 }: TourFloorCardsProps) {
     (left, right) => left.floorNo - right.floorNo,
   );
 
-  // v1 / single-floor tour: one card for the whole tour, opening the map.
+  function openOrUnlock(path: string) {
+    if (locked) {
+      router.push("/explore");
+      return;
+    }
+
+    router.push(path as `/tour/${string}`);
+  }
+
+  // v1 / single-floor tour: one card for the whole tour.
   if (floors.length === 0) {
     return (
       <FloorCardItem
@@ -81,7 +101,8 @@ export function TourFloorCards({ tourId, baseDelay = 0 }: TourFloorCardsProps) {
         coverUrl={rawContent.tour.coverMedia?.url}
         stopCount={rawContent.tour.spots.length}
         delay={baseDelay}
-        onPress={() => router.push(`/tour/${tourId}`)}
+        locked={locked}
+        onPress={() => openOrUnlock(`/tour/${tourId}`)}
       />
     );
   }
@@ -99,7 +120,8 @@ export function TourFloorCards({ tourId, baseDelay = 0 }: TourFloorCardsProps) {
           coverUrl={floor.coverUrl}
           stopCount={getSpotsForFloor(rawContent, floor.id).length}
           delay={baseDelay + index * 80}
-          onPress={() => router.push(`/tour/${tourId}/floor/${floor.id}`)}
+          locked={locked}
+          onPress={() => openOrUnlock(`/tour/${tourId}/floor/${floor.id}`)}
         />
       ))}
     </>

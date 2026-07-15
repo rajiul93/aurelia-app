@@ -158,3 +158,26 @@ export function getFloorName(
     exact?.name ?? sameLanguage?.name ?? english?.name ?? translations[0]!.name
   );
 }
+
+/**
+ * Floor id for a spot so map deep-links land on the right level.
+ * Prefers `spot.floorId`, then matches `spot.floor` to a floor number, then the
+ * tour default (first / only floor, or "" for v1).
+ */
+export function resolveSpotFloorId(
+  content: BundleContent,
+  spot: BundleSpot,
+): string {
+  if (spot.floorId && findFloor(content, spot.floorId)) {
+    return spot.floorId;
+  }
+
+  const byNumber = floorsOf(content).find(
+    (floor) => floor.floorNo === spot.floor,
+  );
+  if (byNumber) {
+    return byNumber.id;
+  }
+
+  return getDefaultFloorId(content);
+}

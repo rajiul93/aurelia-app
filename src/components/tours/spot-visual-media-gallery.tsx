@@ -63,7 +63,6 @@ export function SpotVisualMediaGallery({
     return null;
   }
 
-  const panelBg = onDark ? "rgba(255,255,255,0.08)" : theme.backgroundElement;
   const tabBarBg = onDark ? "rgba(255,255,255,0.06)" : theme.backgroundElement;
 
   function goTo(delta: -1 | 1) {
@@ -112,18 +111,9 @@ export function SpotVisualMediaGallery({
             );
           })}
         </View>
-      ) : (
-        <ThemedText
-          type="smallBold"
-          style={{ color: onDark ? theme.primary : theme.text }}
-        >
-          {resolvedTab === "VIDEO"
-            ? t("spot.mediaVideo")
-            : t("spot.mediaImages")}
-        </ThemedText>
-      )}
+      ) : null}
 
-      <View style={[styles.panel, { backgroundColor: panelBg }]}>
+      <View style={styles.panel}>
         {activeItem && playbackUrl ? (
           <>
             {resolvedTab === "VIDEO" ? (
@@ -183,14 +173,14 @@ const styles = StyleSheet.create({
   },
   panel: {
     alignSelf: "stretch",
+    gap: Spacing.two,
+    overflow: "hidden",
     borderRadius: Spacing.three,
-    padding: Spacing.three,
-    gap: Spacing.three,
   },
   image: {
     width: "100%",
     aspectRatio: 4 / 3,
-    borderRadius: Spacing.two,
+    borderRadius: Spacing.three,
   },
   navigator: {
     flexDirection: "row",
@@ -198,6 +188,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   navButton: {
-    padding: Spacing.two,
+    padding: Spacing.one,
   },
 });

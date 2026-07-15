@@ -8,7 +8,10 @@ export default function AppTabs() {
 
   return (
     <Tabs
-      screenOptions={{ headerShown: false }}
+      screenOptions={{
+        headerShown: false,
+        sceneStyle: { backgroundColor: "transparent" },
+      }}
       tabBar={(props) => <GlassTabBar {...props} />}
     >
       <Tabs.Screen name="index" options={{ title: t("tabs.home") }} />

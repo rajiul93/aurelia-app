@@ -2,6 +2,7 @@ import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
+import { GlassCard } from "@/components/ui/glass-card";
 import { Spacing } from "@/constants/theme";
 import { useRemoveInstalledTour } from "@/hooks/mutations/use-remove-installed-tour";
 import { useStorageSummary } from "@/hooks/queries/use-storage-summary";
@@ -36,12 +37,7 @@ export function StorageSettingsPanel() {
   }
 
   return (
-    <View
-      style={[
-        styles.card,
-        { backgroundColor: theme.backgroundElement },
-      ]}
-    >
+    <GlassCard style={styles.card}>
       <ThemedText type="smallBold">{t("storage.title")}</ThemedText>
       <ThemedText type="small" themeColor="textSecondary">
         {t("storage.subtitle")}
@@ -149,15 +145,12 @@ export function StorageSettingsPanel() {
           )}
         </>
       ) : null}
-    </View>
+    </GlassCard>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    alignSelf: "stretch",
-    borderRadius: Spacing.three,
-    padding: Spacing.four,
     gap: Spacing.three,
   },
   loader: {

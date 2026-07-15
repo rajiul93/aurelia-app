@@ -6,6 +6,7 @@ import {
   getFloorName,
   getFloorScope,
   getSpotsForFloor,
+  resolveSpotFloorId,
 } from "@/lib/bundle/floor-routing";
 import { orderSpotsAcrossFloors } from "@/lib/bundle/route-order";
 import { buildRouteCoordinates } from "@/lib/navigation/route-geometry";
@@ -170,6 +171,22 @@ describe("getFloorScope", () => {
       "s1",
       "s2",
     ]);
+  });
+});
+
+describe("resolveSpotFloorId", () => {
+  it("prefers spot.floorId when present", () => {
+    const target = v2.tour.spots.find((entry) => entry.id === "s3")!;
+    expect(resolveSpotFloorId(v2, target)).toBe("floor-2");
+  });
+
+  it("falls back to matching floor number", () => {
+    const target = { ...v2.tour.spots[0]!, floorId: undefined };
+    expect(resolveSpotFloorId(v2, target)).toBe("floor-1");
+  });
+
+  it("returns empty for a v1 bundle", () => {
+    expect(resolveSpotFloorId(v1, v1.tour.spots[0]!)).toBe("");
   });
 });
 

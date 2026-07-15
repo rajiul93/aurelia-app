@@ -1,6 +1,7 @@
-import { StyleSheet, View } from "react-native";
+import { StyleSheet } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
+import { GlassCard } from "@/components/ui/glass-card";
 import { Spacing } from "@/constants/theme";
 import { useStrings } from "@/hooks/use-strings";
 import { useTheme } from "@/hooks/use-theme";
@@ -17,30 +18,20 @@ export function EmergencyAnnouncementBanner() {
   }
 
   return (
-    <View
-      style={[
-        styles.banner,
-        {
-          backgroundColor: theme.backgroundElement,
-          borderColor: theme.primary,
-        },
-      ]}
-    >
+    <GlassCard style={[styles.banner, { borderColor: theme.primary }]}>
       <ThemedText type="smallBold" themeColor="primary">
         {t("home.announcement")}
       </ThemedText>
       <ThemedText type="small" style={styles.message}>
         {message}
       </ThemedText>
-    </View>
+    </GlassCard>
   );
 }
 
 const styles = StyleSheet.create({
   banner: {
-    alignSelf: "stretch",
     borderWidth: 1,
-    borderRadius: Spacing.three,
     padding: Spacing.three,
     gap: Spacing.one,
   },

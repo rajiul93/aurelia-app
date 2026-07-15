@@ -3,6 +3,7 @@ import type { ComponentProps } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
+import { GlassCard } from "@/components/ui/glass-card";
 import { Spacing } from "@/constants/theme";
 import { useStrings } from "@/hooks/use-strings";
 import { useTheme } from "@/hooks/use-theme";
@@ -32,7 +33,7 @@ export function ThemeSettingsPanel() {
   };
 
   return (
-    <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
+    <GlassCard>
       <ThemedText type="smallBold">{t("settings.theme")}</ThemedText>
       <ThemedText type="small" themeColor="textSecondary">
         {t("settings.themeHint")}
@@ -63,17 +64,11 @@ export function ThemeSettingsPanel() {
           );
         })}
       </View>
-    </View>
+    </GlassCard>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    alignSelf: "stretch",
-    borderRadius: Spacing.three,
-    padding: Spacing.four,
-    gap: Spacing.two,
-  },
   row: {
     flexDirection: "row",
     flexWrap: "wrap",

@@ -185,7 +185,7 @@ export default function TourNavigationScreen() {
 
   if (isResolving) {
     return (
-      <ThemedView style={styles.centered}>
+      <ThemedView transparent style={styles.centered}>
         <ActivityIndicator color={theme.primary} />
       </ThemedView>
     );
@@ -193,7 +193,7 @@ export default function TourNavigationScreen() {
 
   if (!hasRawContent || !content || !tourId) {
     return (
-      <ThemedView style={styles.centered}>
+      <ThemedView transparent style={styles.centered}>
         <ThemedText type="smallBold">{t("tour.notInstalled")}</ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
           {t("tour.downloadFromHome")}
@@ -204,7 +204,7 @@ export default function TourNavigationScreen() {
 
   if (!mapPackReady) {
     return (
-      <ThemedView style={styles.centered}>
+      <ThemedView transparent style={styles.centered}>
         <ActivityIndicator color={theme.primary} />
         <ThemedText type="small" themeColor="textSecondary">
           {t("nav.preparingMap")}
@@ -219,7 +219,7 @@ export default function TourNavigationScreen() {
       : t("nav.unavailableHint");
 
     return (
-      <ThemedView style={styles.centered}>
+      <ThemedView transparent style={styles.centered}>
         <ThemedText type="smallBold">{t("nav.unavailableTitle")}</ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
           {hint}
@@ -240,7 +240,7 @@ export default function TourNavigationScreen() {
     : content.tour.slug;
 
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView transparent style={styles.container}>
       <Suspense
         fallback={
           <View style={styles.centered}>

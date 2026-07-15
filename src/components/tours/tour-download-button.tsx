@@ -1,6 +1,15 @@
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { useRouter } from "expo-router";
+import { useEffect } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
+import Animated, {
+  Easing,
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from "react-native-reanimated";
 
 import { ThemedText } from "@/components/themed-text";
 import { Spacing } from "@/constants/theme";
@@ -19,6 +28,49 @@ type TourDownloadButtonProps = {
   unlocked: boolean;
   entitledVersions?: EntitledVersions;
 };
+
+function PulsingDownloadButton({
+  label,
+  icon,
+  onPress,
+}: {
+  label: string;
+  icon: React.ComponentProps<typeof Ionicons>["name"];
+  onPress: () => void;
+}) {
+  const theme = useTheme();
+  const pulse = useSharedValue(0);
+
+  useEffect(() => {
+    pulse.value = withRepeat(
+      withTiming(1, { duration: 900, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true,
+    );
+  }, [pulse]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(pulse.value, [0, 1], [0.78, 1]),
+    transform: [{ scale: interpolate(pulse.value, [0, 1], [0.995, 1]) }],
+  }));
+
+  return (
+    <Animated.View style={[styles.pulseWrap, animatedStyle]}>
+      <Pressable
+        onPress={onPress}
+        style={[styles.button, styles.buttonFull, { backgroundColor: theme.primary }]}
+      >
+        <Ionicons name={icon} size={16} color={theme.primaryForeground} />
+        <ThemedText
+          type="smallBold"
+          style={{ color: theme.primaryForeground }}
+        >
+          {label}
+        </ThemedText>
+      </Pressable>
+    </Animated.View>
+  );
+}
 
 export function TourDownloadButton({
   tourId,
@@ -74,10 +126,7 @@ export function TourDownloadButton({
         </ThemedText>
         <Pressable
           onPress={() => router.push(`/tour/${tourId}`)}
-          style={StyleSheet.flatten([
-            styles.button,
-            { backgroundColor: theme.primary },
-          ])}
+          style={[styles.button, { backgroundColor: theme.primary }]}
         >
           <Ionicons
             name="map-outline"
@@ -106,18 +155,11 @@ export function TourDownloadButton({
 
   return (
     <View style={styles.actions}>
-      <Pressable
+      <PulsingDownloadButton
+        label={label}
+        icon={icon}
         onPress={openPrepare}
-        style={StyleSheet.flatten([
-          styles.button,
-          { backgroundColor: theme.primary },
-        ])}
-      >
-        <Ionicons name={icon} size={16} color={theme.primaryForeground} />
-        <ThemedText type="smallBold" style={{ color: theme.primaryForeground }}>
-          {label}
-        </ThemedText>
-      </Pressable>
+      />
     </View>
   );
 }
@@ -131,17 +173,26 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     alignSelf: "stretch",
   },
+  pulseWrap: {
+    alignSelf: "stretch",
+    width: "100%",
+    marginTop: Spacing.one,
+  },
   button: {
     alignSelf: "flex-start",
     borderRadius: Spacing.two,
     paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    marginTop: Spacing.one,
+    paddingVertical: Spacing.three,
     minWidth: 160,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: Spacing.two,
+  },
+  buttonFull: {
+    alignSelf: "stretch",
+    width: "100%",
+    minWidth: undefined,
   },
   textButton: {
     alignSelf: "flex-start",

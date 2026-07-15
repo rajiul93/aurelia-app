@@ -1,23 +1,18 @@
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { useRouter } from "expo-router";
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { ThemedText } from "@/components/themed-text";
-import { HamburgerButton } from "@/components/navigation/hamburger-button";
-import { PageBackground } from "@/components/page-background";
-import { WhyBuyCard } from "@/components/tours/why-buy-card";
-import { TourFloorCards } from "@/components/tours/tour-floor-cards";
 import { EmergencyAnnouncementBanner } from "@/components/emergency-announcement-banner";
+import { HamburgerButton } from "@/components/navigation/hamburger-button";
+import { ThemedText } from "@/components/themed-text";
+import { FloorCard } from "@/components/tours/floor-card";
+import { FloorCardSkeleton } from "@/components/tours/floor-card-skeleton";
 import { TourDownloadButton } from "@/components/tours/tour-download-button";
-import { GoldGradientButton } from "@/components/ui/gold-gradient-button";
+import { TourFloorCards } from "@/components/tours/tour-floor-cards";
+import { WhyBuyCard } from "@/components/tours/why-buy-card";
+import { GlassCard } from "@/components/ui/glass-card";
 import { BottomTabInset, Spacing } from "@/constants/theme";
 import { useAppContent } from "@/hooks/queries/use-app-content";
 import { useCatalogTours } from "@/hooks/queries/use-catalog";
@@ -29,7 +24,10 @@ import { env } from "@/lib/env";
 import { useAuthStore } from "@/store/auth-store";
 import { useInstalledToursStore } from "@/store/installed-tours-store";
 
-function getErrorMessage(error: unknown, t: ReturnType<typeof useStrings>["t"]) {
+function getErrorMessage(
+  error: unknown,
+  t: ReturnType<typeof useStrings>["t"],
+) {
   if (error instanceof Error && error.message === "Network Error") {
     return t("home.networkError", { url: env.apiBaseUrl });
   }
@@ -45,8 +43,8 @@ export default function HomeScreen() {
   const router = useRouter();
   const theme = useTheme();
   const { t } = useStrings();
-  const phone = useAuthStore((state) => state.phone);
   const sessionToken = useAuthStore((state) => state.sessionToken);
+  const isSignedIn = Boolean(sessionToken);
   const { data: contentResponse } = useAppContent();
   const { data, isLoading, isError, error, refetch, isFetching } =
     useCatalogTours();
@@ -70,78 +68,66 @@ export default function HomeScreen() {
   // bundle, so these need a download before their floor cards can appear.
   const downloadable = tours.filter((tour) => !installedTourIds.has(tour.id));
 
+  // Locked floor teasers from the catalog for tours that are not (yet) on disk —
+  // real FloorCard UI, never a tour-level card.
+  const lockedCatalogFloors = tours
+    .filter((tour) => !installedTourIds.has(tour.id))
+    .flatMap((tour) =>
+      (tour.floors ?? []).map((floor) => ({
+        tourId: tour.id,
+        floor,
+      })),
+    );
+
+  const showFloorsSection =
+    installedGuides.length > 0 || lockedCatalogFloors.length > 0;
+
   return (
-    <PageBackground uri={backgroundUrl} imagePosition="right" noOverlay>
-      <SafeAreaView style={styles.safeArea} edges={["top"]}>
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.topBar}>
-            <HamburgerButton />
-            <ThemedText
-              type="smallBold"
-              numberOfLines={1}
-              style={[styles.brandTitle, heroOnDark && styles.onDarkText]}
-            >
-              {title}
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.topBar}>
+          <HamburgerButton />
+          <Pressable
+            accessibilityRole="button"
+            hitSlop={4}
+            style={({ pressed }) => [
+              styles.brandChip,
+              { opacity: pressed ? 0.82 : 1 },
+            ]}
+          >
+            <ThemedText type="smallBold" numberOfLines={1} style={styles.brandTitle}>
+              {title.toLocaleUpperCase("en-US")}
             </ThemedText>
-          </View>
+          </Pressable>
+        </View>
 
-          {/* No active plan → the choice to buy sits at the very top. */}
-          {!hasActivePlan ? (
-            <Animated.View
-              entering={FadeInDown.duration(420).springify().damping(18)}
-              style={styles.buyPlanWrap}
-            >
-              <GoldGradientButton
-                label={t("home.choosePlan")}
-                icon="ticket-outline"
-                onPress={() => router.push("/explore")}
-                showArrow
-                style={styles.buyPlanButton}
-              />
-            </Animated.View>
-          ) : null}
-
-          {!phone ? (
-            <Animated.View
-              entering={FadeInDown.delay(60).duration(420).springify().damping(18)}
-              style={[
-                styles.premiumCard,
-                {
-                  backgroundColor: heroOnDark
-                    ? "rgba(15, 16, 22, 0.55)"
-                    : theme.backgroundElement,
-                  borderColor: heroOnDark
-                    ? "rgba(255, 255, 255, 0.18)"
-                    : theme.backgroundSelected,
-                },
-              ]}
-            >
+        {!isSignedIn ? (
+          <Animated.View
+            entering={FadeInDown.delay(60)
+              .duration(420)
+              .springify()
+              .damping(18)}
+          >
+            <GlassCard style={styles.premiumCard}>
               <View
                 style={[
                   styles.premiumIcon,
-                  {
-                    backgroundColor: heroOnDark
-                      ? "rgba(255, 255, 255, 0.14)"
-                      : theme.backgroundSelected,
-                  },
+                  { backgroundColor: `${theme.primary}22` },
                 ]}
               >
                 <Ionicons name="lock-closed" size={20} color={theme.primary} />
               </View>
-              <ThemedText
-                type="smallBold"
-                style={[styles.wrapText, heroOnDark && styles.onDarkText]}
-              >
+              <ThemedText type="smallBold" style={styles.wrapText}>
                 {t("home.premiumTitle")}
               </ThemedText>
               <ThemedText
                 type="small"
-                themeColor={heroOnDark ? undefined : "textSecondary"}
-                style={[styles.wrapText, heroOnDark && styles.onDarkMuted]}
+                themeColor="textSecondary"
+                style={styles.wrapText}
               >
                 {t("home.premiumSubtitle")}
               </ThemedText>
@@ -161,137 +147,135 @@ export default function HomeScreen() {
                   {t("home.signInCta")}
                 </ThemedText>
               </Pressable>
-            </Animated.View>
-          ) : null}
+            </GlassCard>
+          </Animated.View>
+        ) : null}
 
-          <EmergencyAnnouncementBanner />
+        <EmergencyAnnouncementBanner />
 
-          {/* The heart of the home: one premium card per floor of each installed
-              tour. Tapping a card opens that floor's map, stops and content. */}
-          {installedGuides.length > 0 ? (
-            <View style={styles.section}>
-              <ThemedText
-                type="smallBold"
-                style={[styles.sectionTitle, heroOnDark && styles.onDarkText]}
-              >
-                {t("floors.yourFloors")}
-              </ThemedText>
-              <View style={styles.cardList}>
-                {installedGuides.map((guide, index) => (
-                  <TourFloorCards
-                    key={guide.tourId}
-                    tourId={guide.tourId}
-                    baseDelay={index * 120}
-                  />
-                ))}
-              </View>
-            </View>
-          ) : null}
-
-          {isLoading ? (
-            <ActivityIndicator color={theme.primary} style={styles.loader} />
-          ) : null}
-
-          {isError ? (
-            <View
-              style={[
-                styles.messageCard,
-                { backgroundColor: theme.backgroundElement },
-              ]}
-            >
-              <ThemedText type="smallBold" style={styles.wrapText}>
-                {t("home.couldNotLoadTours")}
-              </ThemedText>
-              <ThemedText
-                type="small"
-                themeColor="textSecondary"
-                style={styles.wrapText}
-              >
-                {getErrorMessage(error, t)}
-              </ThemedText>
-              <Pressable
-                onPress={() => void refetch()}
-                style={[styles.retryButton, { backgroundColor: theme.primary }]}
-              >
-                <Ionicons
-                  name="refresh"
-                  size={16}
-                  color={theme.primaryForeground}
-                />
-                <ThemedText
-                  type="smallBold"
-                  style={{ color: theme.primaryForeground }}
-                >
-                  {isFetching ? t("home.retrying") : t("home.tryAgain")}
-                </ThemedText>
-              </Pressable>
-            </View>
-          ) : null}
-
-          {/* Signed in with tours still to download — a compact prompt, not a
-              full cover card, so floors stay the visual focus. */}
-          {sessionToken && downloadable.length > 0 ? (
-            <View style={styles.section}>
-              <ThemedText
-                type="smallBold"
-                style={[styles.sectionTitle, heroOnDark && styles.onDarkText]}
-              >
-                {t("home.availableToDownload")}
-              </ThemedText>
-              <View style={styles.cardList}>
-                {downloadable.map((tour) => (
-                  <View
-                    key={tour.id}
-                    style={[
-                      styles.downloadCard,
-                      { backgroundColor: theme.backgroundElement },
-                    ]}
+        {/* Download first so signed-in users see offline install before floors. */}
+        {sessionToken && downloadable.length > 0 ? (
+          <View style={styles.section}>
+            <View style={styles.cardList}>
+              {downloadable.map((tour) => (
+                <GlassCard key={tour.id} style={styles.downloadCard}>
+                  <ThemedText
+                    type="smallBold"
+                    numberOfLines={2}
+                    style={styles.wrapText}
                   >
-                    <ThemedText
-                      type="smallBold"
-                      numberOfLines={2}
-                      style={styles.wrapText}
-                    >
-                      {tour.title}
-                    </ThemedText>
-                    <TourDownloadButton
-                      tourId={tour.id}
-                      slug={tour.slug}
-                      title={tour.title}
-                      unlocked={unlockedTourIds.has(tour.id)}
-                      entitledVersions={entitledVersionsByTourId.get(tour.id)}
-                    />
-                  </View>
-                ))}
-              </View>
+                    {tour.title}
+                  </ThemedText>
+                  <TourDownloadButton
+                    tourId={tour.id}
+                    slug={tour.slug}
+                    title={tour.title}
+                    unlocked={unlockedTourIds.has(tour.id)}
+                    entitledVersions={entitledVersionsByTourId.get(tour.id)}
+                  />
+                </GlassCard>
+              ))}
             </View>
-          ) : null}
+          </View>
+        ) : null}
 
-          {!isLoading && !isError && tours.length === 0 && installedGuides.length === 0 ? (
-            <View
-              style={[
-                styles.messageCard,
-                { backgroundColor: theme.backgroundElement },
-              ]}
+        {/* Floor cards only: installed (possibly Locked) + locked catalog teasers
+            for floors that are not yet downloaded. */}
+        {showFloorsSection ? (
+          <View style={styles.section}>
+            {/* <ThemedText
+              type="smallBold"
+              style={[styles.sectionTitle, heroOnDark && styles.onDarkText]}
             >
-              <ThemedText type="smallBold" style={styles.wrapText}>
-                {t("home.noPublishedTours")}
-              </ThemedText>
-              <ThemedText
-                type="small"
-                themeColor="textSecondary"
-                style={styles.wrapText}
-              >
-                {t("home.publishHint")}
-              </ThemedText>
+              {t("floors.yourFloors")}
+            </ThemedText> */}
+            <View style={styles.cardList}>
+              {installedGuides.map((guide, index) => (
+                <TourFloorCards
+                  key={guide.tourId}
+                  tourId={guide.tourId}
+                  baseDelay={index * 120}
+                />
+              ))}
+              {lockedCatalogFloors.map(({ floor }, index) => (
+                <FloorCard
+                  key={floor.id}
+                  name={floor.name}
+                  coverUrl={floor.coverUrl}
+                  stopCount={floor.stopCount}
+                  stopLabel={
+                    floor.stopCount === 1 ? t("floors.stop") : t("floors.stops")
+                  }
+                  exploreLabel={t("floors.explore")}
+                  locked
+                  lockedLabel={t("floors.locked")}
+                  delay={installedGuides.length * 120 + index * 80}
+                  onPress={() => router.navigate("/explore")}
+                />
+              ))}
             </View>
-          ) : null}
+          </View>
+        ) : isLoading ? (
+          <View style={styles.section}>
+            <ThemedText
+              type="smallBold"
+              style={[styles.sectionTitle, heroOnDark && styles.onDarkText]}
+            >
+              {t("floors.yourFloors")}
+            </ThemedText>
+            <FloorCardSkeleton count={3} />
+          </View>
+        ) : null}
+        {isError ? (
+          <GlassCard>
+            <ThemedText type="smallBold" style={styles.wrapText}>
+              {t("home.couldNotLoadTours")}
+            </ThemedText>
+            <ThemedText
+              type="small"
+              themeColor="textSecondary"
+              style={styles.wrapText}
+            >
+              {getErrorMessage(error, t)}
+            </ThemedText>
+            <Pressable
+              onPress={() => void refetch()}
+              style={[styles.retryButton, { backgroundColor: theme.primary }]}
+            >
+              <Ionicons
+                name="refresh"
+                size={16}
+                color={theme.primaryForeground}
+              />
+              <ThemedText
+                type="smallBold"
+                style={{ color: theme.primaryForeground }}
+              >
+                {isFetching ? t("home.retrying") : t("home.tryAgain")}
+              </ThemedText>
+            </Pressable>
+          </GlassCard>
+        ) : null}
 
-          {/* Why Buy lives only where there is still a reason to sell. */}
-          {!hasActivePlan ? <WhyBuyCard /> : null}
-        </ScrollView>
-      </SafeAreaView>
-    </PageBackground>
+        {!isLoading && !isError && tours.length === 0 && !showFloorsSection ? (
+          <GlassCard>
+            <ThemedText type="smallBold" style={styles.wrapText}>
+              {t("home.noPublishedTours")}
+            </ThemedText>
+            <ThemedText
+              type="small"
+              themeColor="textSecondary"
+              style={styles.wrapText}
+            >
+              {t("home.publishHint")}
+            </ThemedText>
+          </GlassCard>
+        ) : null}
+
+        {/* Why Buy lives only where there is still a reason to sell. */}
+        {!hasActivePlan ? <WhyBuyCard /> : null}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -314,26 +298,31 @@ const styles = StyleSheet.create({
     alignSelf: "stretch",
     paddingTop: Spacing.two,
   },
-  brandTitle: {
-    fontSize: 18,
-    lineHeight: 24,
+  brandChip: {
     flexShrink: 1,
-    textAlign: "right",
     marginLeft: Spacing.three,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two + 2,
+    borderRadius: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.16)",
+    borderWidth: 1,
+    borderColor: "rgba(225, 165, 102, 0.55)",
+    // Soft premium lift
+    shadowColor: "#e1a566",
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
-  buyPlanWrap: {
-    alignSelf: "stretch",
-    marginTop: Spacing.one,
-  },
-  buyPlanButton: {
-    alignSelf: "stretch",
+  brandTitle: {
+    color: "#ffffff",
+    fontSize: 14,
+    lineHeight: 18,
+    letterSpacing: 1.6,
+    textAlign: "center",
   },
   premiumCard: {
-    alignSelf: "stretch",
     borderRadius: Spacing.four,
-    borderWidth: StyleSheet.hairlineWidth,
-    padding: Spacing.four,
-    gap: Spacing.two,
   },
   premiumIcon: {
     width: 44,
@@ -369,9 +358,6 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 5,
   },
-  loader: {
-    marginTop: Spacing.five,
-  },
   section: {
     alignSelf: "stretch",
     gap: Spacing.three,
@@ -382,12 +368,6 @@ const styles = StyleSheet.create({
   cardList: {
     alignSelf: "stretch",
     gap: Spacing.four,
-  },
-  messageCard: {
-    alignSelf: "stretch",
-    borderRadius: Spacing.three,
-    padding: Spacing.four,
-    gap: Spacing.two,
   },
   retryButton: {
     alignSelf: "flex-start",
@@ -400,9 +380,6 @@ const styles = StyleSheet.create({
     marginTop: Spacing.one,
   },
   downloadCard: {
-    alignSelf: "stretch",
-    borderRadius: Spacing.three,
-    padding: Spacing.four,
     gap: Spacing.three,
   },
 });

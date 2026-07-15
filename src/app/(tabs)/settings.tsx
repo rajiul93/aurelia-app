@@ -16,7 +16,7 @@ export default function SettingsScreen() {
   const { t } = useStrings();
 
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView transparent style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <View style={styles.header}>
           <HamburgerButton />

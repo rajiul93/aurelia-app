@@ -1,5 +1,5 @@
 import { Slot, useLocalSearchParams } from "expo-router";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { ActivityIndicator, StyleSheet } from "react-native";
 
 import { TourAccessLockScreen } from "@/components/tours/tour-access-lock-screen";
 import { ThemedView } from "@/components/themed-view";
@@ -19,7 +19,7 @@ export default function TourIdLayout() {
 
   if (isLoadingAccess) {
     return (
-      <ThemedView style={styles.loading}>
+      <ThemedView transparent style={styles.loading}>
         <ActivityIndicator size="large" />
       </ThemedView>
     );

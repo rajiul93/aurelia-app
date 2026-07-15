@@ -184,7 +184,7 @@ export default function SubscribeScreen() {
 
   if (isPaid) {
     return (
-      <ThemedView style={styles.container}>
+      <ThemedView transparent style={styles.container}>
         <SafeAreaView style={styles.safeArea} edges={['top']}>
           <View style={styles.content}>
             <ScreenHeader title={t('subscribe.title')} />
@@ -223,7 +223,7 @@ export default function SubscribeScreen() {
 
   if (isPurchaseFailed) {
     return (
-      <ThemedView style={styles.container}>
+      <ThemedView transparent style={styles.container}>
         <SafeAreaView style={styles.safeArea} edges={['top']}>
           <View style={styles.content}>
             <ScreenHeader title={t('subscribe.title')} />
@@ -261,7 +261,7 @@ export default function SubscribeScreen() {
 
   if (phase === 'processing' || phase === 'finalizing') {
     return (
-      <ThemedView style={styles.container}>
+      <ThemedView transparent style={styles.container}>
         <SafeAreaView style={styles.safeArea} edges={['top']}>
           <View style={[styles.content, styles.centered]}>
             <ActivityIndicator size="large" color={theme.primary} />
@@ -277,7 +277,7 @@ export default function SubscribeScreen() {
   }
 
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView transparent style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <ScrollView
           contentContainerStyle={styles.scrollContent}

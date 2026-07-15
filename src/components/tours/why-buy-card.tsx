@@ -1,7 +1,8 @@
 import { Ionicons } from "@react-native-vector-icons/ionicons";
-import { Platform, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
+import { GlassCard } from "@/components/ui/glass-card";
 import { Spacing } from "@/constants/theme";
 import { useStrings } from "@/hooks/use-strings";
 import { useTheme } from "@/hooks/use-theme";
@@ -54,7 +55,7 @@ export function WhyBuyCard() {
   const { t } = useStrings();
 
   return (
-    <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
+    <GlassCard style={styles.card}>
       <View style={styles.header}>
         <ThemedText type="subtitle" style={styles.title}>
           {t("whyBuy.title")}
@@ -79,26 +80,14 @@ export function WhyBuyCard() {
           </View>
         ))}
       </View>
-    </View>
+    </GlassCard>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    alignSelf: "stretch",
     borderRadius: Spacing.four,
-    padding: Spacing.four,
     gap: Spacing.four,
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOpacity: 0.14,
-        shadowRadius: 14,
-        shadowOffset: { width: 0, height: 8 },
-      },
-      android: { elevation: 5 },
-      default: {},
-    }),
   },
   header: {
     gap: Spacing.one,

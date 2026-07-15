@@ -4,6 +4,7 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import { AccessEndedBanner } from "@/components/auth/access-ended-banner";
 import { UnlockForm } from "@/components/auth/unlock-form";
 import { ThemedText } from "@/components/themed-text";
+import { GlassCard } from "@/components/ui/glass-card";
 import { Spacing } from "@/constants/theme";
 import { useSignOut } from "@/hooks/mutations/use-auth";
 import { useEntitlements } from "@/hooks/queries/use-entitlements";
@@ -38,9 +39,7 @@ export function AccountPanel() {
   return (
     <View style={styles.signedIn}>
       <AccessEndedBanner />
-      <View
-        style={[styles.card, { backgroundColor: theme.backgroundElement }]}
-      >
+      <GlassCard>
         <ThemedText type="smallBold" style={styles.wrapText}>
           {t("account.signedIn")}
         </ThemedText>
@@ -120,7 +119,7 @@ export function AccountPanel() {
             </>
           )}
         </Pressable>
-      </View>
+      </GlassCard>
     </View>
   );
 }
@@ -132,12 +131,6 @@ const styles = StyleSheet.create({
   },
   signedIn: {
     alignSelf: "stretch",
-  },
-  card: {
-    alignSelf: "stretch",
-    borderRadius: Spacing.three,
-    padding: Spacing.four,
-    gap: Spacing.two,
   },
   wrapText: {
     flexShrink: 1,

@@ -33,7 +33,7 @@ export default function FaqScreen() {
   }, [faqs, t]);
 
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView transparent style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <ScrollView
           contentContainerStyle={styles.scrollContent}

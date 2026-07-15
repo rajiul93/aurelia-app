@@ -7,6 +7,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
+import { useStrings } from '@/hooks/use-strings';
 import { useTheme } from '@/hooks/use-theme';
 
 /** Shared radius so shadow, clip, and cover image all match (Android clips badly otherwise). */
@@ -25,6 +26,9 @@ type FloorCardProps = {
   subtitle?: string;
   /** Ionicons name for the explore chip (default: compass). */
   exploreIcon?: ComponentProps<typeof Ionicons>['name'];
+  /** When true the card shows a lock overlay and does not open content. */
+  locked?: boolean;
+  lockedLabel?: string;
   /** Stagger delay for the entrance animation, in ms. */
   delay?: number;
   onPress: () => void;
@@ -33,7 +37,8 @@ type FloorCardProps = {
 /**
  * A premium, tappable card for one floor: cover image, name, stop count and an
  * explicit "explore" affordance so it reads as openable. Soft shadow, rounded
- * corners, and a gentle press-in scale.
+ * corners, and a gentle press-in scale. Locked state seals content behind a
+ * lock overlay until the user has an active session + plan.
  */
 export function FloorCard({
   name,
@@ -43,24 +48,27 @@ export function FloorCard({
   exploreLabel,
   subtitle,
   exploreIcon = 'compass',
+  locked = false,
+  lockedLabel = 'Locked',
   delay = 0,
   onPress,
 }: FloorCardProps) {
   const theme = useTheme();
+  const { t } = useStrings();
   const secondary = subtitle ?? `${stopCount} ${stopLabel}`;
+  const chipLabel = locked ? lockedLabel : exploreLabel;
+  const chipIcon = locked ? 'lock-closed' : exploreIcon;
 
   return (
     <Animated.View
       entering={FadeInDown.delay(delay).duration(420).springify().damping(18)}
       style={styles.shadow}
     >
-      {/*
-        Inner clip layer is required on Android: elevation on the outer view
-        prevents overflow:hidden from rounding the image, so radius + overflow
-        live here (not on the elevated wrapper).
-      */}
       <Pressable
         onPress={onPress}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: false }}
+        accessibilityHint={locked ? lockedLabel : exploreLabel}
         style={({ pressed }) => [
           styles.card,
           { backgroundColor: theme.backgroundElement },
@@ -71,7 +79,7 @@ export function FloorCard({
           {coverUrl ? (
             <Image
               source={{ uri: coverUrl }}
-              style={styles.cover}
+              style={[styles.cover, locked && styles.coverDimmed]}
               contentFit="cover"
               transition={220}
             />
@@ -80,14 +88,46 @@ export function FloorCard({
               style={[
                 styles.cover,
                 { backgroundColor: theme.backgroundSelected },
+                locked && styles.coverDimmed,
               ]}
             />
           )}
 
           <LinearGradient
-            colors={['transparent', 'rgba(12, 10, 9, 0.72)']}
+            colors={
+              locked
+                ? ['rgba(12, 10, 9, 0.35)', 'rgba(12, 10, 9, 0.82)']
+                : ['transparent', 'rgba(12, 10, 9, 0.72)']
+            }
             style={styles.scrim}
           />
+
+          <View
+            style={styles.verifiedBadge}
+            accessibilityLabel={t('floors.verifiedAuthentic')}
+          >
+            <Ionicons
+              name="shield-checkmark"
+              size={13}
+              color={theme.primary}
+            />
+            <ThemedText type="smallBold" style={styles.verifiedLabel} numberOfLines={1}>
+              {t('floors.verifiedAuthentic')}
+            </ThemedText>
+          </View>
+
+          {locked ? (
+            <View style={styles.lockBadge} accessibilityElementsHidden>
+              <View
+                style={[
+                  styles.lockBadgeInner,
+                  { backgroundColor: 'rgba(28, 25, 23, 0.78)' },
+                ]}
+              >
+                <Ionicons name="lock-closed" size={28} color={theme.primary} />
+              </View>
+            </View>
+          ) : null}
 
           <View style={styles.overlay}>
             <View style={styles.textBlock}>
@@ -100,18 +140,27 @@ export function FloorCard({
             </View>
 
             <View
-              style={[styles.exploreChip, { backgroundColor: theme.primary }]}
+              style={[
+                styles.exploreChip,
+                {
+                  backgroundColor: locked
+                    ? 'rgba(28, 25, 23, 0.88)'
+                    : theme.primary,
+                },
+              ]}
             >
               <Ionicons
-                name={exploreIcon}
+                name={chipIcon}
                 size={16}
-                color={theme.primaryForeground}
+                color={locked ? theme.primary : theme.primaryForeground}
               />
               <ThemedText
                 type="smallBold"
-                style={{ color: theme.primaryForeground }}
+                style={{
+                  color: locked ? theme.primary : theme.primaryForeground,
+                }}
               >
-                {exploreLabel}
+                {chipLabel}
               </ThemedText>
             </View>
           </View>
@@ -134,7 +183,6 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 10 },
       },
       android: {
-        // Elevation on a transparent wrapper casts the child's rounded shape.
         elevation: 6,
       },
       default: {},
@@ -166,12 +214,49 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: CARD_RADIUS,
   },
+  coverDimmed: {
+    opacity: 0.55,
+  },
   scrim: {
     position: 'absolute',
     top: '40%',
     left: 0,
     right: 0,
     bottom: 0,
+  },
+  verifiedBadge: {
+    position: 'absolute',
+    top: Spacing.three,
+    right: Spacing.three,
+    maxWidth: '72%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
+    borderRadius: 999,
+    paddingVertical: Spacing.one + 1,
+    paddingHorizontal: Spacing.two + 2,
+    backgroundColor: 'rgba(28, 25, 23, 0.82)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(225, 165, 102, 0.45)',
+  },
+  verifiedLabel: {
+    flexShrink: 1,
+    color: '#ffffff',
+    fontSize: 11,
+    lineHeight: 14,
+  },
+  lockBadge: {
+    ...StyleSheet.absoluteFill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingBottom: Spacing.five,
+  },
+  lockBadgeInner: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   overlay: {
     flexDirection: 'row',
@@ -186,8 +271,8 @@ const styles = StyleSheet.create({
   },
   name: {
     color: '#ffffff',
-    fontSize: 22,
-    lineHeight: 27,
+    fontSize: 18,
+    lineHeight: 22,
   },
   stops: {
     color: 'rgba(255, 255, 255, 0.86)',

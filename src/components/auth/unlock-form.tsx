@@ -1,4 +1,5 @@
 import { Ionicons } from "@react-native-vector-icons/ionicons";
+import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -7,10 +8,10 @@ import {
   Pressable,
   StyleSheet,
   TextInput,
-  View,
 } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
+import { GlassCard } from "@/components/ui/glass-card";
 import { Spacing } from "@/constants/theme";
 import { useUnlockTour } from "@/hooks/mutations/use-auth";
 import { useStrings } from "@/hooks/use-strings";
@@ -18,6 +19,11 @@ import { useTheme } from "@/hooks/use-theme";
 import { getApiErrorMessage } from "@/lib/api-error";
 
 type UnlockFormProps = {
+  /**
+   * Called after a successful unlock. When set, the form does not navigate —
+   * the caller owns the next screen (e.g. subscribe checkout). When omitted,
+   * the app goes to Home automatically.
+   */
   onUnlocked?: () => void;
 };
 
@@ -31,6 +37,7 @@ function hasEnoughDigits(phone: string) {
  * hand. One step — there is nothing to send and wait for, unlike the old OTP.
  */
 export function UnlockForm({ onUnlocked }: UnlockFormProps) {
+  const router = useRouter();
   const theme = useTheme();
   const { t } = useStrings();
   const unlock = useUnlockTour();
@@ -45,16 +52,26 @@ export function UnlockForm({ onUnlocked }: UnlockFormProps) {
       return;
     }
 
-    await unlock.mutateAsync({ phone: phone.trim(), pin });
-    setPin("");
-    onUnlocked?.();
+    try {
+      await unlock.mutateAsync({ phone: phone.trim(), pin });
+      setPin("");
+
+      if (onUnlocked) {
+        onUnlocked();
+        return;
+      }
+
+      router.replace("/");
+    } catch {
+      // Error is rendered from unlock.error below.
+    }
   }
 
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
+      <GlassCard>
         <ThemedText type="smallBold" style={styles.wrapText}>
           {t("auth.unlockTitle")}
         </ThemedText>
@@ -148,7 +165,7 @@ export function UnlockForm({ onUnlocked }: UnlockFormProps) {
             {getApiErrorMessage(unlock.error)}
           </ThemedText>
         ) : null}
-      </View>
+      </GlassCard>
     </KeyboardAvoidingView>
   );
 }
@@ -156,12 +173,6 @@ export function UnlockForm({ onUnlocked }: UnlockFormProps) {
 const FIELD_HEIGHT = 48;
 
 const styles = StyleSheet.create({
-  card: {
-    alignSelf: "stretch",
-    borderRadius: Spacing.three,
-    padding: Spacing.four,
-    gap: Spacing.two,
-  },
   wrapText: {
     flexShrink: 1,
     alignSelf: "stretch",

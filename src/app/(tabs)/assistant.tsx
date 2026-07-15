@@ -100,7 +100,7 @@ export default function AssistantScreen() {
   const contentBottomInset = keyboardOpen ? keyboardHeight : tabBarHeight;
 
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView transparent style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <View style={[styles.content, { paddingBottom: contentBottomInset }]}>
           <View style={styles.header}>

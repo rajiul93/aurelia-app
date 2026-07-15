@@ -28,7 +28,7 @@ export function MaintenanceGate({ children }: MaintenanceGateProps) {
   }
 
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView transparent style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.content}>
           <ThemedText type="subtitle">{t("maintenance.title")}</ThemedText>

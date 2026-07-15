@@ -29,7 +29,7 @@ export function KnowledgeGate({ children }: KnowledgeGateProps) {
 
   if (!hydrated || firstDownloadInFlight) {
     return (
-      <ThemedView style={styles.container}>
+      <ThemedView transparent style={styles.container}>
         <ActivityIndicator size="large" color={theme.primary} />
         <ThemedText type="small" themeColor="textSecondary" style={styles.label}>
           {t("knowledge.preparing")}

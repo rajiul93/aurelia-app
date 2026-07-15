@@ -4,6 +4,7 @@ import { StatusBar } from "expo-status-bar";
 import { View } from "react-native";
 
 import { AnimatedSplash } from "@/components/animated-splash";
+import { AppBackground } from "@/components/app-background";
 import { useAppBootstrap } from "@/hooks/use-app-bootstrap";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 
@@ -45,14 +46,21 @@ export default function RootLayout() {
             value={colorScheme === "dark" ? AureliaDarkTheme : AureliaLightTheme}
           >
             <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="welcome" />
-              <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="tour" />
-              <Stack.Screen name="pages/[key]" />
-              <Stack.Screen name="faq" />
-              <Stack.Screen name="subscribe" />
-            </Stack>
+            <AppBackground>
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  contentStyle: { backgroundColor: "transparent" },
+                }}
+              >
+                <Stack.Screen name="welcome" />
+                <Stack.Screen name="(tabs)" />
+                <Stack.Screen name="tour" />
+                <Stack.Screen name="pages/[key]" />
+                <Stack.Screen name="faq" />
+                <Stack.Screen name="subscribe" />
+              </Stack>
+            </AppBackground>
           </ThemeProvider>
         </AppProviders>
       ) : null}

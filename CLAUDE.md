@@ -136,6 +136,14 @@ Last updated: **2026-07-15**
   [prisma-retry.ts](../admin-and-server-aurelia/src/lib/prisma-retry.ts),
   [handler.ts](../admin-and-server-aurelia/src/lib/api/handler.ts),
   [app-release.repository.ts](../admin-and-server-aurelia/src/lib/app-release/app-release.repository.ts)
+- ✅ **Floor cards lock after sign-out.** Signed-out users can still see downloaded floor cards on
+  Home (offline covers stay on disk) but each card is **Locked** (lock icon + Locked chip) and taps
+  route to Unlock (`/explore`). Opening any `/tour/[tourId]/…` deep link hits the tour layout
+  gate with reason `signed_out` → `TourAccessLockScreen`. Previously `getTourLockReason` returned
+  `null` when signed out (fail-open), so logout did not seal content.
+  [src/hooks/use-entitlement-status.ts](src/hooks/use-entitlement-status.ts),
+  [src/components/tours/floor-card.tsx](src/components/tours/floor-card.tsx),
+  [src/components/tours/tour-floor-cards.tsx](src/components/tours/tour-floor-cards.tsx)
 
 ---
 
@@ -189,12 +197,11 @@ Last updated: **2026-07-15**
 
 **Multi-floor, remaining:**
 - ✅ **Floor switcher wired** and ✅ **floor names + cover images ship in the bundle** (2026-07-15).
+- ✅ **Floor cards on the home screen** and ✅ **`hasActivePlan` predicate** (2026-07-15).
+- ✅ **Locked floor preview** — catalog `/catalog/tours` ships `floors[]`; Home shows Locked
+  floor cards for non-installed tours and for signed-out users with installs (2026-07-15).
 - ⏳ **Server does not send `spot.floorId`** — only `floor` (the number), so mobile matches spots to
   floors by number. Emitting `floorId` from `toTourDto` would make the match exact (one line, additive).
-- ✅ **Floor cards on the home screen** and ✅ **`hasActivePlan` predicate** (2026-07-15).
-- ⏳ **Locked floor preview for non-buyers is not built.** Floors only appear once the bundle is
-  downloaded (which needs a plan), so a no-plan visitor sees Buy Plan + Why Buy, never a floor preview.
-  Showing a teaser floor list pre-purchase would need the catalog API to expose floors.
 
 **Other:**
 - ⏳ **Decouple map *display* from the GPS navigation gate** so footprints + valid markers render even
@@ -316,6 +323,47 @@ Last updated: **2026-07-15**
 ---
 
 ## 12. Changelog
+
+- **2026-07-15** — **Spot Details → floor map.** Title row has a map button (top-right) that opens
+  that stop’s floor on the interactive map (`/nav?floorId=…`). Floor is resolved via
+  `resolveSpotFloorId` (`floorId`, then floor number, then tour default).
+  [spot/[spotId].tsx](src/app/tour/[tourId]/spot/[spotId].tsx),
+  [floor-routing.ts](src/lib/bundle/floor-routing.ts).
+
+- **2026-07-15** — **Spot audio player height trimmed.** Immersive controls are now a single
+  horizontal row (skip / 40px play / skip + progress + times) instead of a tall stacked block with a
+  64px button — Spot Details no longer wastes vertical space on audio.
+  [spot-audio-player.tsx](src/components/tours/spot-audio-player.tsx).
+
+- **2026-07-15** — **Home shows Locked floor cards again (not tour cards).** Catalog
+  `/catalog/tours` now returns each tour’s `floors[]` (id, name, cover, stopCount).
+  Home renders those as Locked `FloorCard`s when the tour isn’t installed, plus
+  real installed floor cards (also Locked when signed out). Tour-level cover
+  teasers stay gone.
+
+- **2026-07-15** — **Home floor cards stay Locked while signed out.** Installed
+  floors force-lock when there is no session; visitors with no download still
+  see locked catalog teasers that route to Unlock. Tap never opens floor content
+  until signed in with access.
+
+- **2026-07-15** — **Settings cards are glassified.** New reusable
+  [`GlassCard`](src/components/ui/glass-card.tsx) (Liquid Glass / iOS blur /
+  Android translucent tint) wraps all Settings panels so they read as frosted
+  sheets over the global photo background.
+
+- **2026-07-15** — **Same mobile photo background on every screen.** Home’s
+  `resolveAppBackgroundUrl` image (right-cropped, no scrim) now lives once in
+  root via [`AppBackground`](src/components/app-background.tsx); Stack/Tabs use
+  transparent `contentStyle`/`sceneStyle` and screen `ThemedView`s accept
+  `transparent` so the photo shows through Account, Settings, floors, spot,
+  etc. Removed per-screen `PageBackground` wrappers on Home / Welcome / Spot.
+
+- **2026-07-15** — **Floor cards lock after logout.** Root cause: `getTourLockReason` /
+  `hasTour` fail-opened for signed-out users (`if (!isSignedIn) return null` / `true`), so
+  downloaded floors stayed fully explorable with no session. Now signed-out ⇒ lock reason
+  `signed_out`; cards show a lock badge + “Locked” chip and send taps to `/explore`; the tour
+  layout still blocks deep links with `TourAccessLockScreen`. Unlock + active entitlement for
+  that tour still required to enter. `tsc` clean.
 
 - **2026-07-15** — **Dropped unfinished web platform stub.** Product is native-only (no EAS web
   profile; MapLibre/offline GPS tour is not a web target). Deleted Expo-template residue

@@ -2,6 +2,7 @@ import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
+import { GlassCard } from "@/components/ui/glass-card";
 import { Spacing } from "@/constants/theme";
 import { useStrings } from "@/hooks/use-strings";
 import { useTheme } from "@/hooks/use-theme";
@@ -21,12 +22,7 @@ export function LanguageSettingsPanel() {
   );
 
   return (
-    <View
-      style={[
-        styles.card,
-        { backgroundColor: theme.backgroundElement },
-      ]}
-    >
+    <GlassCard>
       <ThemedText type="smallBold">{t("settings.language")}</ThemedText>
       <ThemedText type="small" themeColor="textSecondary">
         {t("settings.languageHint")}
@@ -57,17 +53,11 @@ export function LanguageSettingsPanel() {
           );
         })}
       </View>
-    </View>
+    </GlassCard>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    alignSelf: "stretch",
-    borderRadius: Spacing.three,
-    padding: Spacing.four,
-    gap: Spacing.two,
-  },
   languageRow: {
     flexDirection: "row",
     flexWrap: "wrap",

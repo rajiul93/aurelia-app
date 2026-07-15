@@ -27,15 +27,19 @@ export function TourAccessLockScreen({
   const title =
     reason === "tour_not_entitled"
       ? t("accessLock.tourNotIncluded")
-      : t("accessLock.accessInactive");
+      : reason === "signed_out"
+        ? t("accessLock.signInRequired")
+        : t("accessLock.accessInactive");
 
   const message =
     reason === "tour_not_entitled"
       ? t("accessLock.tourNotIncludedHint")
-      : t("accessLock.accessInactiveHint");
+      : reason === "signed_out"
+        ? t("accessLock.signInRequiredHint")
+        : t("accessLock.accessInactiveHint");
 
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView transparent style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <View style={styles.content}>
           <ScreenHeader title={tourTitle ?? t("accessLock.title")} />
@@ -78,12 +82,14 @@ export function TourAccessLockScreen({
               style={[styles.button, { backgroundColor: theme.primary }]}
             >
               <Ionicons
-                name="person-outline"
+                name={reason === "signed_out" ? "lock-open-outline" : "person-outline"}
                 size={18}
                 color={theme.primaryForeground}
               />
               <ThemedText type="smallBold" style={{ color: theme.primaryForeground }}>
-                {t("accessLock.openAccount")}
+                {reason === "signed_out"
+                  ? t("accessLock.unlock")
+                  : t("accessLock.openAccount")}
               </ThemedText>
             </Pressable>
 

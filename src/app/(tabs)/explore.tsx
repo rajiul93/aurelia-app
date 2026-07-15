@@ -1,13 +1,7 @@
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import {
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -16,7 +10,7 @@ import { HamburgerButton } from '@/components/navigation/hamburger-button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { WhyBuyCard } from '@/components/tours/why-buy-card';
-import { GoldBorderView } from '@/components/ui/gold-border-view';
+import { GlassCard } from '@/components/ui/glass-card';
 import { BottomTabInset, Spacing } from '@/constants/theme';
 import { useEntitlementStatus } from '@/hooks/use-entitlement-status';
 import { useStrings } from '@/hooks/use-strings';
@@ -41,19 +35,10 @@ function SubscriptionCard({
       <Pressable
         accessibilityRole="button"
         onPress={onPress}
-        style={({ pressed }) => [
-          styles.subShadow,
-          {
-            backgroundColor: theme.backgroundElement,
-            shadowColor: theme.primary,
-          },
-          pressed ? styles.subPressed : null,
-        ]}
+        style={({ pressed }) => [pressed ? styles.subPressed : null]}
       >
-        <GoldBorderView
-          borderRadius={Spacing.four}
-          borderWidth={1.5}
-          innerBackground={theme.backgroundElement}
+        <GlassCard
+          style={[styles.subCard, { borderColor: theme.primary }]}
         >
           <View style={styles.subInner}>
             <LinearGradient
@@ -78,7 +63,7 @@ function SubscriptionCard({
 
             <Ionicons name="chevron-forward" size={22} color={theme.primary} />
           </View>
-        </GoldBorderView>
+        </GlassCard>
       </Pressable>
     </Animated.View>
   );
@@ -90,7 +75,7 @@ export default function AccountScreen() {
   const { hasActivePlan } = useEntitlementStatus();
 
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView transparent style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <ScrollView
           style={styles.scrollView}
@@ -176,18 +161,10 @@ const styles = StyleSheet.create({
   cardWrap: {
     alignSelf: 'stretch',
   },
-  subShadow: {
-    alignSelf: 'stretch',
+  subCard: {
     borderRadius: Spacing.four,
-    ...Platform.select({
-      ios: {
-        shadowOpacity: 0.32,
-        shadowRadius: 14,
-        shadowOffset: { width: 0, height: 8 },
-      },
-      android: { elevation: 8 },
-      default: {},
-    }),
+    borderWidth: 1.5,
+    padding: 0,
   },
   subPressed: {
     opacity: 0.94,

@@ -80,9 +80,10 @@ const en = {
   "home.browseTours": "Browse tours",
   "home.tourCatalog": "Tour catalog",
   "home.choosePlan": "Choose your plan",
-  "home.availableToDownload": "Available to download",
   "floors.yourFloors": "Your floors",
   "floors.explore": "Explore",
+  "floors.locked": "Locked",
+  "floors.verifiedAuthentic": "Verified content",
   "floors.stop": "stop",
   "floors.stops": "stops",
   "floors.floorN": "Floor {number}",
@@ -137,6 +138,10 @@ const en = {
   "accessLock.tourNotIncluded": "Tour not included",
   "accessLock.tourNotIncludedHint":
     "This tour is not included in your current access. Contact support if you believe this is a mistake.",
+  "accessLock.signInRequired": "Unlock required",
+  "accessLock.signInRequiredHint":
+    "Sign out locks your downloaded floors. Unlock this device again to open maps and stops.",
+  "accessLock.unlock": "Unlock",
   "accessLock.openAccount": "Open account",
   "accessLock.goBack": "Go back",
   "accessLock.subscribe": "Subscribe",
@@ -315,6 +320,7 @@ const en = {
   "spot.next": "Next",
   "spot.nextStop": "Next stop",
   "spot.done": "Done",
+  "spot.openFloorMap": "Open floor map",
 
   "chat.title": "Ask Aurelia",
   "chat.subtitle": "Offline answers from your downloaded guide",
@@ -417,9 +423,10 @@ const es: Record<StringKey, string> = {
   "home.browseTours": "Explorar tours",
   "home.tourCatalog": "Catálogo de tours",
   "home.choosePlan": "Elige tu plan",
-  "home.availableToDownload": "Disponible para descargar",
   "floors.yourFloors": "Tus plantas",
   "floors.explore": "Explorar",
+  "floors.locked": "Bloqueado",
+  "floors.verifiedAuthentic": "Contenido verificado",
   "floors.stop": "parada",
   "floors.stops": "paradas",
   "floors.floorN": "Planta {number}",
@@ -471,6 +478,10 @@ const es: Record<StringKey, string> = {
   "accessLock.tourNotIncluded": "Tour no incluido",
   "accessLock.tourNotIncludedHint":
     "Este tour no está incluido en tu acceso actual. Contacta soporte si crees que es un error.",
+  "accessLock.signInRequired": "Desbloqueo requerido",
+  "accessLock.signInRequiredHint":
+    "Al cerrar sesión se bloquean tus plantas descargadas. Desbloquea este dispositivo de nuevo para abrir mapas y paradas.",
+  "accessLock.unlock": "Desbloquear",
   "accessLock.openAccount": "Abrir cuenta",
   "accessLock.goBack": "Volver",
   "accessLock.subscribe": "Suscribirse",
@@ -643,6 +654,7 @@ const es: Record<StringKey, string> = {
   "spot.next": "Siguiente",
   "spot.nextStop": "Siguiente parada",
   "spot.done": "Listo",
+  "spot.openFloorMap": "Abrir mapa de la planta",
   "chat.title": "Pregunta a Aurelia",
   "chat.subtitle": "Respuestas sin conexión de tu guía descargada",
   "chat.initialMessage":
@@ -741,9 +753,10 @@ const fr: Record<StringKey, string> = {
   "home.browseTours": "Parcourir les visites",
   "home.tourCatalog": "Catalogue des visites",
   "home.choosePlan": "Choisissez votre forfait",
-  "home.availableToDownload": "Disponible au téléchargement",
   "floors.yourFloors": "Vos étages",
   "floors.explore": "Explorer",
+  "floors.locked": "Verrouillé",
+  "floors.verifiedAuthentic": "Contenu vérifié",
   "floors.stop": "arrêt",
   "floors.stops": "arrêts",
   "floors.floorN": "Étage {number}",
@@ -795,6 +808,10 @@ const fr: Record<StringKey, string> = {
   "accessLock.tourNotIncluded": "Visite non incluse",
   "accessLock.tourNotIncludedHint":
     "Cette visite n'est pas incluse dans votre accès actuel. Contactez le support si vous pensez qu'il s'agit d'une erreur.",
+  "accessLock.signInRequired": "Déverrouillage requis",
+  "accessLock.signInRequiredHint":
+    "La déconnexion verrouille vos étages téléchargés. Déverrouillez cet appareil à nouveau pour ouvrir les cartes et les arrêts.",
+  "accessLock.unlock": "Déverrouiller",
   "accessLock.openAccount": "Ouvrir le compte",
   "accessLock.goBack": "Retour",
   "accessLock.subscribe": "S'abonner",
@@ -967,6 +984,7 @@ const fr: Record<StringKey, string> = {
   "spot.next": "Suivant",
   "spot.nextStop": "Arrêt suivant",
   "spot.done": "Terminé",
+  "spot.openFloorMap": "Ouvrir la carte de l'étage",
   "chat.title": "Demander à Aurelia",
   "chat.subtitle": "Réponses hors ligne de votre guide téléchargé",
   "chat.initialMessage":

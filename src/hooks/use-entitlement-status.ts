@@ -8,7 +8,11 @@ import type { EntitledVersions } from "@/lib/bundle/version-compare";
 import { useAuthStore } from "@/store/auth-store";
 import { useEntitlementsStore } from "@/store/entitlements-store";
 
-export type TourLockReason = "access_inactive" | "tour_not_entitled" | null;
+export type TourLockReason =
+  | "signed_out"
+  | "access_inactive"
+  | "tour_not_entitled"
+  | null;
 
 export function useEntitlementStatus() {
   const queryClient = useQueryClient();
@@ -23,12 +27,12 @@ export function useEntitlementStatus() {
   const isSignedIn = Boolean(sessionToken);
 
   const isActive = useMemo(
-    () => !isSignedIn || isAccessActive(entitlements),
+    () => isSignedIn && isAccessActive(entitlements),
     [entitlements, isSignedIn],
   );
 
-  // A real "has an active plan" signal, unlike `isActive` which is fail-open for
-  // a signed-out visitor. Gates the Buy-Plan / Why-Buy sections.
+  // A real "has an active plan" signal, unlike the old fail-open `isActive`.
+  // Gates Buy-Plan / Why-Buy and now also floor-card unlock state.
   const hasActivePlan = useMemo(
     () => computeHasActivePlan(isSignedIn, entitlements),
     [entitlements, isSignedIn],
@@ -60,20 +64,18 @@ export function useEntitlementStatus() {
   );
 
   function hasTour(tourId: string) {
-    if (!isSignedIn) {
-      return true;
-    }
-
-    if (!entitlements) {
-      return true;
+    if (!isSignedIn || !entitlements) {
+      return false;
     }
 
     return entitledTourIds.has(tourId);
   }
 
   function getTourLockReason(tourId: string): TourLockReason {
+    // Downloaded floors must stay sealed after sign-out — disk alone is not
+    // enough to open them.
     if (!isSignedIn) {
-      return null;
+      return "signed_out";
     }
 
     if (isLoading && !entitlements) {

@@ -9,6 +9,8 @@ export type ThemedViewProps = ViewProps & {
   darkColor?: string;
   type?: ThemeColor;
   className?: string;
+  /** Skip the fill so the global AppBackground image shows through. */
+  transparent?: boolean;
 };
 
 export function ThemedView({
@@ -16,13 +18,17 @@ export function ThemedView({
   lightColor,
   darkColor,
   type,
+  transparent = false,
   ...otherProps
 }: ThemedViewProps) {
   const theme = useTheme();
 
   return (
     <View
-      style={[{ backgroundColor: theme[type ?? "background"] }, style]}
+      style={[
+        !transparent && { backgroundColor: theme[type ?? "background"] },
+        style,
+      ]}
       {...otherProps}
     />
   );

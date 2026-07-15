@@ -2,6 +2,7 @@ import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
+import { GlassCard } from "@/components/ui/glass-card";
 import { Spacing } from "@/constants/theme";
 import { useEntitlementStatus } from "@/hooks/use-entitlement-status";
 import { useStrings } from "@/hooks/use-strings";
@@ -35,17 +36,12 @@ export function AccessSettingsPanel() {
 
   if (!sessionToken) {
     return (
-      <View
-        style={[
-          styles.card,
-          { backgroundColor: theme.backgroundElement },
-        ]}
-      >
+      <GlassCard>
         <ThemedText type="smallBold">{t("settings.access")}</ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
           {t("settings.accessSignedOutHint")}
         </ThemedText>
-      </View>
+      </GlassCard>
     );
   }
 
@@ -56,12 +52,7 @@ export function AccessSettingsPanel() {
       : t("settings.accessStatusInactive");
 
   return (
-    <View
-      style={[
-        styles.card,
-        { backgroundColor: theme.backgroundElement },
-      ]}
-    >
+    <GlassCard>
       <ThemedText type="smallBold">{t("settings.access")}</ThemedText>
       <ThemedText type="small" themeColor="textSecondary">
         {t("settings.accessHint")}
@@ -109,17 +100,11 @@ export function AccessSettingsPanel() {
           </>
         )}
       </Pressable>
-    </View>
+    </GlassCard>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    alignSelf: "stretch",
-    borderRadius: Spacing.three,
-    padding: Spacing.four,
-    gap: Spacing.two,
-  },
   loader: {
     marginTop: Spacing.one,
   },

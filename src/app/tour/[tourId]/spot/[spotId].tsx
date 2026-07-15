@@ -1,7 +1,6 @@
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
-  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,21 +9,21 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { FaqAccordion } from "@/components/tours/faq-accordion";
-import { PageBackground } from "@/components/page-background";
 import { SpotAudioSection } from "@/components/tours/spot-audio-section";
 import { SpotDetailHeader } from "@/components/tours/spot-detail-header";
+import { SpotDetailSkeleton } from "@/components/tours/spot-detail-skeleton";
 import { SpotVisualMediaGallery } from "@/components/tours/spot-visual-media-gallery";
 import { GoldGradientButton } from "@/components/ui/gold-gradient-button";
+import { GlassCard } from "@/components/ui/glass-card";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Spacing } from "@/constants/theme";
-import { useCachedAppContent } from "@/hooks/queries/use-app-content";
 import { useInstalledTourView } from "@/hooks/use-installed-tour-view";
 import { useStrings } from "@/hooks/use-strings";
 import { useTheme } from "@/hooks/use-theme";
-import { resolveAppBackgroundUrl } from "@/lib/app-content/resolve-asset";
 import { pickAudienceTranslation } from "@/lib/bundle/localize";
 import { orderSpotsAcrossFloors } from "@/lib/bundle/route-order";
+import { resolveSpotFloorId } from "@/lib/bundle/floor-routing";
 import { useSpotBookmarksStore } from "@/store/spot-bookmarks-store";
 import { useTourProgressStore } from "@/store/tour-progress-store";
 
@@ -37,31 +36,39 @@ export default function SpotDetailScreen() {
     tourId: string;
     spotId: string;
   }>();
-  const { data: contentResponse } = useCachedAppContent();
-  const backgroundUrl = resolveAppBackgroundUrl(contentResponse?.data.assets);
-  const { data: content, isResolving, hasRawContent, tourId: resolvedTourId, preferences } =
-    useInstalledTourView(tourId);
+  const {
+    data: content,
+    isResolving,
+    hasRawContent,
+    tourId: resolvedTourId,
+    preferences,
+  } = useInstalledTourView(tourId);
   const isComplete = useTourProgressStore((state) =>
-    state.byTourId[resolvedTourId ?? ""]?.completedSpotIds.includes(spotId ?? ""),
+    state.byTourId[resolvedTourId ?? ""]?.completedSpotIds.includes(
+      spotId ?? "",
+    ),
   );
-  const toggleComplete = useTourProgressStore((state) => state.toggleSpotComplete);
+  const toggleComplete = useTourProgressStore(
+    (state) => state.toggleSpotComplete,
+  );
   const bookmarked = useSpotBookmarksStore((state) =>
     state.byTourId[resolvedTourId ?? ""]?.includes(spotId ?? ""),
   );
   const toggleBookmark = useSpotBookmarksStore((state) => state.toggleBookmark);
 
   if (isResolving) {
-    return (
-      <ThemedView style={styles.centered}>
-        <ActivityIndicator color={theme.primary} />
-      </ThemedView>
-    );
+    return <SpotDetailSkeleton />;
   }
 
   if (!hasRawContent || !content || !resolvedTourId || !spotId) {
     return (
-      <ThemedView style={styles.centered}>
-        <ThemedText type="smallBold">{t("tour.notInstalled")}</ThemedText>
+      <ThemedView transparent style={styles.centered}>
+        <GlassCard style={styles.messageCard}>
+          <Ionicons name="cloud-offline-outline" size={28} color={theme.primary} />
+          <ThemedText type="smallBold" style={styles.messageTitle}>
+            {t("tour.notInstalled")}
+          </ThemedText>
+        </GlassCard>
       </ThemedView>
     );
   }
@@ -72,8 +79,13 @@ export default function SpotDetailScreen() {
 
   if (!spot) {
     return (
-      <ThemedView style={styles.centered}>
-        <ThemedText type="smallBold">{t("spot.notFound")}</ThemedText>
+      <ThemedView transparent style={styles.centered}>
+        <GlassCard style={styles.messageCard}>
+          <Ionicons name="alert-circle-outline" size={28} color={theme.primary} />
+          <ThemedText type="smallBold" style={styles.messageTitle}>
+            {t("spot.notFound")}
+          </ThemedText>
+        </GlassCard>
       </ThemedView>
     );
   }
@@ -123,128 +135,166 @@ export default function SpotDetailScreen() {
     "";
 
   return (
-    <PageBackground uri={backgroundUrl} darkOverlay>
-      <SafeAreaView style={styles.safeArea} edges={["top"]}>
-        <View style={styles.screen}>
-          <View style={styles.headerWrap}>
-            <SpotDetailHeader
-              stopLabel={t("spot.indexOfTotal", {
-                current: spotIndex + 1,
-                total: spots.length,
-              })}
-              bookmarked={bookmarked}
-              // Return to wherever the user opened this spot from — the floor
-              // page, the map, a search result. Only fall back to the tour index
-              // when there is no history (e.g. a deep link straight to a spot).
-              onClose={() =>
-                router.canGoBack()
-                  ? router.back()
-                  : router.replace(`/tour/${resolvedTourId}`)
-              }
-              onToggleBookmark={() => void toggleBookmark(resolvedTourId, spotId)}
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <View style={styles.screen}>
+        <View style={styles.headerWrap}>
+          <SpotDetailHeader
+            stopLabel={t("spot.indexOfTotal", {
+              current: spotIndex + 1,
+              total: spots.length,
+            })}
+            bookmarked={bookmarked}
+            onClose={() =>
+              router.canGoBack()
+                ? router.back()
+                : router.replace(`/tour/${resolvedTourId}`)
+            }
+            onToggleBookmark={() =>
+              void toggleBookmark(resolvedTourId, spotId)
+            }
+          />
+        </View>
+
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.hero}>
+            <View style={styles.stopBadge}>
+              <Ionicons name="location" size={12} color={theme.primary} />
+              <ThemedText type="smallBold" style={styles.stopBadgeText}>
+                {t("spot.indexOfTotal", {
+                  current: spotIndex + 1,
+                  total: spots.length,
+                })}
+              </ThemedText>
+            </View>
+
+            <View style={styles.titleRow}>
+              <ThemedText type="subtitle" style={styles.heroTitle}>
+                {translation?.title ?? t("tour.stopFallback")}
+              </ThemedText>
+
+              <Pressable
+                accessibilityLabel={t("spot.openFloorMap")}
+                accessibilityRole="button"
+                hitSlop={8}
+                onPress={() => {
+                  const floorId = resolveSpotFloorId(content, spot);
+                  router.push(
+                    floorId
+                      ? `/tour/${resolvedTourId}/nav?floorId=${floorId}`
+                      : `/tour/${resolvedTourId}/nav`,
+                  );
+                }}
+                style={styles.mapButton}
+              >
+                <Ionicons name="map" size={18} color={theme.primary} />
+              </Pressable>
+            </View>
+          </View>
+
+          <SpotVisualMediaGallery
+            tourId={resolvedTourId}
+            spot={spot}
+            onDark
+          />
+
+          <View style={styles.audioBlock}>
+            <SpotAudioSection
+              tourId={resolvedTourId}
+              spot={spot}
+              variant="immersive"
             />
           </View>
 
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-          >
-            <ThemedText type="subtitle" style={styles.heroTitle}>
-              {translation?.title ?? t("tour.stopFallback")}
-            </ThemedText>
-
-            {translation?.shortDesc ? (
-              <ThemedText type="small" style={styles.heroSubtitle}>
-                {translation.shortDesc}
+          {transcript ? (
+            <GlassCard style={styles.transcriptCard}>
+              <ThemedText type="smallBold" style={styles.transcriptLabel}>
+                {t("spot.transcript")}
               </ThemedText>
-            ) : null}
+              <ThemedText type="small" style={styles.transcriptBody}>
+                {transcript}
+              </ThemedText>
+            </GlassCard>
+          ) : null}
 
-            <View style={styles.audioBlock}>
-              <SpotAudioSection tourId={resolvedTourId} spot={spot} variant="immersive" />
-            </View>
-
-            {transcript ? (
-              <View style={styles.transcriptSection}>
-                <ThemedText type="smallBold" style={styles.transcriptLabel}>
-                  {t("spot.transcript")}
-                </ThemedText>
-                <ThemedText type="small" style={styles.transcriptBody}>
-                  {transcript}
-                </ThemedText>
-              </View>
-            ) : null}
-
-            <SpotVisualMediaGallery tourId={resolvedTourId} spot={spot} onDark />
-
-            {faqItems.length > 0 ? (
+          {faqItems.length > 0 ? (
+            <GlassCard style={styles.faqCard}>
               <FaqAccordion
                 title={t("spot.faqs")}
                 items={faqItems}
                 onDark
               />
-            ) : null}
-          </ScrollView>
+            </GlassCard>
+          ) : null}
+        </ScrollView>
 
-          <View
-            style={[
-              styles.footer,
-              {
-                borderTopColor: "rgba(255,255,255,0.1)",
-                paddingBottom: Math.max(insets.bottom, Spacing.three),
-              },
-            ]}
-          >
-            {previousSpot ? (
-              <Pressable
-                onPress={() =>
-                  router.replace(`/tour/${resolvedTourId}/spot/${previousSpot.id}`)
-                }
-                style={styles.footerNav}
-              >
-                <Ionicons name="chevron-back" size={16} color="#ffffff" />
-                <ThemedText type="small" style={styles.footerLink}>
-                  {t("spot.previous")}
-                </ThemedText>
-              </Pressable>
-            ) : (
-              <ThemedText type="small" style={styles.footerLinkDisabled}>
+        <View
+          style={[
+            styles.footer,
+            {
+              paddingBottom: Math.max(insets.bottom, Spacing.three),
+            },
+          ]}
+        >
+          {previousSpot ? (
+            <Pressable
+              onPress={() =>
+                router.replace(
+                  `/tour/${resolvedTourId}/spot/${previousSpot.id}`,
+                )
+              }
+              style={styles.footerNav}
+            >
+              <Ionicons name="chevron-back" size={16} color="#ffffff" />
+              <ThemedText type="small" style={styles.footerLink}>
                 {t("spot.previous")}
               </ThemedText>
-            )}
-
-            <Pressable
-              onPress={() => void toggleComplete(resolvedTourId, spotId)}
-              style={styles.completeButton}
-            >
-              <Ionicons
-                name={isComplete ? "checkbox" : "square-outline"}
-                size={20}
-                color={theme.primary}
-              />
-              <ThemedText type="small" style={styles.completeLabel}>
-                {t("spot.markComplete")}
-              </ThemedText>
             </Pressable>
+          ) : (
+            <ThemedText type="small" style={styles.footerLinkDisabled}>
+              {t("spot.previous")}
+            </ThemedText>
+          )}
 
-            {nextSpot ? (
-              <GoldGradientButton
-                label={t("spot.next")}
-                icon="arrow-forward"
-                onPress={() =>
-                  router.replace(`/tour/${resolvedTourId}/spot/${nextSpot.id}`)
-                }
-              />
-            ) : (
-              <GoldGradientButton
-                label={t("spot.done")}
-                icon="checkmark"
-                onPress={() => router.push(`/tour/${resolvedTourId}`)}
-              />
-            )}
-          </View>
+          <Pressable
+            onPress={() => void toggleComplete(resolvedTourId, spotId)}
+            style={[
+              styles.completeButton,
+              isComplete && styles.completeButtonActive,
+            ]}
+          >
+            <Ionicons
+              name={isComplete ? "checkbox" : "square-outline"}
+              size={20}
+              color={theme.primary}
+            />
+            <ThemedText type="small" style={styles.completeLabel}>
+              {t("spot.markComplete")}
+            </ThemedText>
+          </Pressable>
+
+          {nextSpot ? (
+            <GoldGradientButton
+              label={t("spot.next")}
+              icon="arrow-forward"
+              onPress={() =>
+                router.replace(
+                  `/tour/${resolvedTourId}/spot/${nextSpot.id}`,
+                )
+              }
+            />
+          ) : (
+            <GoldGradientButton
+              label={t("spot.done")}
+              icon="checkmark"
+              onPress={() => router.push(`/tour/${resolvedTourId}`)}
+            />
+          )}
         </View>
-      </SafeAreaView>
-    </PageBackground>
+      </View>
+    </SafeAreaView>
   );
 }
 
@@ -261,6 +311,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: Spacing.four,
   },
+  messageCard: {
+    alignItems: "center",
+    gap: Spacing.three,
+    minWidth: "70%",
+  },
+  messageTitle: {
+    color: "#ffffff",
+    textAlign: "center",
+  },
   headerWrap: {
     paddingHorizontal: Spacing.four,
   },
@@ -269,39 +328,77 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.four,
     gap: Spacing.three,
   },
-  heroTitle: {
-    color: "#ffffff",
+  hero: {
+    gap: Spacing.two,
     marginTop: Spacing.two,
   },
-  heroSubtitle: {
-    color: "rgba(255,255,255,0.6)",
+  stopBadge: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.one,
+    borderRadius: 999,
+    paddingHorizontal: Spacing.two + 2,
+    paddingVertical: Spacing.one,
+    backgroundColor: "rgba(28, 25, 23, 0.72)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(225, 165, 102, 0.4)",
+  },
+  stopBadgeText: {
+    color: "#ffffff",
+    fontSize: 11,
+    lineHeight: 14,
+  },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: Spacing.three,
+  },
+  heroTitle: {
+    flex: 1,
+    color: "#ffffff",
+    fontSize: 22,
+    lineHeight: 28,
+  },
+  mapButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(28, 25, 23, 0.72)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(225, 165, 102, 0.45)",
   },
   audioBlock: {
-    marginTop: Spacing.two,
+    marginTop: Spacing.one,
   },
-  transcriptSection: {
+  transcriptCard: {
     gap: Spacing.two,
-    alignSelf: "stretch",
   },
   transcriptLabel: {
     color: "#e1a566",
   },
   transcriptBody: {
-    color: "rgba(255,255,255,0.75)",
+    color: "rgba(255,255,255,0.82)",
     lineHeight: 22,
+  },
+  faqCard: {
+    paddingVertical: Spacing.one,
   },
   footer: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(255,255,255,0.12)",
     paddingHorizontal: Spacing.four,
     paddingTop: Spacing.three,
     gap: Spacing.two,
-    backgroundColor: "rgba(0,0,0,0.35)",
+    backgroundColor: "rgba(12, 10, 9, 0.72)",
   },
   footerLink: {
-    color: "rgba(255,255,255,0.7)",
+    color: "rgba(255,255,255,0.78)",
   },
   footerNav: {
     flexDirection: "row",
@@ -309,15 +406,21 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   footerLinkDisabled: {
-    color: "rgba(255,255,255,0.3)",
+    color: "rgba(255,255,255,0.28)",
   },
   completeButton: {
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.one,
     flexShrink: 1,
+    borderRadius: 999,
+    paddingHorizontal: Spacing.two,
+    paddingVertical: Spacing.one,
+  },
+  completeButtonActive: {
+    backgroundColor: "rgba(225, 165, 102, 0.16)",
   },
   completeLabel: {
-    color: "rgba(255,255,255,0.8)",
+    color: "rgba(255,255,255,0.85)",
   },
 });

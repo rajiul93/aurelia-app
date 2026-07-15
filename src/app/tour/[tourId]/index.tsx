@@ -47,7 +47,7 @@ export default function TourRouteScreen() {
 
   if (isResolving) {
     return (
-      <ThemedView style={styles.centered}>
+      <ThemedView transparent style={styles.centered}>
         <ActivityIndicator color={theme.primary} />
       </ThemedView>
     );
@@ -55,7 +55,7 @@ export default function TourRouteScreen() {
 
   if (!hasRawContent || !content || !resolvedTourId) {
     return (
-      <ThemedView style={styles.centered}>
+      <ThemedView transparent style={styles.centered}>
         <ThemedText type="smallBold">{t("tour.notInstalled")}</ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
           {t("tour.downloadFromHome")}
@@ -78,7 +78,7 @@ export default function TourRouteScreen() {
     spots.length > 0 ? (completedIds.length / spots.length) * 100 : 0;
 
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView transparent style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <ScrollView
           contentContainerStyle={styles.scrollContent}

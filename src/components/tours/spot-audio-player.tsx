@@ -74,47 +74,42 @@ export function SpotAudioPlayer({
         <ThemedText type="smallBold">{t("spot.audioGuide")}</ThemedText>
       ) : null}
 
-      <ProgressBar
-        value={progress}
-        variant={immersive ? "gold" : "default"}
-      />
-
-      <View style={styles.timeRow}>
-        <ThemedText type="small" style={{ color: timeColor }}>
-          {formatTime(currentTime)}
-        </ThemedText>
-        <ThemedText type="small" style={{ color: timeColor }}>
-          {formatTime(duration)}
-        </ThemedText>
-      </View>
-
-      <View style={styles.controls}>
-        <Pressable onPress={() => skipBy(-15)} style={styles.skipButton}>
-          <Ionicons name="play-back" size={22} color={skipColor} />
-          <ThemedText type="small" style={{ color: skipColor, fontSize: 10 }}>
-            15s
-          </ThemedText>
+      <View style={styles.controlsRow}>
+        <Pressable onPress={() => skipBy(-15)} hitSlop={8} style={styles.skipButton}>
+          <Ionicons name="play-back" size={18} color={skipColor} />
         </Pressable>
 
-        <Pressable onPress={togglePlayback}>
+        <Pressable onPress={togglePlayback} hitSlop={4}>
           <LinearGradient
             {...GoldGradientHorizontal}
             style={styles.playButton}
           >
             <Ionicons
               name={isPlaying ? "pause" : "play"}
-              size={28}
+              size={20}
               color="#1a1208"
             />
           </LinearGradient>
         </Pressable>
 
-        <Pressable onPress={() => skipBy(15)} style={styles.skipButton}>
-          <Ionicons name="play-forward" size={22} color={skipColor} />
-          <ThemedText type="small" style={{ color: skipColor, fontSize: 10 }}>
-            15s
-          </ThemedText>
+        <Pressable onPress={() => skipBy(15)} hitSlop={8} style={styles.skipButton}>
+          <Ionicons name="play-forward" size={18} color={skipColor} />
         </Pressable>
+
+        <View style={styles.progressColumn}>
+          <ProgressBar
+            value={progress}
+            variant={immersive ? "gold" : "default"}
+          />
+          <View style={styles.timeRow} pointerEvents="none">
+            <ThemedText type="small" style={[styles.timeText, { color: timeColor }]}>
+              {formatTime(currentTime)}
+            </ThemedText>
+            <ThemedText type="small" style={[styles.timeText, { color: timeColor }]}>
+              {formatTime(duration)}
+            </ThemedText>
+          </View>
+        </View>
       </View>
 
       {!status.isLoaded && !player.isLoaded ? (
@@ -139,27 +134,42 @@ const styles = StyleSheet.create({
   containerImmersive: {
     padding: 0,
     borderRadius: 0,
+    gap: Spacing.one,
+  },
+  controlsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.three,
+    // Room for time labels that sit under the centered progress bar
+    marginBottom: 16,
+  },
+  progressColumn: {
+    flex: 1,
+    height: 40,
+    justifyContent: "center",
   },
   timeRow: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 42,
     flexDirection: "row",
     justifyContent: "space-between",
   },
-  controls: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: Spacing.five,
-    paddingVertical: Spacing.two,
+  timeText: {
+    fontSize: 11,
+    lineHeight: 14,
   },
   skipButton: {
     alignItems: "center",
-    gap: Spacing.half,
-    minWidth: 48,
+    justifyContent: "center",
+    minWidth: 28,
+    height: 40,
   },
   playButton: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
   },
