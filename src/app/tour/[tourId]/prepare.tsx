@@ -29,7 +29,7 @@ import {
   formatDownloadPercent,
   getDownloadProgressLabel,
 } from "@/lib/bundle/download-progress-label";
-import { useLocaleStore, type AppLanguage } from "@/store/locale-store";
+import { useLocaleStore, APP_LANGUAGES, type AppLanguage } from "@/store/locale-store";
 import { useInstalledToursStore } from "@/store/installed-tours-store";
 import { useReleaseConfigStore } from "@/store/release-config-store";
 
@@ -78,8 +78,8 @@ export default function TourPrepareScreen() {
     setDownloadMode(installed.downloadPreferences.downloadMode);
   }, [installed]);
 
-  const languages = (["en", "es", "fr"] as AppLanguage[]).filter((code) =>
-    supportedLanguages.includes(code),
+  const languages = APP_LANGUAGES.filter((value) =>
+    supportedLanguages.includes(value),
   );
   const isDownloading = downloadTour.isPending;
   const percent = downloadProgress

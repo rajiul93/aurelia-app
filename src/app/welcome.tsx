@@ -2,9 +2,10 @@ import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useEffect } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import Animated, {
   Easing,
+  FadeInDown,
   interpolate,
   useAnimatedStyle,
   useSharedValue,
@@ -14,17 +15,27 @@ import Animated, {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
-import { Spacing } from "@/constants/theme";
+import { GoldGradientButton } from "@/components/ui/gold-gradient-button";
+import { Fonts, Spacing } from "@/constants/theme";
 import { useAppContent } from "@/hooks/queries/use-app-content";
 import { useStrings } from "@/hooks/use-strings";
 import { useTheme } from "@/hooks/use-theme";
 import { resolveAppAssetUrl } from "@/lib/app-content/resolve-asset";
+import { GoldGradientHorizontal } from "@/theme/gradients";
 import { useOnboardingStore } from "@/store/onboarding-store";
-import { useLocaleStore, type AppLanguage } from "@/store/locale-store";
+import {
+  APP_LANGUAGES,
+  useLocaleStore,
+  type AppLanguage,
+} from "@/store/locale-store";
 import { useReleaseConfigStore } from "@/store/release-config-store";
 
 const LIGHT_DRIFT = Easing.inOut(Easing.sin);
 
+/**
+ * Welcome is intentionally non-scrolling: hero + up to 4 languages + CTA
+ * must fit a typical phone viewport. Keep paddings compact when adding a language.
+ */
 export default function WelcomeScreen() {
   const theme = useTheme();
   const { t, languageLabel } = useStrings();
@@ -38,7 +49,6 @@ export default function WelcomeScreen() {
   const assets = contentResponse?.data.assets;
   const logoUrl = resolveAppAssetUrl(assets, "logo");
 
-  // Soft “light drift” — long sine loops so it feels like ambient light, not a blink
   const drift = useSharedValue(0);
   const breath = useSharedValue(0);
 
@@ -67,7 +77,7 @@ export default function WelcomeScreen() {
     };
   });
 
-  const languages = (["en", "es", "fr"] as AppLanguage[]).filter((code) =>
+  const languages = APP_LANGUAGES.filter((code) =>
     supportedLanguages.includes(code),
   );
 
@@ -76,12 +86,20 @@ export default function WelcomeScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.hero}>
+    <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
+      <LinearGradient
+        pointerEvents="none"
+        colors={["rgba(0,0,0,0.45)", "transparent", "rgba(0,0,0,0.55)"]}
+        locations={[0, 0.35, 1]}
+        style={StyleSheet.absoluteFill}
+      />
+
+      {/* Fixed layout — no ScrollView so a 4th language still fits on-screen */}
+      <View style={styles.screen}>
+        <Animated.View
+          entering={FadeInDown.delay(40).duration(520).springify().damping(18)}
+          style={styles.hero}
+        >
           {logoUrl ? (
             <Image
               source={{ uri: logoUrl }}
@@ -93,6 +111,8 @@ export default function WelcomeScreen() {
               {t("app.name")}
             </ThemedText>
           )}
+
+          <View style={[styles.goldRule, { backgroundColor: theme.primary }]} />
 
           <View style={styles.titleBlock}>
             <Animated.View
@@ -111,90 +131,123 @@ export default function WelcomeScreen() {
                 style={styles.ambientLight}
               />
             </Animated.View>
-            <ThemedText type="title" style={[styles.headline, styles.headlineText]}>
+            <ThemedText style={[styles.headline, styles.headlineText]}>
               {t("welcome.title.line1")}
             </ThemedText>
-            <ThemedText type="title" style={[styles.headline, styles.headlineText]}>
+            <ThemedText style={[styles.headline, styles.headlineText]}>
               {t("welcome.title.line2")}
             </ThemedText>
-            <ThemedText
-              type="subtitle"
-              style={[styles.highlight, styles.headlineText]}
-            >
+            <ThemedText style={[styles.highlight, styles.headlineText]}>
               {t("welcome.title.highlight")}
             </ThemedText>
           </View>
 
-          <ThemedText style={[styles.subcopy, styles.onDarkMuted]}>
+          <ThemedText
+            numberOfLines={2}
+            style={[styles.subcopy, styles.onDarkMuted]}
+          >
             {t("welcome.description")}
           </ThemedText>
-        </View>
+        </Animated.View>
 
-        <View style={styles.languageBlock}>
-          <ThemedText type="smallBold" style={[styles.sectionLabel, styles.onDarkText]}>
-            {t("welcome.languageLabel")}
-          </ThemedText>
-          <View style={styles.languageRow}>
-            {languages.map((code) => {
+        <Animated.View
+          entering={FadeInDown.delay(160).duration(520).springify().damping(18)}
+          style={styles.languageBlock}
+        >
+          <View style={styles.languageHeader}>
+            <ThemedText type="smallBold" style={styles.sectionLabel}>
+              {t("welcome.languageLabel").toLocaleUpperCase("en-US")}
+            </ThemedText>
+            <View
+              style={[styles.sectionRule, { backgroundColor: theme.primary }]}
+            />
+          </View>
+
+          <View style={styles.languagePanel}>
+            {languages.map((code, index) => {
               const active = code === language;
+              const isLast = index === languages.length - 1;
 
               return (
-                <Pressable
-                  key={code}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: active }}
-                  onPress={() => void setLanguage(code)}
-                  style={[
-                    styles.languageChip,
-                    active
-                      ? styles.languageChipActive
-                      : styles.languageChipInactive,
-                  ]}
-                >
-                  {active ? (
-                    <View style={styles.checkBadge}>
-                      <Ionicons name="checkmark" size={12} color="#ffffff" />
-                    </View>
-                  ) : (
-                    <Ionicons
-                      name="language-outline"
-                      size={14}
-                      color="rgba(255,255,255,0.7)"
-                    />
-                  )}
-                  <ThemedText
-                    type="smallBold"
-                    style={
-                      active
-                        ? styles.languageLabelActive
-                        : styles.languageLabelInactive
-                    }
+                <View key={code}>
+                  <Pressable
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: active }}
+                    android_ripple={{
+                      color: "rgba(255,255,255,0.08)",
+                      borderless: false,
+                      foreground: true,
+                    }}
+                    onPress={() => void setLanguage(code)}
+                    style={({ pressed }) => [
+                      styles.languageOption,
+                      pressed && !active && styles.languageOptionPressed,
+                    ]}
                   >
-                    {languageLabel(code)}
-                  </ThemedText>
-                </Pressable>
+                    {active ? (
+                      <LinearGradient
+                        {...GoldGradientHorizontal}
+                        style={styles.languageOptionActive}
+                      >
+                        <View style={styles.languageCodeBadgeActive}>
+                          <ThemedText
+                            type="smallBold"
+                            style={styles.languageCodeActive}
+                          >
+                            {code.toUpperCase()}
+                          </ThemedText>
+                        </View>
+                        <ThemedText
+                          type="smallBold"
+                          style={styles.languageNameActive}
+                        >
+                          {languageLabel(code as AppLanguage)}
+                        </ThemedText>
+                        <View style={styles.checkBadgeActive}>
+                          <Ionicons
+                            name="checkmark"
+                            size={14}
+                            color={theme.primary}
+                          />
+                        </View>
+                      </LinearGradient>
+                    ) : (
+                      <View style={styles.languageOptionIdle}>
+                        <View style={styles.languageCodeBadge}>
+                          <ThemedText
+                            type="smallBold"
+                            style={styles.languageCode}
+                          >
+                            {code.toUpperCase()}
+                          </ThemedText>
+                        </View>
+                        <ThemedText type="smallBold" style={styles.languageName}>
+                          {languageLabel(code as AppLanguage)}
+                        </ThemedText>
+                        <View style={styles.radioIdle} />
+                      </View>
+                    )}
+                  </Pressable>
+                  {!isLast ? <View style={styles.languageDivider} /> : null}
+                </View>
               );
             })}
           </View>
-        </View>
+        </Animated.View>
 
-        <Pressable
-          onPress={() => void handleGetStarted()}
-          style={[styles.cta, { backgroundColor: theme.primary }]}
+        <Animated.View
+          entering={FadeInDown.delay(260).duration(520).springify().damping(18)}
+          style={styles.ctaWrap}
         >
-          <ThemedText
-            type="smallBold"
-            style={{ color: theme.primaryForeground }}
-          >
-            {t("welcome.getStarted")}
-          </ThemedText>
-          <Ionicons
-            name="arrow-forward"
-            size={18}
-            color={theme.primaryForeground}
+          <GoldGradientButton
+            label={t("welcome.getStarted")}
+            onPress={() => void handleGetStarted()}
+            showArrow
+            fullWidth
+            style={styles.ctaButton}
           />
-        </Pressable>
-      </ScrollView>
+        </Animated.View>
+      </View>
     </SafeAreaView>
   );
 }
@@ -203,42 +256,50 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
-  scrollContent: {
-    flexGrow: 1,
+  screen: {
+    flex: 1,
     justifyContent: "space-between",
     paddingHorizontal: Spacing.four,
-    paddingBottom: Spacing.six,
-    gap: Spacing.five,
+    paddingTop: Spacing.three,
+    paddingBottom: Spacing.four,
+    gap: Spacing.three,
   },
   hero: {
-    paddingTop: Spacing.six,
-    gap: Spacing.two,
+    gap: Spacing.one,
+    flexShrink: 1,
   },
   brand: {
-    fontSize: 42,
-    lineHeight: 48,
-    marginBottom: Spacing.three,
+    fontSize: 34,
+    lineHeight: 40,
+    marginBottom: Spacing.one,
   },
   brandText: {
     color: "#0c0a09",
   },
   logo: {
-    width: 200,
-    height: 120,
-    marginBottom: Spacing.three,
+    width: 160,
+    height: 72,
+    marginBottom: Spacing.one,
+  },
+  goldRule: {
+    width: 32,
+    height: 2,
+    borderRadius: 999,
+    marginVertical: Spacing.one,
+    opacity: 0.9,
   },
   titleBlock: {
     position: "relative",
-    gap: Spacing.two,
-    paddingVertical: Spacing.two,
+    gap: 2,
+    paddingVertical: Spacing.one,
     overflow: "visible",
   },
   ambientLightWrap: {
     position: "absolute",
     left: -40,
     top: -10,
-    width: 320,
-    height: 200,
+    width: 300,
+    height: 150,
   },
   ambientLight: {
     width: "100%",
@@ -246,79 +307,152 @@ const styles = StyleSheet.create({
     borderRadius: 160,
   },
   headline: {
-    fontSize: 34,
-    lineHeight: 40,
-    letterSpacing: -0.4,
+    fontFamily: Fonts.sansBold,
+    fontSize: 28,
+    lineHeight: 34,
+    letterSpacing: -0.5,
   },
   headlineText: {
     color: "#ffffff",
   },
   highlight: {
-    marginTop: Spacing.one,
-    fontSize: 28,
-    lineHeight: 34,
+    marginTop: 2,
+    fontFamily: Fonts.sansBold,
+    fontSize: 22,
+    lineHeight: 28,
     letterSpacing: -0.2,
   },
   subcopy: {
     marginTop: Spacing.two,
-    maxWidth: 320,
-    lineHeight: 22,
+    maxWidth: 300,
+    fontSize: 13,
+    lineHeight: 18,
   },
   languageBlock: {
     gap: Spacing.two,
+    flexShrink: 0,
+  },
+  languageHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.three,
   },
   sectionLabel: {
-    marginBottom: Spacing.one,
+    color: "rgba(255,255,255,0.72)",
+    fontSize: 11,
+    lineHeight: 14,
+    letterSpacing: 2.2,
   },
-  languageRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: Spacing.two,
+  sectionRule: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+    opacity: 0.55,
   },
-  languageChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.two,
-    borderWidth: 1.5,
-    borderRadius: Spacing.three,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two + 2,
-    minWidth: 96,
+  languagePanel: {
+    borderRadius: 28,
+    overflow: "hidden",
+    padding: Spacing.two + 2,
+    backgroundColor: "rgba(12, 10, 9, 0.48)",
+    borderWidth: 1,
+    borderColor: "rgba(225, 165, 102, 0.28)",
   },
-  languageChipInactive: {
-    borderColor: "rgba(255,255,255,0.35)",
-    backgroundColor: "rgba(12, 10, 9, 0.62)",
+  languageOption: {
+    borderRadius: 22,
+    overflow: "hidden",
   },
-  languageChipActive: {
-    borderColor: "#ffffff",
-    backgroundColor: "#ffffff",
+  languageOptionPressed: {
+    opacity: 0.88,
   },
-  languageLabelActive: {
-    color: "#0c0a09",
-  },
-  languageLabelInactive: {
-    color: "#ffffff",
-  },
-  checkBadge: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#0c0a09",
-  },
-  cta: {
+  languageOptionActive: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: Spacing.two,
-    borderRadius: Spacing.three,
+    gap: Spacing.three,
     paddingVertical: Spacing.three,
+    paddingHorizontal: Spacing.three + 2,
+    borderRadius: 22,
   },
-  onDarkText: {
-    color: "#ffffff",
+  languageOptionIdle: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.three,
+    paddingVertical: Spacing.three,
+    paddingHorizontal: Spacing.three + 2,
+    borderRadius: 22,
+    backgroundColor: "transparent",
+  },
+  languageCodeBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.18)",
+  },
+  languageCodeBadgeActive: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(26, 18, 8, 0.22)",
+  },
+  languageCode: {
+    color: "rgba(255,255,255,0.78)",
+    fontSize: 12,
+    letterSpacing: 1.2,
+  },
+  languageCodeActive: {
+    color: "#1a1208",
+    fontSize: 12,
+    letterSpacing: 1.2,
+  },
+  languageName: {
+    flex: 1,
+    color: "rgba(255,255,255,0.92)",
+    fontSize: 15,
+  },
+  languageNameActive: {
+    flex: 1,
+    color: "#1a1208",
+    fontSize: 15,
+  },
+  radioIdle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1.5,
+    borderColor: "rgba(255,255,255,0.28)",
+  },
+  checkBadgeActive: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#1a1208",
+  },
+  languageDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    marginHorizontal: Spacing.three,
+  },
+  ctaWrap: {
+    alignSelf: "stretch",
+    flexShrink: 0,
+  },
+  ctaButton: {
+    alignSelf: "stretch",
+    borderRadius: 18,
+    overflow: "hidden",
+    shadowColor: "#e1a566",
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 8,
   },
   onDarkMuted: {
-    color: "rgba(255, 255, 255, 0.88)",
+    color: "rgba(255, 255, 255, 0.78)",
   },
 });

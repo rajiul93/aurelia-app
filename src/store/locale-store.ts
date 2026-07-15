@@ -7,6 +7,9 @@ import {
 
 export type AppLanguage = "en" | "es" | "fr";
 
+/** Canonical UI language list — add codes here when a new language ships. */
+export const APP_LANGUAGES: readonly AppLanguage[] = ["en", "es", "fr"] as const;
+
 type LocaleState = {
   language: AppLanguage;
   hydrated: boolean;

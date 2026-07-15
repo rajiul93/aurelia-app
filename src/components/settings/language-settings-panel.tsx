@@ -7,9 +7,7 @@ import { Spacing } from "@/constants/theme";
 import { useStrings } from "@/hooks/use-strings";
 import { useTheme } from "@/hooks/use-theme";
 import { useRemoteConfig } from "@/store/release-config-store";
-import { useLocaleStore, type AppLanguage } from "@/store/locale-store";
-
-const ALL_LANGUAGES: AppLanguage[] = ["en", "es", "fr"];
+import { useLocaleStore, APP_LANGUAGES, type AppLanguage } from "@/store/locale-store";
 
 export function LanguageSettingsPanel() {
   const theme = useTheme();
@@ -17,7 +15,7 @@ export function LanguageSettingsPanel() {
   const remote = useRemoteConfig();
   const language = useLocaleStore((state) => state.language);
   const setLanguage = useLocaleStore((state) => state.setLanguage);
-  const languages = ALL_LANGUAGES.filter((item) =>
+  const languages = APP_LANGUAGES.filter((item) =>
     remote.supportedLanguages.includes(item),
   );
 

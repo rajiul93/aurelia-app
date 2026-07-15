@@ -16,6 +16,8 @@ type GoldGradientButtonProps = {
   icon?: IconName;
   showArrow?: boolean;
   style?: ViewStyle;
+  /** Stretch the gradient fill to the pressable width (e.g. full-width CTAs). */
+  fullWidth?: boolean;
 };
 
 export function GoldGradientButton({
@@ -24,10 +26,14 @@ export function GoldGradientButton({
   icon,
   showArrow = false,
   style,
+  fullWidth = false,
 }: GoldGradientButtonProps) {
   return (
     <Pressable onPress={onPress} style={style}>
-      <LinearGradient {...GoldGradientHorizontal} style={styles.gradient}>
+      <LinearGradient
+        {...GoldGradientHorizontal}
+        style={[styles.gradient, fullWidth && styles.gradientFull]}
+      >
         {icon ? <Ionicons name={icon} size={16} color="#1a1208" /> : null}
         <ThemedText type="smallBold" style={styles.label}>
           {label}
@@ -50,6 +56,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: Spacing.two,
     paddingHorizontal: Spacing.four,
+  },
+  gradientFull: {
+    width: "100%",
+    minHeight: 52,
+    borderRadius: 18,
+    paddingVertical: Spacing.three,
   },
   label: {
     color: "#1a1208",
