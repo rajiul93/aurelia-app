@@ -1,10 +1,11 @@
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
+import { useIsFocused, useRouter } from "expo-router";
 import type { ComponentProps } from "react";
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import Animated, {
+  cancelAnimation,
   Easing,
   FadeInDown,
   interpolate,
@@ -40,13 +41,20 @@ const DEFAULT_TILE_WIDTH = 168;
 function MovingLightSheen({
   tileWidth,
   delayMs = 0,
+  active,
 }: {
   tileWidth: SharedValue<number>;
   delayMs?: number;
+  active: boolean;
 }) {
   const progress = useSharedValue(0);
 
   useEffect(() => {
+    if (!active) {
+      cancelAnimation(progress);
+      return;
+    }
+
     progress.value = withDelay(
       delayMs,
       withRepeat(
@@ -55,7 +63,11 @@ function MovingLightSheen({
         false,
       ),
     );
-  }, [delayMs, progress]);
+
+    return () => {
+      cancelAnimation(progress);
+    };
+  }, [active, delayMs, progress]);
 
   const bandStyle = useAnimatedStyle(() => {
     const w = Math.max(tileWidth.value, DEFAULT_TILE_WIDTH);
@@ -73,6 +85,10 @@ function MovingLightSheen({
       ],
     };
   });
+
+  if (!active) {
+    return null;
+  }
 
   return (
     <View pointerEvents="none" style={styles.sheenLayer}>
@@ -103,6 +119,7 @@ type FeatureTileProps = {
   onPress: () => void;
   delay?: number;
   sheenDelayMs?: number;
+  sheenActive?: boolean;
 };
 
 function FeatureTile({
@@ -114,13 +131,14 @@ function FeatureTile({
   onPress,
   delay = 0,
   sheenDelayMs = 0,
+  sheenActive = true,
 }: FeatureTileProps) {
   const tileWidth = useSharedValue(DEFAULT_TILE_WIDTH);
 
   return (
     <Animated.View
       style={styles.tileWrap}
-      entering={FadeInDown.delay(delay).duration(420).springify().damping(18)}
+      entering={FadeInDown.delay(Math.min(delay, 80)).duration(260)}
     >
       <Pressable
         onPress={onPress}
@@ -154,7 +172,11 @@ function FeatureTile({
             pointerEvents="none"
           />
 
-          <MovingLightSheen tileWidth={tileWidth} delayMs={sheenDelayMs} />
+          <MovingLightSheen
+            tileWidth={tileWidth}
+            delayMs={sheenDelayMs}
+            active={sheenActive}
+          />
 
           <View style={styles.tileContent}>
             <View style={styles.tileHeader}>
@@ -209,6 +231,7 @@ type FeatureRowProps = {
 export function FeatureRow({ tourId, locked, delay = 0 }: FeatureRowProps) {
   const router = useRouter();
   const { t } = useStrings();
+  const isFocused = useIsFocused();
 
   const snapshot = useEntitlementsStore((state) => state.snapshot);
   const byTourId = useTourReminderStore((state) => state.byTourId);
@@ -235,6 +258,7 @@ export function FeatureRow({ tourId, locked, delay = 0 }: FeatureRowProps) {
           lockedLabel={lockedLabel}
           delay={delay}
           sheenDelayMs={0}
+          sheenActive={isFocused}
           onPress={() =>
             locked ? goUnlock() : router.push(`/find-host/${tourId}`)
           }
@@ -247,6 +271,7 @@ export function FeatureRow({ tourId, locked, delay = 0 }: FeatureRowProps) {
           lockedLabel={lockedLabel}
           delay={delay + 80}
           sheenDelayMs={SHEEN_CYCLE_MS / 2}
+          sheenActive={isFocused}
           onPress={() => (locked ? goUnlock() : setShowDateModal(true))}
         />
       </View>

@@ -88,7 +88,7 @@ export function TourDownloadButton({
 
   function openPrepare() {
     router.push({
-      pathname: "/tour/[tourId]/prepare",
+      pathname: "/download/[tourId]",
       params: {
         tourId,
         slug,

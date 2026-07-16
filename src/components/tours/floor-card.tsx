@@ -61,7 +61,7 @@ export function FloorCard({
 
   return (
     <Animated.View
-      entering={FadeInDown.delay(delay).duration(420).springify().damping(18)}
+      entering={FadeInDown.delay(Math.min(delay, 100)).duration(260)}
       style={styles.shadow}
     >
       <Pressable

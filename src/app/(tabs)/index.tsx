@@ -1,5 +1,6 @@
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { useRouter } from "expo-router";
+import { useEffect } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -69,19 +70,53 @@ export default function HomeScreen() {
   // bundle, so these need a download before their floor cards can appear.
   const downloadable = tours.filter((tour) => !installedTourIds.has(tour.id));
 
-  // Locked floor teasers from the catalog for tours that are not (yet) on disk —
-  // real FloorCard UI, never a tour-level card.
-  const lockedCatalogFloors = tours
+  // Locked / download floor teasers from the catalog for tours not yet on disk.
+  // Entitled + signed-in → Download (prepare). Everyone else → Locked (unlock).
+  const catalogFloorTeasers = tours
     .filter((tour) => !installedTourIds.has(tour.id))
     .flatMap((tour) =>
       (tour.floors ?? []).map((floor) => ({
-        tourId: tour.id,
+        tour,
         floor,
       })),
     );
 
+  // Entitled tours with no floor list still need a compact download row.
+  const downloadableWithoutFloors = downloadable.filter(
+    (tour) => !(tour.floors?.length),
+  );
+
   const showFloorsSection =
-    installedGuides.length > 0 || lockedCatalogFloors.length > 0;
+    installedGuides.length > 0 || catalogFloorTeasers.length > 0;
+
+  // Prefetch the lightweight root download route so floor → prepare feels instant.
+  const downloadPrefetchKey = downloadable
+    .filter((tour) => unlockedTourIds.has(tour.id))
+    .map((tour) => tour.id)
+    .join("|");
+
+  useEffect(() => {
+    if (!isSignedIn || !downloadPrefetchKey) {
+      return;
+    }
+
+    for (const tour of downloadable) {
+      if (!unlockedTourIds.has(tour.id)) {
+        continue;
+      }
+
+      router.prefetch({
+        pathname: "/download/[tourId]",
+        params: {
+          tourId: tour.id,
+          slug: tour.slug,
+          title: tour.title,
+        },
+      });
+    }
+    // downloadable / unlockedTourIds intentionally keyed via downloadPrefetchKey
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- avoid re-prefetch every render
+  }, [downloadPrefetchKey, isSignedIn, router]);
 
   // Tour to reference for "Find Your Host": prefer an installed guide, else the
   // first catalog tour so the card still shows (locked) before any download.
@@ -120,11 +155,11 @@ export default function HomeScreen() {
 
         <EmergencyAnnouncementBanner />
 
-        {/* Download first so signed-in users see offline install before floors. */}
-        {sessionToken && downloadable.length > 0 ? (
+        {/* Download row only for entitled tours that have no floor teasers yet. */}
+        {sessionToken && downloadableWithoutFloors.length > 0 ? (
           <View style={styles.section}>
             <View style={styles.cardList}>
-              {downloadable.map((tour) => (
+              {downloadableWithoutFloors.map((tour) => (
                 <GlassCard key={tour.id} style={styles.downloadCard}>
                   <ThemedText
                     type="smallBold"
@@ -158,16 +193,10 @@ export default function HomeScreen() {
           </View>
         ) : null}
 
-        {/* Floor cards only: installed (possibly Locked) + locked catalog teasers
-            for floors that are not yet downloaded. */}
+        {/* Floor cards: installed (Locked only when signed out / not entitled) +
+            catalog teasers (Download when entitled, Locked otherwise). */}
         {showFloorsSection ? (
           <View style={styles.section}>
-            {/* <ThemedText
-              type="smallBold"
-              style={[styles.sectionTitle, heroOnDark && styles.onDarkText]}
-            >
-              {t("floors.yourFloors")}
-            </ThemedText> */}
             <View style={styles.cardList}>
               {installedGuides.map((guide, index) => (
                 <TourFloorCards
@@ -176,22 +205,48 @@ export default function HomeScreen() {
                   baseDelay={index * 120}
                 />
               ))}
-              {lockedCatalogFloors.map(({ floor }, index) => (
-                <FloorCard
-                  key={floor.id}
-                  name={floor.name}
-                  coverUrl={floor.coverUrl}
-                  stopCount={floor.stopCount}
-                  stopLabel={
-                    floor.stopCount === 1 ? t("floors.stop") : t("floors.stops")
-                  }
-                  exploreLabel={t("floors.explore")}
-                  locked
-                  lockedLabel={t("floors.locked")}
-                  delay={installedGuides.length * 120 + index * 80}
-                  onPress={() => router.navigate("/explore")}
-                />
-              ))}
+              {catalogFloorTeasers.map(({ tour, floor }, index) => {
+                const canDownload =
+                  isSignedIn && unlockedTourIds.has(tour.id);
+                return (
+                  <FloorCard
+                    key={floor.id}
+                    name={floor.name}
+                    coverUrl={floor.coverUrl}
+                    stopCount={floor.stopCount}
+                    stopLabel={
+                      floor.stopCount === 1
+                        ? t("floors.stop")
+                        : t("floors.stops")
+                    }
+                    exploreLabel={
+                      canDownload
+                        ? t("floors.download")
+                        : t("floors.explore")
+                    }
+                    exploreIcon={
+                      canDownload ? "cloud-download-outline" : "compass"
+                    }
+                    locked={!canDownload}
+                    lockedLabel={t("floors.locked")}
+                    delay={installedGuides.length * 120 + index * 80}
+                    onPress={() => {
+                      if (canDownload) {
+                        router.push({
+                          pathname: "/download/[tourId]",
+                          params: {
+                            tourId: tour.id,
+                            slug: tour.slug,
+                            title: tour.title,
+                          },
+                        });
+                        return;
+                      }
+                      router.navigate("/explore");
+                    }}
+                  />
+                );
+              })}
             </View>
           </View>
         ) : isLoading ? (

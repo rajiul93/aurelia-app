@@ -11,6 +11,8 @@ export default function AppTabs() {
       screenOptions={{
         headerShown: false,
         sceneStyle: { backgroundColor: "transparent" },
+        freezeOnBlur: true,
+        lazy: true,
       }}
       tabBar={(props) => <GlassTabBar {...props} />}
     >

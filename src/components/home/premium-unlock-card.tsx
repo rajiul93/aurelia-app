@@ -1,8 +1,10 @@
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { LinearGradient } from "expo-linear-gradient";
+import { useIsFocused } from "expo-router";
 import { useEffect } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import Animated, {
+  cancelAnimation,
   Easing,
   FadeInDown,
   interpolate,
@@ -33,16 +35,26 @@ type PremiumUnlockCardProps = {
  */
 export function PremiumUnlockCard({ onPress }: PremiumUnlockCardProps) {
   const { t } = useStrings();
+  const isFocused = useIsFocused();
   const progress = useSharedValue(0);
   const cardWidth = useSharedValue(320);
 
   useEffect(() => {
+    if (!isFocused) {
+      cancelAnimation(progress);
+      return;
+    }
+
     progress.value = withRepeat(
       withTiming(1, { duration: SHEEN_CYCLE_MS, easing: Easing.linear }),
       -1,
       false,
     );
-  }, [progress]);
+
+    return () => {
+      cancelAnimation(progress);
+    };
+  }, [isFocused, progress]);
 
   const sheenStyle = useAnimatedStyle(() => {
     const travel = cardWidth.value + SHEEN_WIDTH * 2;
@@ -62,7 +74,7 @@ export function PremiumUnlockCard({ onPress }: PremiumUnlockCardProps) {
 
   return (
     <Animated.View
-      entering={FadeInDown.delay(60).duration(420).springify().damping(18)}
+      entering={FadeInDown.delay(40).duration(260)}
     >
       <Pressable
         onPress={onPress}
@@ -101,23 +113,25 @@ export function PremiumUnlockCard({ onPress }: PremiumUnlockCardProps) {
             pointerEvents="none"
           />
 
-          {/* Moving light */}
-          <View pointerEvents="none" style={styles.sheenLayer}>
-            <Animated.View style={[styles.sheenBand, sheenStyle]}>
-              <LinearGradient
-                colors={[
-                  "transparent",
-                  "rgba(236,201,138,0.18)",
-                  "rgba(255,255,255,0.34)",
-                  "rgba(236,201,138,0.18)",
-                  "transparent",
-                ]}
-                start={{ x: 0, y: 0.5 }}
-                end={{ x: 1, y: 0.5 }}
-                style={styles.sheenGradient}
-              />
-            </Animated.View>
-          </View>
+          {/* Moving light — pause when this screen is not focused */}
+          {isFocused ? (
+            <View pointerEvents="none" style={styles.sheenLayer}>
+              <Animated.View style={[styles.sheenBand, sheenStyle]}>
+                <LinearGradient
+                  colors={[
+                    "transparent",
+                    "rgba(236,201,138,0.18)",
+                    "rgba(255,255,255,0.34)",
+                    "rgba(236,201,138,0.18)",
+                    "transparent",
+                  ]}
+                  start={{ x: 0, y: 0.5 }}
+                  end={{ x: 1, y: 0.5 }}
+                  style={styles.sheenGradient}
+                />
+              </Animated.View>
+            </View>
+          ) : null}
 
           <View style={styles.content}>
             <View style={styles.iconRing}>

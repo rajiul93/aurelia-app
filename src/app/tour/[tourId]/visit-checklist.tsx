@@ -141,8 +141,12 @@ export default function VisitChecklistScreen() {
                 fullWidth
                 onPress={() =>
                   router.push({
-                    pathname: "/tour/[tourId]/prepare",
-                    params: { tourId: tour.id, slug: tour.slug, title: tour.title },
+                    pathname: "/download/[tourId]",
+                    params: {
+                      tourId: tour.id,
+                      slug: tour.slug,
+                      title: tour.title,
+                    },
                   })
                 }
               />

@@ -1,7 +1,8 @@
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { View } from "react-native";
+import { Platform, View } from "react-native";
+import { enableFreeze } from "react-native-screens";
 
 import { AnimatedSplash } from "@/components/animated-splash";
 import { AppBackground } from "@/components/app-background";
@@ -15,6 +16,10 @@ import { AppProviders } from "@/providers/app-providers";
 import { BrandColors } from "@/theme/colors";
 
 const SPLASH_BACKGROUND = "#0c0a09";
+
+// Pause inactive screens so Home (floor cards, sheens) doesn't keep burning JS
+// while another route is pushing/popping — the main source of transition lag.
+enableFreeze(true);
 
 // Hold the native splash until the JS overlay has painted (handled inside
 // AnimatedSplash), so cold start never shows a blank frame.
@@ -53,10 +58,23 @@ export default function RootLayout() {
                 screenOptions={{
                   headerShown: false,
                   contentStyle: { backgroundColor: "transparent" },
+                  freezeOnBlur: true,
+                  // Android default stack animation is heavy with transparent
+                  // scenes + photo background; simple_push stays snappy.
+                  animation:
+                    Platform.OS === "android" ? "simple_push" : "default",
+                  animationDuration: 250,
                 }}
               >
                 <Stack.Screen name="welcome" />
                 <Stack.Screen name="(tabs)" />
+                <Stack.Screen
+                  name="download/[tourId]"
+                  options={{
+                    animation: "fade",
+                    animationDuration: 180,
+                  }}
+                />
                 <Stack.Screen name="tour" />
                 <Stack.Screen name="pages/[key]" />
                 <Stack.Screen name="faq" />

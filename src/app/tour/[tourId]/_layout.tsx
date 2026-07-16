@@ -1,14 +1,12 @@
 import { Slot, useLocalSearchParams } from "expo-router";
-import { ActivityIndicator, StyleSheet } from "react-native";
 
 import { TourAccessLockScreen } from "@/components/tours/tour-access-lock-screen";
-import { ThemedView } from "@/components/themed-view";
 import { useEntitlementStatus } from "@/hooks/use-entitlement-status";
 import { useInstalledToursStore } from "@/store/installed-tours-store";
 
 export default function TourIdLayout() {
   const { tourId } = useLocalSearchParams<{ tourId: string }>();
-  const { isLoadingAccess, getTourLockReason } = useEntitlementStatus();
+  const { getTourLockReason } = useEntitlementStatus();
   const installedTitle = useInstalledToursStore(
     (state) => state.installedByTourId[tourId ?? ""]?.title,
   );
@@ -17,14 +15,8 @@ export default function TourIdLayout() {
     return <Slot />;
   }
 
-  if (isLoadingAccess) {
-    return (
-      <ThemedView transparent style={styles.loading}>
-        <ActivityIndicator size="large" />
-      </ThemedView>
-    );
-  }
-
+  // Never gate behind a spinner — that flash is what felt like lag when
+  // opening prepare/download from Home. Snapshot-backed lock is sync.
   const lockReason = getTourLockReason(tourId);
 
   if (lockReason) {
@@ -35,11 +27,3 @@ export default function TourIdLayout() {
 
   return <Slot />;
 }
-
-const styles = StyleSheet.create({
-  loading: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});
