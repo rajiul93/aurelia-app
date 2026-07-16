@@ -26,13 +26,19 @@ import { useTourAccess } from "@/hooks/useTourAccess";
 import { distanceBetweenPointsM } from "@/lib/distance";
 import type { Host } from "@/types/host";
 
+const DIRECTIONS_MOVEMENT_THRESHOLD_M = 25;
+
 export default function FindHostScreen() {
   const router = useRouter();
   const theme = useTheme();
   const { tourId } = useLocalSearchParams<{ tourId: string }>();
-  const lastDirectionsCallRef = useRef<{ hostId: string; distance: number } | null>(
-    null,
-  );
+  /** Throttle auto-fetch only — never read during render. */
+  const lastAutoDirectionsRef = useRef<{
+    hostId: string;
+    distance: number;
+  } | null>(null);
+  /** Host the current directions request/result belongs to — safe for render. */
+  const [directionsHostId, setDirectionsHostId] = useState<string | null>(null);
 
   const { data: access, isLoading: isCheckingAccess } = useTourAccess(tourId!);
   const {
@@ -53,32 +59,35 @@ export default function FindHostScreen() {
   useEffect(() => {
     if (!userPosition || !hosts.length) return;
 
-    const MOVEMENT_THRESHOLD = 25;
     const firstHost = hosts[0];
     const distance = distanceBetweenPointsM(userPosition, {
       latitude: firstHost.latitude,
       longitude: firstHost.longitude,
     });
 
+    const last = lastAutoDirectionsRef.current;
     if (
-      !lastDirectionsCallRef.current ||
-      Math.abs(distance - lastDirectionsCallRef.current.distance) >
-        MOVEMENT_THRESHOLD
+      last &&
+      last.hostId === firstHost.id &&
+      Math.abs(distance - last.distance) <= DIRECTIONS_MOVEMENT_THRESHOLD_M
     ) {
-      lastDirectionsCallRef.current = {
-        hostId: firstHost.id,
-        distance,
-      };
-
-      directionsMutation.mutate({
-        tourId: tourId!,
-        hostId: firstHost.id,
-        request: {
-          latitude: userPosition.latitude,
-          longitude: userPosition.longitude,
-        },
-      });
+      return;
     }
+
+    lastAutoDirectionsRef.current = {
+      hostId: firstHost.id,
+      distance,
+    };
+    setDirectionsHostId(firstHost.id);
+
+    directionsMutation.mutate({
+      tourId: tourId!,
+      hostId: firstHost.id,
+      request: {
+        latitude: userPosition.latitude,
+        longitude: userPosition.longitude,
+      },
+    });
   }, [userPosition, hosts, tourId, directionsMutation]);
 
   function handleLocationBannerPress() {
@@ -94,6 +103,7 @@ export default function FindHostScreen() {
 
   function handleGetDirections(host: Host) {
     if (locationStatus === "ready" && userPosition) {
+      setDirectionsHostId(host.id);
       directionsMutation.mutate({
         tourId: tourId!,
         hostId: host.id,
@@ -323,16 +333,14 @@ export default function FindHostScreen() {
                   host={host}
                   distanceM={distance}
                   durationS={
-                    directionsMutation.data &&
-                    lastDirectionsCallRef.current?.hostId === host.id
+                    directionsMutation.data && directionsHostId === host.id
                       ? directionsMutation.data.durationS
                       : undefined
                   }
                   tourId={tourId}
                   onGetDirections={() => handleGetDirections(host)}
                   isLoadingDirections={
-                    directionsMutation.isPending &&
-                    lastDirectionsCallRef.current?.hostId === host.id
+                    directionsMutation.isPending && directionsHostId === host.id
                   }
                 />
               );

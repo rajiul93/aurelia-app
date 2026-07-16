@@ -8,7 +8,7 @@
 
 **Status legend:** ✅ Completed · 🚧 In Progress · ⚠️ Known Issue · ⏳ Pending · ❌ Not Started
 
-Last updated: **2026-07-15**
+Last updated: **2026-07-16**
 
 ---
 
@@ -323,6 +323,15 @@ Last updated: **2026-07-15**
 ---
 
 ## 12. Changelog
+
+- **2026-07-16** — **Find-host Map no longer crashes the app.** `HostMapView` still used the old
+  MapLibre API (`MapLibre.MapView` / `styleURL` / `MarkerView` / `ShapeSource`) which does not exist
+  in `@maplibre/maplibre-react-native` v11 — opening Map native-crashed (ErrorBoundary cannot catch
+  it). Rewrote to the same v11 surface as tour nav: `<Map mapStyle={inline}>` + `Marker` +
+  `GeoJSONSource`/`Layer`, style retry + fallback, and the map screen now fetches walking directions
+  when visitor GPS is ready (throttled to 25 m).
+  [host-map-view.tsx](src/components/host/host-map-view.tsx),
+  [map.tsx](src/app/find-host/[tourId]/[hostId]/map.tsx). `tsc` clean.
 
 - **2026-07-15** — **Spot Details → floor map.** Title row has a map button (top-right) that opens
   that stop’s floor on the interactive map (`/nav?floorId=…`). Floor is resolved via
