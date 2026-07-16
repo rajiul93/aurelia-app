@@ -18,7 +18,14 @@ export type UnlockResult = {
   expiresAt: string;
   maxDevices: number;
   activeDeviceCount: number;
-  tours: Array<{ id: string; slug: string }>;
+  tours: Array<{
+    id: string;
+    slug: string;
+    /** Admin-set visit day "YYYY-MM-DD", or null when the buyer picks it. */
+    tourDate: string | null;
+    /** Optional "HH:mm" start time used in reminder copy. */
+    startTime: string | null;
+  }>;
 };
 
 export type OtpVerifyResult = {
@@ -60,5 +67,9 @@ export type Entitlements = {
     mediaVersion: number;
     aiKnowledgeVersion: number;
     routeVersion: number;
+    /** Admin-set visit day "YYYY-MM-DD", or null when the buyer picks it. */
+    tourDate: string | null;
+    /** Optional "HH:mm" start time used in reminder copy. */
+    startTime: string | null;
   }>;
 };

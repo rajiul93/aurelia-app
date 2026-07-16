@@ -1,19 +1,24 @@
 import { ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { FeatureRow } from "@/components/home/feature-row";
 import { HamburgerButton } from "@/components/navigation/hamburger-button";
 import { AccessSettingsPanel } from "@/components/settings/access-settings-panel";
 import { AppInfoSettingsPanel } from "@/components/settings/app-info-settings-panel";
 import { LanguageSettingsPanel } from "@/components/settings/language-settings-panel";
 import { StorageSettingsPanel } from "@/components/settings/storage-settings-panel";
 import { ThemeSettingsPanel } from "@/components/settings/theme-settings-panel";
+import { TourDateSettingsPanel } from "@/components/settings/tour-date-settings-panel";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { BottomTabInset, Spacing } from "@/constants/theme";
+import { useEntitlementStatus } from "@/hooks/use-entitlement-status";
 import { useStrings } from "@/hooks/use-strings";
 
 export default function SettingsScreen() {
   const { t } = useStrings();
+  const { hasActivePlan, entitlements } = useEntitlementStatus();
+  const hostTourId = entitlements?.tours[0]?.id;
 
   return (
     <ThemedView transparent style={styles.container}>
@@ -33,6 +38,10 @@ export default function SettingsScreen() {
           showsVerticalScrollIndicator={false}
         >
           <AccessSettingsPanel />
+          {hostTourId ? (
+            <FeatureRow tourId={hostTourId} locked={!hasActivePlan} />
+          ) : null}
+          <TourDateSettingsPanel />
           <ThemeSettingsPanel />
           <LanguageSettingsPanel />
           <StorageSettingsPanel />

@@ -8,7 +8,7 @@
 
 **Status legend:** ✅ Completed · 🚧 In Progress · ⚠️ Known Issue · ⏳ Pending · ❌ Not Started
 
-Last updated: **2026-07-16**
+Last updated: **2026-07-16** (reminder cadence → admin-controlled)
 
 ---
 
@@ -323,6 +323,74 @@ Last updated: **2026-07-16**
 ---
 
 ## 12. Changelog
+
+- **2026-07-16** — **Reminder cadence is now admin-controlled (remote config).** The prep-reminder
+ schedule was hard-coded on device (`PREP_OFFSET_DAYS = [3,2,1]`, 09:00). It now comes from the
+ **`AppReleaseConfig` singleton** the admin already edits, so "koto din আগে + koyta reminder" is set
+ in the panel, not shipped in a build. Three new remote-config fields:
+ `reminderOffsetDays` (Json int[]), `reminderHour` (0–23), `reminderNudgeEnabled` (bool).
+ - **Backend** (admin-and-server-aurelia): Prisma columns + migration
+ `20260716120000_add_reminder_cadence_config` (**applied to Neon**), Zod validation
+ (`reminderOffsetDays` ints 0–60, ≤10; hour 0–23), repository create/update + `REMOTE_CONFIG_FIELDS`
+ (so a change bumps `remoteConfigVersion`), admin GET/PATCH responses, `types/app-content.ts`, and the
+ **Remote config panel** gained a "Tour reminders" block (comma-separated days, hour, nudge toggle).
+ Mobile bundle mapper normalizes offsets (whole days, dedupe, largest-first; garbage → `[3,2,1]`;
+ empty = prep off).
+ - **Mobile** (aurelia-app): `RemoteConfig` + defaults carry the three fields;
+ [schedule-math.ts](src/lib/tour-reminder/schedule-math.ts) is now cadence-driven
+ (`normalizePrepOffsets`/`normalizeReminderHour`, `computePrepTriggers(date, now, offsets, hour)`),
+ and the **schedule key includes the cadence** so an admin change reschedules on the next sync.
+ [scheduler.ts](src/lib/tour-reminder/scheduler.ts) reads the synced remote config, uses `reminderHour`
+ for both prep DATE triggers and the DAILY nudge, gates the nudge on `reminderNudgeEnabled`, and now
+ **cancels by querying `getAllScheduledNotificationsAsync()`** (prefix `prep:{tourId}:`) so changing
+ the offset set clears stale identifiers it no longer emits. Prep copy is generic: D-1 = "tomorrow",
+ D-0 = "today", else `reminder.prep.body.generic` ("{days} days"); en/es/fr added. `tsc` clean both
+ repos; **130 mobile tests** (+8), **163 backend tests**. ⚠️ Cadence changes reach a device only after
+ it syncs release-config (version bump on foreground) — offline devices keep the last-synced cadence.
+
+- **2026-07-16** — **Home premium cards restyled (Find Host / Reminders / Unlock).** Feature tiles and
+ the signed-out unlock banner moved to a single gold-washed dark surface (`#2a2118`→`#0f0d0b`), gold
+ hairline, top rim, and a reanimated sweeping-light sheen (`expo-linear-gradient`, no Skia canvas —
+ the Skia `Canvas` painted an opaque white box on Android). New
+ [premium-unlock-card.tsx](src/components/home/premium-unlock-card.tsx) replaces the tall stacked
+ GlassCard with a compact ~78px row (icon · title/subtitle · gold "Unlock" CTA). `home.premiumCta`
+ string added (en/es/fr).
+
+- **2026-07-16** — **Smart Tour Reminder v1 (local prep notifications).** New feature: each entitled
+  tour can carry a planned visit date; the app schedules local prep reminders at **09:00 device-local
+  on D-3 / D-2 / D-1** and, for undated tours the buyer skipped, a daily "set a date" nudge. **Local
+  notifications only** (`expo-notifications` 57, no push server); `@react-native-community/datetimepicker`
+  9 added for the date/time picker. **Native rebuild required** — both are config-plugin deps; ran
+  `expo prebuild` (CNG, `ios`/`android` are gitignored) + `pod install`; a fresh dev-client build is
+  needed on device/simulator before testing.
+  - **Data flow:** backend now sends `tourDate`/`startTime` per tour on `/auth/unlock` + `/me/entitlements`
+    (see admin repo changelog). `UnlockResult`/`Entitlements` tours in [types/auth.ts](src/types/auth.ts)
+    carry them. Local state lives in a new store [tour-reminder-store.ts](src/store/tour-reminder-store.ts)
+    + [lib/tour-reminder/storage.ts](src/lib/tour-reminder/storage.ts) (expo-file-system JSON at
+    `document/aurelia/tour-reminders.json`, mirroring entitlements), hydrated in
+    [use-app-bootstrap.ts](src/hooks/use-app-bootstrap.ts) (which also fires a cold-start
+    `rescheduleAllReminders()` so TZ/clock drift self-heals), cleared on sign-out.
+  - **Precedence:** admin dates seed local state **unless** the buyer overrode it (`userOverridden`);
+    the buyer's date always wins. Sync runs inside `fetchAndPersistEntitlements`
+    ([entitlements/refresh.ts](src/lib/entitlements/refresh.ts)) — the single seam covering unlock +
+    refresh — via [lib/tour-reminder/sync.ts](src/lib/tour-reminder/sync.ts). Reminder triggers key off
+    `tourDate == null`, **not** Stripe success (self-purchase buyers unlock first, so this covers them).
+  - **Scheduling:** pure, unit-tested math in [schedule-math.ts](src/lib/tour-reminder/schedule-math.ts)
+    (D-3/D-2/D-1 at 09:00 local, skip-past, `scheduleKey` fingerprint incl. TZ offset for no-dup
+    resyncs); OS glue in [scheduler.ts](src/lib/tour-reminder/scheduler.ts) (stable identifiers
+    `prep:{tourId}:d{n}` / `nudge:{tourId}:daily`, `DATE` one-shots + `DAILY` nudge, Android channel
+    `tour-reminders`). Scheduling is a **no-op without notification permission**, so sync never prompts.
+  - **UX:** Set Tour Date modal [set-tour-date-modal.tsx](src/components/tour-reminder/set-tour-date-modal.tsx)
+    is the **JIT permission moment** — the OS prompt fires only on a deliberate "Set reminders", same
+    pattern as the location `LocationPermissionPrimer`. [tour-reminder-gate.tsx](src/components/tour-reminder/tour-reminder-gate.tsx)
+    shows it once/session for the first undated tour; [tour-reminder-listener.tsx](src/components/tour-reminder/tour-reminder-listener.tsx)
+    routes a tapped prep reminder → new **visit-checklist** screen
+    [tour/[tourId]/visit-checklist.tsx](src/app/tour/[tourId]/visit-checklist.tsx) (persisted checklist
+    toggles + Open/Download CTA), and a nudge → Settings. Both mounted in
+    [_layout.tsx](src/app/_layout.tsx). Per-tour date editing in
+    [tour-date-settings-panel.tsx](src/components/settings/tour-date-settings-panel.tsx) (Settings).
+    ⚠️ Named **visit-checklist**, not `prepare`, to avoid colliding with the existing
+    `tour/[tourId]/prepare.tsx` download screen. en/es/fr copy added. `tsc` clean; **122 tests** (12 new).
 
 - **2026-07-16** — **Find-host Map no longer crashes the app.** `HostMapView` still used the old
   MapLibre API (`MapLibre.MapView` / `styleURL` / `MarkerView` / `ShapeSource`) which does not exist

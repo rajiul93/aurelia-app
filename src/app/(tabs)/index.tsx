@@ -1,10 +1,11 @@
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { useRouter } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { EmergencyAnnouncementBanner } from "@/components/emergency-announcement-banner";
+import { FeatureRow } from "@/components/home/feature-row";
+import { PremiumUnlockCard } from "@/components/home/premium-unlock-card";
 import { HamburgerButton } from "@/components/navigation/hamburger-button";
 import { ThemedText } from "@/components/themed-text";
 import { FloorCard } from "@/components/tours/floor-card";
@@ -12,7 +13,6 @@ import { FloorCardSkeleton } from "@/components/tours/floor-card-skeleton";
 import { TourDownloadButton } from "@/components/tours/tour-download-button";
 import { TourFloorCards } from "@/components/tours/tour-floor-cards";
 import { WhyBuyCard } from "@/components/tours/why-buy-card";
-import { FindHostCard } from "@/components/home/find-host-card";
 import { GlassCard } from "@/components/ui/glass-card";
 import { BottomTabInset, Spacing } from "@/constants/theme";
 import { useAppContent } from "@/hooks/queries/use-app-content";
@@ -83,6 +83,10 @@ export default function HomeScreen() {
   const showFloorsSection =
     installedGuides.length > 0 || lockedCatalogFloors.length > 0;
 
+  // Tour to reference for "Find Your Host": prefer an installed guide, else the
+  // first catalog tour so the card still shows (locked) before any download.
+  const hostTourId = installedGuides[0]?.tourId ?? tours[0]?.id;
+
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <ScrollView
@@ -100,56 +104,18 @@ export default function HomeScreen() {
               { opacity: pressed ? 0.82 : 1 },
             ]}
           >
-            <ThemedText type="smallBold" numberOfLines={1} style={styles.brandTitle}>
+            <ThemedText
+              type="smallBold"
+              numberOfLines={1}
+              style={styles.brandTitle}
+            >
               {title.toLocaleUpperCase("en-US")}
             </ThemedText>
           </Pressable>
         </View>
 
         {!isSignedIn ? (
-          <Animated.View
-            entering={FadeInDown.delay(60)
-              .duration(420)
-              .springify()
-              .damping(18)}
-          >
-            <GlassCard style={styles.premiumCard}>
-              <View
-                style={[
-                  styles.premiumIcon,
-                  { backgroundColor: `${theme.primary}22` },
-                ]}
-              >
-                <Ionicons name="lock-closed" size={20} color={theme.primary} />
-              </View>
-              <ThemedText type="smallBold" style={styles.wrapText}>
-                {t("home.premiumTitle")}
-              </ThemedText>
-              <ThemedText
-                type="small"
-                themeColor="textSecondary"
-                style={styles.wrapText}
-              >
-                {t("home.premiumSubtitle")}
-              </ThemedText>
-              <Pressable
-                onPress={() => router.navigate("/explore")}
-                style={[styles.premiumCta, { backgroundColor: theme.primary }]}
-              >
-                <Ionicons
-                  name="sparkles"
-                  size={16}
-                  color={theme.primaryForeground}
-                />
-                <ThemedText
-                  type="smallBold"
-                  style={{ color: theme.primaryForeground }}
-                >
-                  {t("home.signInCta")}
-                </ThemedText>
-              </Pressable>
-            </GlassCard>
-          </Animated.View>
+          <PremiumUnlockCard onPress={() => router.navigate("/explore")} />
         ) : null}
 
         <EmergencyAnnouncementBanner />
@@ -177,6 +143,18 @@ export default function HomeScreen() {
                 </GlassCard>
               ))}
             </View>
+          </View>
+        ) : null}
+
+        {/* Find Host + Reminders row: show whenever there's a tour to reference.
+            Locked (routes to unlock) until the user has an active plan. */}
+        {hostTourId ? (
+          <View style={styles.section}>
+            <FeatureRow
+              tourId={hostTourId}
+              locked={!hasActivePlan}
+              delay={installedGuides.length * 120 + 200}
+            />
           </View>
         ) : null}
 
@@ -273,16 +251,6 @@ export default function HomeScreen() {
           </GlassCard>
         ) : null}
 
-        {/* Find Your Host card: show when there are installed guides */}
-        {showFloorsSection && installedGuides.length > 0 ? (
-          <View style={styles.section}>
-            <FindHostCard
-              tourId={installedGuides[0].tourId}
-              delay={installedGuides.length * 120 + 200}
-            />
-          </View>
-        ) : null}
-
         {/* Why Buy lives only where there is still a reason to sell. */}
         {!hasActivePlan ? <WhyBuyCard /> : null}
       </ScrollView>
@@ -331,27 +299,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     letterSpacing: 1.6,
     textAlign: "center",
-  },
-  premiumCard: {
-    borderRadius: Spacing.four,
-  },
-  premiumIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: Spacing.one,
-  },
-  premiumCta: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.two,
-    alignSelf: "flex-start",
-    borderRadius: 999,
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.three,
-    marginTop: Spacing.two,
   },
   wrapText: {
     flexShrink: 1,

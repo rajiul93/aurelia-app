@@ -6,6 +6,7 @@ import {
 } from "@expo-google-fonts/roboto";
 import { useEffect, useState } from "react";
 
+import { rescheduleAllReminders } from "@/lib/tour-reminder/scheduler";
 import { useAuthStore } from "@/store/auth-store";
 import { useEntitlementsStore } from "@/store/entitlements-store";
 import { useInstalledToursStore } from "@/store/installed-tours-store";
@@ -16,6 +17,7 @@ import { useReleaseConfigStore } from "@/store/release-config-store";
 import { useSpotBookmarksStore } from "@/store/spot-bookmarks-store";
 import { useThemeStore } from "@/store/theme-store";
 import { useTourProgressStore } from "@/store/tour-progress-store";
+import { useTourReminderStore } from "@/store/tour-reminder-store";
 
 // Minimum time the full-screen splash stays up, so it is actually seen (and
 // doesn't flash by) when hydration finishes almost instantly. If hydration
@@ -59,10 +61,15 @@ export function useAppBootstrap(): boolean {
       useOnboardingStore.getState().hydrate(),
       useKnowledgeStore.getState().hydrate(),
       useThemeStore.getState().hydrate(),
+      useTourReminderStore.getState().hydrate(),
     ]).then(() => {
       if (!cancelled) {
         setHydrated(true);
       }
+
+      // Cold-start resync so timezone/clock drift self-heals. Fire-and-forget:
+      // it must never hold up the splash, and needs no permission to be a no-op.
+      void rescheduleAllReminders().catch(() => undefined);
     });
 
     return () => {

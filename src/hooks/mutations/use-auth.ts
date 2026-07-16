@@ -3,10 +3,12 @@ import { router } from "expo-router";
 
 import { refreshEntitlements } from "@/lib/entitlements/refresh";
 import { queryKeys } from "@/lib/query/keys";
+import { cancelAllReminders } from "@/lib/tour-reminder/scheduler";
 import { authService } from "@/services/auth.service";
 import { useAuthStore } from "@/store/auth-store";
 import { useEntitlementsStore } from "@/store/entitlements-store";
 import { useOnboardingStore } from "@/store/onboarding-store";
+import { useTourReminderStore } from "@/store/tour-reminder-store";
 
 export function useUnlockTour() {
   const queryClient = useQueryClient();
@@ -41,6 +43,9 @@ export function useSignOut() {
       // otherwise a buyer could hand the tour around by signing out each time.
       await clearSession();
       await useEntitlementsStore.getState().clear();
+      // Reminders are per-buyer; wipe local state and any scheduled OS notifications.
+      await useTourReminderStore.getState().clear();
+      await cancelAllReminders();
       await resetOnboarding();
     },
     onSettled: () => {

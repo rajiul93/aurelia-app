@@ -54,6 +54,8 @@ function entitlements(overrides: Partial<Entitlements> = {}): Entitlements {
         mediaVersion: 1,
         aiKnowledgeVersion: 1,
         routeVersion: 1,
+        tourDate: null,
+        startTime: null,
       },
     ],
     ...overrides,

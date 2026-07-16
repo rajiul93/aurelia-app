@@ -37,6 +37,12 @@
       "expo-dev-client",
       "expo-secure-store",
       [
+        "expo-notifications",
+        {
+          "color": "#0c0a09"
+        }
+      ],
+      [
         "expo-location",
         {
           "locationWhenInUsePermission": "Aurelia uses your location to guide you along your downloaded walking tour route while the app is open."
@@ -58,7 +64,8 @@
         {
           "enableGooglePay": false
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true

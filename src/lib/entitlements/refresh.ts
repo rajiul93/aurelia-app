@@ -1,6 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 
 import { queryKeys } from "@/lib/query/keys";
+import { syncRemindersFromEntitlements } from "@/lib/tour-reminder/sync";
 import { authService } from "@/services/auth.service";
 import { useEntitlementsStore } from "@/store/entitlements-store";
 
@@ -8,6 +9,11 @@ import { useEntitlementsStore } from "@/store/entitlements-store";
 export async function fetchAndPersistEntitlements() {
   const response = await authService.getEntitlements();
   await useEntitlementsStore.getState().setEntitlements(response.data);
+
+  // Seed/refresh prep reminders from the admin's visit dates. Best-effort: a
+  // scheduling hiccup must never fail the entitlements fetch that gates access.
+  await syncRemindersFromEntitlements(response.data.tours).catch(() => undefined);
+
   return response;
 }
 

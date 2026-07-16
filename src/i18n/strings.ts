@@ -48,7 +48,12 @@ const en = {
     "Free catalog — name and cover only. Sign in to unlock downloads.",
   "home.signedInAs": "Unlocked with {phone}",
   "home.signInCta": "Sign in to unlock downloads",
+  "home.premiumCta": "Unlock",
   "home.premiumTitle": "Unlock full tours",
+  "home.findHost": "Find Host",
+  "home.findHostDesc": "On-site help & directions",
+  "home.reminders": "Reminders",
+  "home.remindersDesc": "Tour prep alerts",
   "whyBuy.title": "Why buy this tour package?",
   "whyBuy.subtitle": "Everything you need for a richer, effortless visit.",
   "whyBuy.offlineTitle": "Offline navigation",
@@ -340,6 +345,50 @@ const en = {
 
   "common.tryAgain": "Try again",
   "common.refreshing": "Refreshing…",
+
+  "reminder.genericTour": "your tour",
+  "reminder.prep.title": "Get ready for {tour}",
+  "reminder.prep.body.d3": "Your visit to {tour} is in 3 days. Tap to see your prep checklist.",
+  "reminder.prep.body.d2": "Your visit to {tour} is in 2 days. Tap to see your prep checklist.",
+  "reminder.prep.body.d1": "Your visit to {tour} is tomorrow — tap to get ready.",
+  "reminder.prep.body.today": "Your visit to {tour} is today — tap to get ready.",
+  "reminder.prep.body.generic": "Your visit to {tour} is in {days} days. Tap to see your prep checklist.",
+  "reminder.nudge.title": "When are you visiting {tour}?",
+  "reminder.nudge.body": "Set your visit date so we can remind you to prepare.",
+
+  "reminder.modal.title": "When are you visiting?",
+  "reminder.modal.subtitle":
+    "Set your visit date for {tour} and we'll remind you to prepare — ticket, ID, offline download — a few days before.",
+  "reminder.modal.dateLabel": "Visit date",
+  "reminder.modal.timeLabel": "Start time (optional)",
+  "reminder.modal.permissionNote":
+    "Reminders are sent on this device only. No account needed, and you can turn them off anytime.",
+  "reminder.modal.confirm": "Set reminders",
+  "reminder.modal.skip": "I'll do it later",
+  "reminder.modal.permissionDenied":
+    "Notifications are off for Aurelia. Turn them on in Settings to get visit reminders.",
+
+  "visitChecklist.title": "Prepare for your visit",
+  "visitChecklist.subtitle": "A quick checklist so you're ready on the day.",
+  "visitChecklist.dateLine": "Your visit: {date}",
+  "visitChecklist.arriveHint": "Arrive about 30 minutes before your {time} start.",
+  "visitChecklist.item.ticket": "Ticket / booking ready",
+  "visitChecklist.item.id": "Passport / ID with you",
+  "visitChecklist.item.charged": "Phone charged",
+  "visitChecklist.item.offline": "Tour downloaded for offline",
+  "visitChecklist.item.headphones": "Headphones packed",
+  "visitChecklist.item.early": "Plan to arrive early",
+  "visitChecklist.openTour": "Open tour",
+  "visitChecklist.download": "Download for offline",
+  "visitChecklist.done": "Done",
+
+  "settings.tourDates": "Visit dates",
+  "settings.tourDatesHint":
+    "Set when you're visiting each tour to get prep reminders.",
+  "settings.tourDateNotSet": "No date set",
+  "settings.tourDateChange": "Change",
+  "settings.tourDateSet": "Set date",
+  "settings.tourDateClear": "Clear",
 } as const;
 
 export type StringKey = keyof typeof en;
@@ -389,7 +438,12 @@ const es: Record<StringKey, string> = {
     "Catálogo gratuito — solo nombre y portada. Inicia sesión para desbloquear descargas.",
   "home.signedInAs": "Desbloqueado con {phone}",
   "home.signInCta": "Inicia sesión para desbloquear descargas",
+  "home.premiumCta": "Desbloquear",
   "home.premiumTitle": "Desbloquea tours completos",
+  "home.findHost": "Buscar anfitrión",
+  "home.findHostDesc": "Ayuda in situ y rutas",
+  "home.reminders": "Recordatorios",
+  "home.remindersDesc": "Avisos de preparación",
   "whyBuy.title": "¿Por qué comprar este paquete de tour?",
   "whyBuy.subtitle":
     "Todo lo que necesitas para una visita más rica y sin complicaciones.",
@@ -671,6 +725,50 @@ const es: Record<StringKey, string> = {
   "maintenance.openSettings": "Abrir ajustes",
   "common.tryAgain": "Reintentar",
   "common.refreshing": "Actualizando…",
+
+  "reminder.genericTour": "tu tour",
+  "reminder.prep.title": "Prepárate para {tour}",
+  "reminder.prep.body.d3": "Tu visita a {tour} es en 3 días. Toca para ver tu lista de preparación.",
+  "reminder.prep.body.d2": "Tu visita a {tour} es en 2 días. Toca para ver tu lista de preparación.",
+  "reminder.prep.body.d1": "Tu visita a {tour} es mañana: toca para prepararte.",
+  "reminder.prep.body.today": "Tu visita a {tour} es hoy: toca para prepararte.",
+  "reminder.prep.body.generic": "Tu visita a {tour} es en {days} días. Toca para ver tu lista de preparación.",
+  "reminder.nudge.title": "¿Cuándo visitas {tour}?",
+  "reminder.nudge.body": "Elige tu fecha de visita para recordarte que te prepares.",
+
+  "reminder.modal.title": "¿Cuándo vas a visitar?",
+  "reminder.modal.subtitle":
+    "Elige tu fecha de visita para {tour} y te recordaremos prepararte —entrada, identificación, descarga sin conexión— unos días antes.",
+  "reminder.modal.dateLabel": "Fecha de visita",
+  "reminder.modal.timeLabel": "Hora de inicio (opcional)",
+  "reminder.modal.permissionNote":
+    "Los recordatorios se envían solo en este dispositivo. No necesitas cuenta y puedes desactivarlos cuando quieras.",
+  "reminder.modal.confirm": "Activar recordatorios",
+  "reminder.modal.skip": "Lo haré más tarde",
+  "reminder.modal.permissionDenied":
+    "Las notificaciones de Aurelia están desactivadas. Actívalas en Ajustes para recibir recordatorios de visita.",
+
+  "visitChecklist.title": "Prepara tu visita",
+  "visitChecklist.subtitle": "Una lista rápida para estar listo el día de la visita.",
+  "visitChecklist.dateLine": "Tu visita: {date}",
+  "visitChecklist.arriveHint": "Llega unos 30 minutos antes de tu inicio a las {time}.",
+  "visitChecklist.item.ticket": "Entrada / reserva lista",
+  "visitChecklist.item.id": "Pasaporte / identificación contigo",
+  "visitChecklist.item.charged": "Teléfono cargado",
+  "visitChecklist.item.offline": "Tour descargado para sin conexión",
+  "visitChecklist.item.headphones": "Auriculares en la mochila",
+  "visitChecklist.item.early": "Planea llegar temprano",
+  "visitChecklist.openTour": "Abrir tour",
+  "visitChecklist.download": "Descargar sin conexión",
+  "visitChecklist.done": "Listo",
+
+  "settings.tourDates": "Fechas de visita",
+  "settings.tourDatesHint":
+    "Elige cuándo visitas cada tour para recibir recordatorios de preparación.",
+  "settings.tourDateNotSet": "Sin fecha",
+  "settings.tourDateChange": "Cambiar",
+  "settings.tourDateSet": "Elegir fecha",
+  "settings.tourDateClear": "Borrar",
 };
 
 const fr: Record<StringKey, string> = {
@@ -718,7 +816,12 @@ const fr: Record<StringKey, string> = {
     "Catalogue gratuit — nom et couverture uniquement. Connectez-vous pour débloquer les téléchargements.",
   "home.signedInAs": "Débloqué avec {phone}",
   "home.signInCta": "Connectez-vous pour débloquer les téléchargements",
+  "home.premiumCta": "Débloquer",
   "home.premiumTitle": "Débloquez les visites complètes",
+  "home.findHost": "Trouver un hôte",
+  "home.findHostDesc": "Aide sur place et itinéraires",
+  "home.reminders": "Rappels",
+  "home.remindersDesc": "Alertes de préparation",
   "whyBuy.title": "Pourquoi acheter ce forfait de visite ?",
   "whyBuy.subtitle":
     "Tout ce qu'il faut pour une visite plus riche et sans effort.",
@@ -1001,6 +1104,50 @@ const fr: Record<StringKey, string> = {
   "maintenance.openSettings": "Ouvrir les réglages",
   "common.tryAgain": "Réessayer",
   "common.refreshing": "Actualisation…",
+
+  "reminder.genericTour": "votre visite",
+  "reminder.prep.title": "Préparez-vous pour {tour}",
+  "reminder.prep.body.d3": "Votre visite de {tour} est dans 3 jours. Touchez pour voir votre check-list.",
+  "reminder.prep.body.d2": "Votre visite de {tour} est dans 2 jours. Touchez pour voir votre check-list.",
+  "reminder.prep.body.d1": "Votre visite de {tour} est demain — touchez pour vous préparer.",
+  "reminder.prep.body.today": "Votre visite de {tour} est aujourd'hui — touchez pour vous préparer.",
+  "reminder.prep.body.generic": "Votre visite de {tour} est dans {days} jours. Touchez pour voir votre check-list.",
+  "reminder.nudge.title": "Quand visitez-vous {tour} ?",
+  "reminder.nudge.body": "Choisissez votre date de visite pour qu'on vous rappelle de vous préparer.",
+
+  "reminder.modal.title": "Quand visitez-vous ?",
+  "reminder.modal.subtitle":
+    "Choisissez votre date de visite pour {tour} et nous vous rappellerons de vous préparer — billet, pièce d'identité, téléchargement hors ligne — quelques jours avant.",
+  "reminder.modal.dateLabel": "Date de visite",
+  "reminder.modal.timeLabel": "Heure de début (facultatif)",
+  "reminder.modal.permissionNote":
+    "Les rappels sont envoyés sur cet appareil uniquement. Aucun compte requis, et vous pouvez les désactiver à tout moment.",
+  "reminder.modal.confirm": "Activer les rappels",
+  "reminder.modal.skip": "Je le ferai plus tard",
+  "reminder.modal.permissionDenied":
+    "Les notifications d'Aurelia sont désactivées. Activez-les dans les Réglages pour recevoir des rappels de visite.",
+
+  "visitChecklist.title": "Préparez votre visite",
+  "visitChecklist.subtitle": "Une check-list rapide pour être prêt le jour J.",
+  "visitChecklist.dateLine": "Votre visite : {date}",
+  "visitChecklist.arriveHint": "Arrivez environ 30 minutes avant votre début à {time}.",
+  "visitChecklist.item.ticket": "Billet / réservation prêt",
+  "visitChecklist.item.id": "Passeport / pièce d'identité sur vous",
+  "visitChecklist.item.charged": "Téléphone chargé",
+  "visitChecklist.item.offline": "Visite téléchargée hors ligne",
+  "visitChecklist.item.headphones": "Écouteurs emportés",
+  "visitChecklist.item.early": "Prévoyez d'arriver tôt",
+  "visitChecklist.openTour": "Ouvrir la visite",
+  "visitChecklist.download": "Télécharger hors ligne",
+  "visitChecklist.done": "Terminé",
+
+  "settings.tourDates": "Dates de visite",
+  "settings.tourDatesHint":
+    "Indiquez quand vous visitez chaque tour pour recevoir des rappels de préparation.",
+  "settings.tourDateNotSet": "Aucune date",
+  "settings.tourDateChange": "Modifier",
+  "settings.tourDateSet": "Choisir une date",
+  "settings.tourDateClear": "Effacer",
 };
 
 export const UI_STRINGS: Record<AppLanguage, Record<StringKey, string>> = {

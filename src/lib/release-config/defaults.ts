@@ -10,6 +10,9 @@ export const DEFAULT_REMOTE_CONFIG: RemoteConfig = {
   maxChatHistory: 50,
   supportedLanguages: ["en", "es", "fr"],
   emergencyAnnouncement: null,
+  reminderOffsetDays: [3, 2, 1],
+  reminderHour: 9,
+  reminderNudgeEnabled: true,
 };
 
 export const DEFAULT_RELEASE_CONFIG: ReleaseConfig = {

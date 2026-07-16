@@ -5,6 +5,8 @@ import { View } from "react-native";
 
 import { AnimatedSplash } from "@/components/animated-splash";
 import { AppBackground } from "@/components/app-background";
+import { TourReminderGate } from "@/components/tour-reminder/tour-reminder-gate";
+import { TourReminderListener } from "@/components/tour-reminder/tour-reminder-listener";
 import { useAppBootstrap } from "@/hooks/use-app-bootstrap";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 
@@ -60,6 +62,8 @@ export default function RootLayout() {
                 <Stack.Screen name="faq" />
                 <Stack.Screen name="subscribe" />
               </Stack>
+              <TourReminderListener />
+              <TourReminderGate />
             </AppBackground>
           </ThemeProvider>
         </AppProviders>
