@@ -1,4 +1,5 @@
 import { View, ScrollView, Text, TouchableOpacity, ActivityIndicator } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { lazy, Suspense } from "react";
@@ -32,7 +33,7 @@ export default function HostMapScreen() {
 
   // Get visitor location
   const { status: locationStatus, position: visitorLocation } =
-    useHostVisitorLocation();
+    useHostVisitorLocation({ autoRequest: true });
 
   // Get directions
   const directionsMutation = useHostDirections();
@@ -69,10 +70,12 @@ export default function HostMapScreen() {
 
   return (
     <View className="flex-1 bg-white dark:bg-gray-950">
-      <ScreenHeader
-        title={host.name}
-        onBackPress={() => router.back()}
-      />
+      <SafeAreaView edges={["top"]}>
+        <ScreenHeader
+          title={host.name}
+          onBack={() => router.back()}
+        />
+      </SafeAreaView>
 
       {/* Map */}
       <View className="flex-1">
@@ -81,8 +84,8 @@ export default function HostMapScreen() {
             <HostMapView
               host={host}
               visitorLocation={visitorLocation}
-              directions={directionsMutation.data}
-              isLoading={directionsMutation.isPending || locationStatus === "pending"}
+              directions={directionsMutation.data ?? null}
+              isLoading={directionsMutation.isPending || locationStatus === "requesting"}
             />
           </Suspense>
         </ErrorBoundary>

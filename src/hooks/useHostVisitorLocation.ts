@@ -1,68 +1,109 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import * as Location from "expo-location";
 
-export type LocationStatus = "pending" | "ready" | "denied";
+export type LocationStatus = "idle" | "requesting" | "ready" | "denied" | "error" | "timeout";
 
 export interface LocationCoords {
   latitude: number;
   longitude: number;
 }
 
-export function useHostVisitorLocation() {
-  const [status, setStatus] = useState<LocationStatus>("pending");
+export interface UseHostVisitorLocationOptions {
+  autoRequest?: boolean;
+}
+
+export function useHostVisitorLocation(options?: UseHostVisitorLocationOptions) {
+  const [status, setStatus] = useState<LocationStatus>("idle");
   const [position, setPosition] = useState<LocationCoords | null>(null);
+  const [initializing, setInitializing] = useState(!options?.autoRequest);
+  const subscriptionRef = useRef<Location.LocationSubscription | null>(null);
+  const { autoRequest = false } = options ?? {};
 
-  useEffect(() => {
-    let subscription: Location.LocationSubscription | null = null;
+  const requestPermission = useCallback(async () => {
+    setStatus("requesting");
+    try {
+      const { status: permissionStatus } =
+        await Location.requestForegroundPermissionsAsync();
 
-    const startTracking = async () => {
+      if (permissionStatus !== "granted") {
+        setStatus("denied");
+        return;
+      }
+
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Location timeout")), 10000)
+      );
+
       try {
-        const { status: permissionStatus } =
-          await Location.requestForegroundPermissionsAsync();
-
-        if (permissionStatus !== "granted") {
-          setStatus("denied");
-          return;
-        }
-
-        // Get initial location
-        const initialLocation = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
-        });
+        const initialLocation = await Promise.race([
+          Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          }),
+          timeoutPromise as Promise<any>,
+        ]);
 
         setPosition({
           latitude: initialLocation.coords.latitude,
           longitude: initialLocation.coords.longitude,
         });
+      } catch (timeoutError) {
+        if ((timeoutError as Error).message === "Location timeout") {
+          setStatus("timeout");
+          return;
+        }
+        throw timeoutError;
+      }
 
-        setStatus("ready");
+      setStatus("ready");
 
-        // Watch for updates every 2 seconds
-        subscription = await Location.watchPositionAsync(
-          {
-            accuracy: Location.Accuracy.Balanced,
-            timeInterval: 2000,
-            distanceInterval: 5, // Update if moved >5m
-          },
-          (location) => {
-            setPosition({
-              latitude: location.coords.latitude,
-              longitude: location.coords.longitude,
-            });
-          }
-        );
-      } catch (error) {
-        console.error("Location error:", error);
+      subscriptionRef.current = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.Balanced,
+          timeInterval: 2000,
+          distanceInterval: 5,
+        },
+        (location) => {
+          setPosition({
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+          });
+        }
+      );
+    } catch (error) {
+      console.error("Location error:", error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes("unavailable") || errorMessage.includes("disabled")) {
+        setStatus("error");
+      } else {
         setStatus("denied");
       }
-    };
-
-    startTracking();
-
-    return () => {
-      subscription?.remove();
-    };
+    }
   }, []);
 
-  return { status, position };
+  useEffect(() => {
+    if (autoRequest) {
+      requestPermission();
+    } else {
+      const checkPermissionStatus = async () => {
+        try {
+          const { status: permissionStatus } =
+            await Location.getForegroundPermissionsAsync();
+          if (permissionStatus === "granted") {
+            await requestPermission();
+          } else if (permissionStatus === "denied") {
+            setStatus("denied");
+          }
+        } finally {
+          setInitializing(false);
+        }
+      };
+      checkPermissionStatus();
+    }
+
+    return () => {
+      subscriptionRef.current?.remove();
+    };
+  }, [autoRequest, requestPermission]);
+
+  return { status, position, requestPermission, initializing };
 }

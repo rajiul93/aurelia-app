@@ -15,6 +15,7 @@ export type Host = {
   availableFrom: string | null;
   availableTo: string | null;
   isActive: boolean;
+  isAvailableNow: boolean;
   sortOrder: number;
   translations: HostTranslation[];
   createdAt: string;

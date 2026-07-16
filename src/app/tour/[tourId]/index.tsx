@@ -139,9 +139,9 @@ export default function TourRouteScreen() {
                 size={20}
                 color={theme.primary}
               />
-              <ThemedText type="smallBold">{t("tour.findHost") || "Find Your Host"}</ThemedText>
+              <ThemedText type="smallBold">{"Find Your Host"}</ThemedText>
               <ThemedText type="small" themeColor="textSecondary" style={styles.askHint}>
-                {t("tour.findHostHint") || "Locate an on-site assistant"}
+                {"Locate an on-site assistant"}
               </ThemedText>
             </Pressable>
 

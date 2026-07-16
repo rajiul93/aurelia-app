@@ -1,46 +1,76 @@
-import { View, Text } from "react-native";
-import { useDeviceLanguage } from "@/hooks/useDeviceLanguage";
+import { StyleSheet, View } from "react-native";
+
+import { ThemedText } from "@/components/themed-text";
+import { Spacing } from "@/constants/theme";
 import type { Host } from "@/types/host";
 
-interface HostStatusChipProps {
+type HostStatusChipProps = {
   host: Host;
-}
-
-function isWithinHours(
-  availableFrom: string | null,
-  availableTo: string | null
-): boolean {
-  if (!availableFrom || !availableTo) return true; // No hours set = always available (if isActive)
-
-  const now = new Date();
-  const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(
-    now.getMinutes()
-  ).padStart(2, "0")}`;
-
-  return currentTime >= availableFrom && currentTime < availableTo;
-}
+};
 
 export function HostStatusChip({ host }: HostStatusChipProps) {
-  const isAvailable = host.isActive && isWithinHours(host.availableFrom, host.availableTo);
-
-  if (!isAvailable) {
-    return (
-      <View className="flex-row items-center gap-2 rounded-full bg-red-100 px-3 py-1">
-        <View className="h-2 w-2 rounded-full bg-red-600" />
-        <Text className="text-sm font-medium text-red-600">Offline</Text>
-      </View>
-    );
-  }
+  const available = host.isAvailableNow;
 
   return (
-    <View className="flex-row items-center gap-2 rounded-full bg-green-100 px-3 py-1">
-      <View className="h-2 w-2 rounded-full bg-green-600" />
-      <Text className="text-sm font-medium text-green-600">Available now</Text>
-      {host.availableTo && (
-        <Text className="text-xs text-green-600">
-          (until {host.availableTo})
-        </Text>
-      )}
+    <View
+      style={[
+        styles.chip,
+        available ? styles.chipAvailable : styles.chipOffline,
+      ]}
+    >
+      <View
+        style={[styles.dot, available ? styles.dotAvailable : styles.dotOffline]}
+      />
+      <ThemedText type="smallBold" style={styles.label}>
+        {available ? "Available now" : "Offline"}
+      </ThemedText>
+      {available && host.availableTo ? (
+        <ThemedText type="small" style={styles.until}>
+          until {host.availableTo}
+        </ThemedText>
+      ) : null}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  chip: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.one,
+    borderRadius: 999,
+    paddingHorizontal: Spacing.two + 2,
+    paddingVertical: Spacing.one,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  chipAvailable: {
+    backgroundColor: "rgba(34, 197, 94, 0.18)",
+    borderColor: "rgba(34, 197, 94, 0.45)",
+  },
+  chipOffline: {
+    backgroundColor: "rgba(239, 68, 68, 0.16)",
+    borderColor: "rgba(239, 68, 68, 0.4)",
+  },
+  dot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
+  dotAvailable: {
+    backgroundColor: "#4ade80",
+  },
+  dotOffline: {
+    backgroundColor: "#f87171",
+  },
+  label: {
+    color: "#ffffff",
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  until: {
+    color: "rgba(255,255,255,0.72)",
+    fontSize: 11,
+    lineHeight: 14,
+  },
+});

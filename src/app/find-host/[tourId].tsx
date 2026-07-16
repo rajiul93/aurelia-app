@@ -1,55 +1,73 @@
-import { View, ScrollView, Text, ActivityIndicator, TouchableOpacity } from "react-native";
+import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useHosts } from "@/hooks/queries/useHosts";
-import { useHostDirections } from "@/hooks/mutations/useHostDirections";
-import { useHostVisitorLocation } from "@/hooks/useHostVisitorLocation";
+import { useEffect, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Linking,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
 import { HostCard } from "@/components/host/host-card";
-import { distanceBetweenPointsM } from "@/lib/distance";
+import { LocationPermissionPrimer } from "@/components/host/location-permission-primer";
 import { ScreenHeader } from "@/components/screen-header";
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { GlassCard } from "@/components/ui/glass-card";
+import { Spacing } from "@/constants/theme";
+import { useHostDirections } from "@/hooks/mutations/useHostDirections";
+import { useHosts } from "@/hooks/queries/useHosts";
+import { useHostVisitorLocation } from "@/hooks/useHostVisitorLocation";
+import { useTheme } from "@/hooks/use-theme";
 import { useTourAccess } from "@/hooks/useTourAccess";
+import { distanceBetweenPointsM } from "@/lib/distance";
 import type { Host } from "@/types/host";
-import { useRef, useEffect } from "react";
 
 export default function FindHostScreen() {
   const router = useRouter();
+  const theme = useTheme();
   const { tourId } = useLocalSearchParams<{ tourId: string }>();
-  const lastDirectionsCallRef = useRef<{ hostId: string; lat: number; lng: number } | null>(null);
+  const lastDirectionsCallRef = useRef<{ hostId: string; distance: number } | null>(
+    null,
+  );
 
-  // Check if user has access to this tour
   const { data: access, isLoading: isCheckingAccess } = useTourAccess(tourId!);
-
-  // Fetch hosts
-  const { data: hosts = [], isLoading: isLoadingHosts } = useHosts(tourId!);
-
-  // Get user location
-  const { status: locationStatus, position: userPosition } =
-    useHostVisitorLocation();
-
-  // Directions mutation
+  const {
+    data: hosts = [],
+    isLoading: isLoadingHosts,
+    isError: isHostsError,
+    refetch: refetchHosts,
+  } = useHosts(tourId!);
+  const {
+    status: locationStatus,
+    position: userPosition,
+    requestPermission,
+    initializing,
+  } = useHostVisitorLocation();
+  const [skippedLocation, setSkippedLocation] = useState(false);
   const directionsMutation = useHostDirections();
 
-  // Debounce directions calls
   useEffect(() => {
     if (!userPosition || !hosts.length) return;
 
-    const MOVEMENT_THRESHOLD = 25; // meters
+    const MOVEMENT_THRESHOLD = 25;
     const firstHost = hosts[0];
-
     const distance = distanceBetweenPointsM(userPosition, {
       latitude: firstHost.latitude,
       longitude: firstHost.longitude,
     });
 
-    // Call directions on first fix or if moved >25m
     if (
       !lastDirectionsCallRef.current ||
-      Math.abs(distance - (lastDirectionsCallRef.current?.lat || 0)) >
+      Math.abs(distance - lastDirectionsCallRef.current.distance) >
         MOVEMENT_THRESHOLD
     ) {
       lastDirectionsCallRef.current = {
         hostId: firstHost.id,
-        lat: userPosition.latitude,
-        lng: userPosition.longitude,
+        distance,
       };
 
       directionsMutation.mutate({
@@ -63,141 +81,332 @@ export default function FindHostScreen() {
     }
   }, [userPosition, hosts, tourId, directionsMutation]);
 
-  // Check access
-  if (isCheckingAccess) {
+  function handleLocationBannerPress() {
+    if (locationStatus === "denied") {
+      void Linking.openSettings();
+      return;
+    }
+    if (locationStatus === "requesting") {
+      return;
+    }
+    void requestPermission();
+  }
+
+  function handleGetDirections(host: Host) {
+    if (locationStatus === "ready" && userPosition) {
+      directionsMutation.mutate({
+        tourId: tourId!,
+        hostId: host.id,
+        request: {
+          latitude: userPosition.latitude,
+          longitude: userPosition.longitude,
+        },
+      });
+      return;
+    }
+
+    if (
+      locationStatus === "idle" ||
+      locationStatus === "error" ||
+      locationStatus === "timeout"
+    ) {
+      void requestPermission();
+      return;
+    }
+
+    if (locationStatus === "denied") {
+      void Linking.openSettings();
+    }
+  }
+
+  if (isCheckingAccess || initializing) {
     return (
-      <View className="flex-1 items-center justify-center bg-white dark:bg-gray-950">
-        <ActivityIndicator size="large" />
-      </View>
+      <ThemedView transparent style={styles.centered}>
+        <ActivityIndicator color={theme.primary} />
+      </ThemedView>
     );
   }
 
   if (!access || !access.isActive) {
     return (
-      <View className="flex-1 bg-white dark:bg-gray-950">
-        <ScreenHeader title="Find Your Host" />
-        <View className="flex-1 items-center justify-center px-4">
-          <Text className="text-center text-lg font-semibold text-gray-900 dark:text-white">
-            🔒 Unlock Required
-          </Text>
-          <Text className="mt-2 text-center text-gray-600 dark:text-gray-400">
-            Unlock this tour to find a host on-site
-          </Text>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            className="mt-6 rounded-lg bg-blue-500 px-6 py-3"
-          >
-            <Text className="font-medium text-white">Go Back</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      <ThemedView transparent style={styles.container}>
+        <SafeAreaView style={styles.safeArea} edges={["top"]}>
+          <View style={styles.padded}>
+            <ScreenHeader title="Find Your Host" onBack={() => router.back()} />
+            <GlassCard style={styles.messageCard}>
+              <Ionicons name="lock-closed" size={28} color={theme.primary} />
+              <ThemedText type="smallBold" style={styles.messageTitle}>
+                Unlock required
+              </ThemedText>
+              <ThemedText type="small" style={styles.messageBody}>
+                Unlock this tour to find a host on-site.
+              </ThemedText>
+              <Pressable
+                onPress={() => router.back()}
+                style={[styles.solidButton, { backgroundColor: theme.primary }]}
+              >
+                <ThemedText
+                  type="smallBold"
+                  style={{ color: theme.primaryForeground }}
+                >
+                  Go back
+                </ThemedText>
+              </Pressable>
+            </GlassCard>
+          </View>
+        </SafeAreaView>
+      </ThemedView>
     );
   }
 
-  // Request location permission
-  if (locationStatus === "pending") {
+  if (locationStatus === "idle" && !skippedLocation) {
     return (
-      <View className="flex-1 bg-white dark:bg-gray-950">
-        <ScreenHeader title="Find Your Host" />
-        <View className="flex-1 items-center justify-center px-4">
-          <ActivityIndicator size="large" />
-          <Text className="mt-4 text-gray-600 dark:text-gray-400">
-            Requesting location access...
-          </Text>
-        </View>
-      </View>
+      <ThemedView transparent style={styles.container}>
+        <SafeAreaView style={styles.safeArea} edges={["top"]}>
+          <View style={styles.padded}>
+            <ScreenHeader title="Find Your Host" onBack={() => router.back()} />
+          </View>
+          <LocationPermissionPrimer
+            onEnable={() => void requestPermission()}
+            onSkip={() => setSkippedLocation(true)}
+          />
+        </SafeAreaView>
+      </ThemedView>
     );
   }
 
-  if (locationStatus === "denied") {
-    return (
-      <View className="flex-1 bg-white dark:bg-gray-950">
-        <ScreenHeader title="Find Your Host" />
-        <View className="flex-1 items-center justify-center px-4">
-          <Text className="text-center text-lg font-semibold text-gray-900 dark:text-white">
-            📍 Location Required
-          </Text>
-          <Text className="mt-2 text-center text-gray-600 dark:text-gray-400">
-            Please grant location permission to find a host
-          </Text>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            className="mt-6 rounded-lg bg-blue-500 px-6 py-3"
-          >
-            <Text className="font-medium text-white">Go Back</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
-
-  // Loading hosts
   if (isLoadingHosts) {
     return (
-      <View className="flex-1 bg-white dark:bg-gray-950">
-        <ScreenHeader title="Find Your Host" />
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" />
-        </View>
-      </View>
+      <ThemedView transparent style={styles.container}>
+        <SafeAreaView style={styles.safeArea} edges={["top"]}>
+          <View style={styles.padded}>
+            <ScreenHeader title="Find Your Host" onBack={() => router.back()} />
+          </View>
+          <View style={styles.centered}>
+            <ActivityIndicator color={theme.primary} />
+          </View>
+        </SafeAreaView>
+      </ThemedView>
     );
   }
 
-  // No hosts available
+  if (isHostsError) {
+    return (
+      <ThemedView transparent style={styles.container}>
+        <SafeAreaView style={styles.safeArea} edges={["top"]}>
+          <View style={styles.padded}>
+            <ScreenHeader title="Find Your Host" onBack={() => router.back()} />
+            <GlassCard style={styles.messageCard}>
+              <Ionicons name="cloud-offline-outline" size={28} color={theme.primary} />
+              <ThemedText type="smallBold" style={styles.messageTitle}>
+                Couldn’t load hosts
+              </ThemedText>
+              <ThemedText type="small" style={styles.messageBody}>
+                Check your connection and that the API server is running, then try
+                again.
+              </ThemedText>
+              <Pressable
+                onPress={() => void refetchHosts()}
+                style={[styles.solidButton, { backgroundColor: theme.primary }]}
+              >
+                <ThemedText
+                  type="smallBold"
+                  style={{ color: theme.primaryForeground }}
+                >
+                  Retry
+                </ThemedText>
+              </Pressable>
+            </GlassCard>
+          </View>
+        </SafeAreaView>
+      </ThemedView>
+    );
+  }
+
   if (!hosts.length) {
     return (
-      <View className="flex-1 bg-white dark:bg-gray-950">
-        <ScreenHeader title="Find Your Host" />
-        <View className="flex-1 items-center justify-center px-4">
-          <Text className="text-center text-lg font-semibold text-gray-900 dark:text-white">
-            No Hosts Available
-          </Text>
-          <Text className="mt-2 text-center text-gray-600 dark:text-gray-400">
-            No on-site hosts are available for this tour right now.
-          </Text>
-        </View>
-      </View>
+      <ThemedView transparent style={styles.container}>
+        <SafeAreaView style={styles.safeArea} edges={["top"]}>
+          <View style={styles.padded}>
+            <ScreenHeader title="Find Your Host" onBack={() => router.back()} />
+            <GlassCard style={styles.messageCard}>
+              <Ionicons name="people-outline" size={28} color={theme.primary} />
+              <ThemedText type="smallBold" style={styles.messageTitle}>
+                No hosts available
+              </ThemedText>
+              <ThemedText type="small" style={styles.messageBody}>
+                No on-site hosts are available for this tour right now.
+              </ThemedText>
+            </GlassCard>
+          </View>
+        </SafeAreaView>
+      </ThemedView>
     );
   }
 
+  const showLocationBanner =
+    locationStatus === "denied" ||
+    locationStatus === "error" ||
+    locationStatus === "timeout" ||
+    locationStatus === "requesting" ||
+    (locationStatus === "idle" && skippedLocation);
+
+  const locationBannerMessage = (() => {
+    if (locationStatus === "denied") {
+      return "Location permission is off. Tap to open settings.";
+    }
+    if (locationStatus === "requesting") {
+      return "Getting your location…";
+    }
+    if (locationStatus === "timeout") {
+      return "Couldn’t get location. Tap to try again.";
+    }
+    if (locationStatus === "error") {
+      return "Location services are off. Tap to enable them.";
+    }
+    return "Location disabled — tap to enable";
+  })();
+
   return (
-    <View className="flex-1 bg-white dark:bg-gray-950">
-      <ScreenHeader title="Find Your Host" />
+    <ThemedView transparent style={styles.container}>
+      <SafeAreaView style={styles.safeArea} edges={["top"]}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <ScreenHeader
+            title="Find Your Host"
+            subtitle={`${hosts.length} host${hosts.length === 1 ? "" : "s"} nearby`}
+            onBack={() => router.back()}
+          />
 
-      <ScrollView className="flex-1" contentContainerStyle={{ padding: 16 }}>
-        {hosts.map((host: Host) => {
-          const distance =
-            userPosition &&
-            distanceBetweenPointsM(userPosition, {
-              latitude: host.latitude,
-              longitude: host.longitude,
-            });
+          {showLocationBanner ? (
+            <Pressable
+              onPress={handleLocationBannerPress}
+              style={({ pressed }) => [
+                styles.locationBanner,
+                locationStatus === "requesting" && styles.locationBannerMuted,
+                pressed &&
+                  locationStatus !== "requesting" &&
+                  styles.pressed,
+              ]}
+            >
+              {locationStatus === "requesting" ? (
+                <ActivityIndicator size="small" color={theme.primary} />
+              ) : (
+                <Ionicons
+                  name={
+                    locationStatus === "denied" ? "settings-outline" : "location"
+                  }
+                  size={16}
+                  color={theme.primary}
+                />
+              )}
+              <ThemedText type="small" style={styles.locationBannerText}>
+                {locationBannerMessage}
+              </ThemedText>
+            </Pressable>
+          ) : null}
 
-          const directions = directionsMutation.data;
+          <View style={styles.list}>
+            {hosts.map((host) => {
+              const distance = userPosition
+                ? (distanceBetweenPointsM(userPosition, {
+                    latitude: host.latitude,
+                    longitude: host.longitude,
+                  }) ?? undefined)
+                : undefined;
 
-          return (
-            <View key={host.id} className="mb-4">
-              <HostCard
-                host={host}
-                distanceM={distance}
-                durationS={directions?.durationS}
-                tourId={tourId}
-                onGetDirections={() => {
-                  directionsMutation.mutate({
-                    tourId: tourId!,
-                    hostId: host.id,
-                    request: {
-                      latitude: userPosition!.latitude,
-                      longitude: userPosition!.longitude,
-                    },
-                  });
-                }}
-                isLoadingDirections={directionsMutation.isPending}
-              />
-            </View>
-          );
-        })}
-      </ScrollView>
-    </View>
+              return (
+                <HostCard
+                  key={host.id}
+                  host={host}
+                  distanceM={distance}
+                  durationS={
+                    directionsMutation.data &&
+                    lastDirectionsCallRef.current?.hostId === host.id
+                      ? directionsMutation.data.durationS
+                      : undefined
+                  }
+                  tourId={tourId}
+                  onGetDirections={() => handleGetDirections(host)}
+                  isLoadingDirections={
+                    directionsMutation.isPending &&
+                    lastDirectionsCallRef.current?.hostId === host.id
+                  }
+                />
+              );
+            })}
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </ThemedView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  safeArea: {
+    flex: 1,
+  },
+  padded: {
+    paddingHorizontal: Spacing.four,
+    gap: Spacing.three,
+  },
+  scrollContent: {
+    paddingHorizontal: Spacing.four,
+    paddingBottom: Spacing.six,
+    gap: Spacing.three,
+  },
+  centered: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: Spacing.four,
+  },
+  messageCard: {
+    alignItems: "center",
+    gap: Spacing.two,
+    marginTop: Spacing.four,
+  },
+  messageTitle: {
+    color: "#ffffff",
+    textAlign: "center",
+  },
+  messageBody: {
+    color: "rgba(255,255,255,0.75)",
+    textAlign: "center",
+  },
+  solidButton: {
+    marginTop: Spacing.two,
+    borderRadius: 14,
+    paddingHorizontal: Spacing.four,
+    paddingVertical: Spacing.three,
+  },
+  locationBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.two,
+    borderRadius: 14,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.three,
+    backgroundColor: "rgba(28, 25, 23, 0.62)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(225, 165, 102, 0.4)",
+  },
+  locationBannerMuted: {
+    opacity: 0.85,
+  },
+  locationBannerText: {
+    flex: 1,
+    color: "rgba(255,255,255,0.88)",
+  },
+  list: {
+    gap: Spacing.three,
+  },
+  pressed: {
+    opacity: 0.86,
+  },
+});

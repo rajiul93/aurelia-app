@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   Linking,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { useHosts } from "@/hooks/queries/useHosts";
@@ -29,7 +30,7 @@ export default function HostDirectionsScreen() {
 
   // Get visitor location
   const { status: locationStatus, position: visitorLocation } =
-    useHostVisitorLocation();
+    useHostVisitorLocation({ autoRequest: true });
 
   // Get directions
   const directionsMutation = useHostDirections();
@@ -94,7 +95,9 @@ export default function HostDirectionsScreen() {
 
   return (
     <View className="flex-1 bg-white dark:bg-gray-950">
-      <ScreenHeader title={`Directions to ${host.name}`} onBackPress={() => router.back()} />
+      <SafeAreaView edges={["top"]}>
+        <ScreenHeader title={`Directions to ${host.name}`} onBack={() => router.back()} />
+      </SafeAreaView>
 
       {/* Route preview card */}
       <View className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-900/20 px-4 py-6">
