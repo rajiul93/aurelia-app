@@ -54,34 +54,20 @@ export default function TourChatScreen() {
   const searchAudience = installed?.downloadPreferences?.audience;
   const remote = useRemoteConfig();
   const scrollRef = useRef<ScrollView>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  // Seeded at mount rather than by an effect: an effect had to write state on
+  // first render just to show a constant. Its text is resolved at render time
+  // (below), so it still follows a language change — and now keeps following it
+  // once the conversation has started, which the effect gave up on.
+  const [messages, setMessages] = useState<ChatMessage[]>(() => [
+    {
+      id: WELCOME_MESSAGE_ID,
+      role: "assistant",
+      content: "",
+    },
+  ]);
   const [input, setInput] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
-
-  useEffect(() => {
-    const welcomeMessage: ChatMessage = {
-      id: WELCOME_MESSAGE_ID,
-      role: "assistant",
-      content: t("chat.initialMessage"),
-    };
-
-    setMessages((current) => {
-      if (current.length === 0) {
-        return [welcomeMessage];
-      }
-
-      if (
-        current.length === 1 &&
-        current[0]?.id === WELCOME_MESSAGE_ID &&
-        current[0].role === "assistant"
-      ) {
-        return [welcomeMessage];
-      }
-
-      return current;
-    });
-  }, [t]);
 
   const { data: documents = [], isLoading } =
     useInstalledTourSearchDocuments(tourId);
@@ -208,6 +194,12 @@ export default function TourChatScreen() {
             >
               {messages.map((message) => {
                 const isUser = message.role === "user";
+                // The welcome text is not stored, so it always renders in the
+                // language selected right now.
+                const content =
+                  message.id === WELCOME_MESSAGE_ID
+                    ? t("chat.initialMessage")
+                    : message.content;
 
                 return (
                   <View
@@ -231,7 +223,7 @@ export default function TourChatScreen() {
                         color: isUser ? theme.primaryForeground : theme.text,
                       }}
                     >
-                      {message.content}
+                      {content}
                     </ThemedText>
                   </View>
                 );

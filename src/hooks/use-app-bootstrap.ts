@@ -7,6 +7,7 @@ import {
 import { useEffect, useState } from "react";
 
 import { rescheduleAllReminders } from "@/lib/tour-reminder/scheduler";
+import { useAppContentStore } from "@/store/app-content-store";
 import { useAuthStore } from "@/store/auth-store";
 import { useEntitlementsStore } from "@/store/entitlements-store";
 import { useInstalledToursStore } from "@/store/installed-tours-store";
@@ -57,6 +58,9 @@ export function useAppBootstrap(): boolean {
       useTourProgressStore.getState().hydrate(),
       useSpotBookmarksStore.getState().hydrate(),
       useReleaseConfigStore.getState().hydrate(),
+      // Independent of the locale store hydrating alongside it: the snapshot
+      // records the language it was fetched for, and the query reconciles.
+      useAppContentStore.getState().hydrate(),
       useLocaleStore.getState().hydrate(),
       useOnboardingStore.getState().hydrate(),
       useKnowledgeStore.getState().hydrate(),

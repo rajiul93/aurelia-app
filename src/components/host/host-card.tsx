@@ -3,6 +3,7 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   StyleSheet,
   View,
@@ -51,7 +52,25 @@ export function HostCard({
   const bio =
     host.translations.find((entry) => entry.language === language)?.bio || "";
 
+  /**
+   * An inactive host still gets a card (so the roster reads consistently) but
+   * must not be routed to: they aren't at the venue, so a map pin and a walking
+   * route would send the visitor to nobody. Distinct from merely being outside
+   * today's hours, which is a normal state for a real host.
+   */
+  function warnInactive() {
+    Alert.alert(
+      "Host not active",
+      `${host.name} isn't currently active at this venue, so directions aren't available.`,
+      [{ text: "OK" }],
+    );
+  }
+
   function openMap() {
+    if (!host.isActive) {
+      warnInactive();
+      return;
+    }
     if (onShowMap) {
       onShowMap();
       return;
@@ -59,6 +78,14 @@ export function HostCard({
     if (tourId) {
       router.push(`/find-host/${tourId}/${host.id}/map`);
     }
+  }
+
+  function getDirections() {
+    if (!host.isActive) {
+      warnInactive();
+      return;
+    }
+    onGetDirections?.();
   }
 
   return (
@@ -133,7 +160,7 @@ export function HostCard({
         </Pressable>
 
         <Pressable
-          onPress={onGetDirections}
+          onPress={getDirections}
           disabled={isLoadingDirections}
           style={({ pressed }) => [
             styles.directionsButton,

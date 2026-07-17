@@ -114,11 +114,18 @@ export function useNavigationSession({
   const snapshot = useNavigationSessionStore((state) => state.snapshot);
   const isTracking = useNavigationSessionStore((state) => state.isTracking);
   const subscriptionRef = useRef<Location.LocationSubscription | null>(null);
+  // Kept in a ref so the tracking effect can read the latest content without
+  // depending on it — content's identity churns on query refresh, and
+  // re-subscribing to GPS on every churn would drop the fix. Written in an
+  // effect, not during render, which is unsafe under concurrent rendering.
   const contentRef = useRef(content);
   const [locationStatus, setLocationStatus] =
     useState<NavigationLocationStatus>("pending");
   const [locationTimedOut, setLocationTimedOut] = useState(false);
-  contentRef.current = content;
+
+  useEffect(() => {
+    contentRef.current = content;
+  }, [content]);
 
   // Navigation is available for any installed tour with usable geo data. The
   // enableGpsNavigation remote flag no longer gates offline navigation; voice
@@ -130,9 +137,12 @@ export function useNavigationSession({
     setCompletedSpotIds(completedSpotIds);
   }, [completedSpotIds, setCompletedSpotIds]);
 
+  // True only while we are actually waiting on a first fix. Derived rather than
+  // stored so it can't drift from canNavigate/snapshot.
+  const waitingForFix = Boolean(canNavigate) && !hasLocationFix(snapshot);
+
   useEffect(() => {
-    if (!canNavigate || hasLocationFix(snapshot)) {
-      setLocationTimedOut(false);
+    if (!waitingForFix) {
       return;
     }
 
@@ -140,8 +150,14 @@ export function useNavigationSession({
       setLocationTimedOut(true);
     }, 15_000);
 
-    return () => clearTimeout(timeoutId);
-  }, [canNavigate, snapshot]);
+    return () => {
+      clearTimeout(timeoutId);
+      // Leaving this wait — a fix arrived, or navigation stopped. The next wait
+      // must serve its own 15 seconds rather than inherit this one's verdict,
+      // or losing a fix mid-walk would flash "no GPS" instantly.
+      setLocationTimedOut(false);
+    };
+  }, [waitingForFix]);
 
   useEffect(() => {
     if (!canNavigate || !contentRef.current) {

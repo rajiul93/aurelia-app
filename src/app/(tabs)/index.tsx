@@ -21,10 +21,14 @@ import { useCatalogTours } from "@/hooks/queries/use-catalog";
 import { useEntitlementStatus } from "@/hooks/use-entitlement-status";
 import { useStrings } from "@/hooks/use-strings";
 import { useTheme } from "@/hooks/use-theme";
-import { resolveAppBackgroundUrl } from "@/lib/app-content/resolve-asset";
+import {
+  getCurrentTimeOfDay,
+  resolveAppBackgroundUrl,
+} from "@/lib/app-content/resolve-asset";
 import { env } from "@/lib/env";
 import { useAuthStore } from "@/store/auth-store";
 import { useInstalledToursStore } from "@/store/installed-tours-store";
+import { useRemoteConfig } from "@/store/release-config-store";
 
 function getErrorMessage(
   error: unknown,
@@ -48,6 +52,7 @@ export default function HomeScreen() {
   const sessionToken = useAuthStore((state) => state.sessionToken);
   const isSignedIn = Boolean(sessionToken);
   const { data: contentResponse } = useAppContent();
+  const { venueTimezone } = useRemoteConfig();
   const { data, isLoading, isError, error, refetch, isFetching } =
     useCatalogTours();
   const { hasActivePlan, entitledVersionsByTourId } = useEntitlementStatus();
@@ -56,7 +61,12 @@ export default function HomeScreen() {
   );
 
   const strings = contentResponse?.data.strings ?? {};
-  const backgroundUrl = resolveAppBackgroundUrl(contentResponse?.data.assets);
+  // Venue slot, matching AppBackground — the two render the same photo and must
+  // not disagree about what time of day it is.
+  const backgroundUrl = resolveAppBackgroundUrl(
+    contentResponse?.data.assets,
+    getCurrentTimeOfDay(venueTimezone),
+  );
   const title = strings["title.welcome"] ?? t("app.name");
   const heroOnDark = Boolean(backgroundUrl);
 

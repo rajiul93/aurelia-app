@@ -81,26 +81,47 @@ export function useHostVisitorLocation(options?: UseHostVisitorLocationOptions) 
   }, []);
 
   useEffect(() => {
-    if (autoRequest) {
-      requestPermission();
-    } else {
-      const checkPermissionStatus = async () => {
-        try {
-          const { status: permissionStatus } =
-            await Location.getForegroundPermissionsAsync();
-          if (permissionStatus === "granted") {
-            await requestPermission();
-          } else if (permissionStatus === "denied") {
-            setStatus("denied");
-          }
-        } finally {
+    let cancelled = false;
+
+    async function bootstrap() {
+      // Yield before touching state. requestPermission sets "requesting" before
+      // its first await, so calling it straight from an effect body writes state
+      // synchronously during commit and cascades an extra render. It stays
+      // synchronous for event-handler callers, where that is exactly right.
+      await Promise.resolve();
+      if (cancelled) {
+        return;
+      }
+
+      if (autoRequest) {
+        await requestPermission();
+        return;
+      }
+
+      try {
+        const { status: permissionStatus } =
+          await Location.getForegroundPermissionsAsync();
+
+        if (cancelled) {
+          return;
+        }
+
+        if (permissionStatus === "granted") {
+          await requestPermission();
+        } else if (permissionStatus === "denied") {
+          setStatus("denied");
+        }
+      } finally {
+        if (!cancelled) {
           setInitializing(false);
         }
-      };
-      checkPermissionStatus();
+      }
     }
 
+    void bootstrap();
+
     return () => {
+      cancelled = true;
       subscriptionRef.current?.remove();
     };
   }, [autoRequest, requestPermission]);

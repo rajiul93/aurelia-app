@@ -8,7 +8,7 @@
 
 **Status legend:** ✅ Completed · 🚧 In Progress · ⚠️ Known Issue · ⏳ Pending · ❌ Not Started
 
-Last updated: **2026-07-16** (reminder cadence → admin-controlled)
+Last updated: **2026-07-17** (venue timezone, offline app-content, perf/lint pass)
 
 ---
 
@@ -149,7 +149,7 @@ Last updated: **2026-07-16** (reminder cadence → admin-controlled)
 
 ## 3. In Progress (🚧)
 
-- None active. **Note:** all changes above are in the working tree and **not committed**.
+- None active.
 
 ---
 
@@ -177,6 +177,16 @@ Last updated: **2026-07-16** (reminder cadence → admin-controlled)
   range 0-255 … (HTTP 404)` — so base-map text labels may be missing offline. Not blocking for stop
   pins/footprints (the inline-style fix makes the map load regardless); to fully silence it, bundle
   local fonts/sprite or drop the `place-labels` layer. Verify base-label expectations on-device.
+- ⚠️ **`Intl` timezone support is not guaranteed on Hermes.** Host availability and the time-of-day
+  background are read on the venue's clock via `Intl.DateTimeFormat({ timeZone })`. Hermes does not
+  guarantee this across builds, so [lib/host/availability.ts](src/lib/host/availability.ts) probes it
+  once (`supportsTimezoneFormatting`) and, when missing, falls back to the **server's** `isAvailableNow`
+  — deliberately *not* to the device clock, which is the bug being fixed. **Verify on-device**: if
+  chips or backgrounds look wrong, check that probe first.
+- ✅ **venueTimezone is live** — migration applied to production; `release-config` now carries the
+  field. `DEFAULT_REMOTE_CONFIG.venueTimezone` ("Europe/Rome") only stands in pre-first-sync.
+- ⏳ **The host feature is not localized** — `HostCard`/`HostStatusChip`/the not-active modal are
+  hardcoded English while the rest of the app uses `useStrings`. Pre-existing.
 - ⚠️ **Hardware verification pending.** The emulator has no magnetometer or real GPS movement, and
   downloading a tour bundle needs the backend/auth flow — so offline rendering, compass rotation, and
   arrival voice are code-verified but not visually confirmed on-device.
@@ -234,6 +244,24 @@ Last updated: **2026-07-16** (reminder cadence → admin-controlled)
   the existing `expo-speech` pattern.
 - **react-query `offlineFirst`** — disk-backed queries resolve immediately offline instead of being
   paused/retried by the default `online` network mode.
+- **App content is disk-first; background *bytes* are left to expo-image** — the offline background was
+  blank not for lack of image data but because the **JSON holding the URLs** was memory-only, so a cold
+  offline start didn't know what to ask for. expo-image already disk-caches by default
+  (`cachePolicy: 'disk'`), so persisting `aurelia/app-content.json` fixes it and a hand-rolled
+  file cache would only duplicate what expo-image does. `Image.prefetch` warms the slots instead:
+  current slot awaited, the other two fire-and-forget.
+  ⚠️ Trade-off: the OS may evict expo-image's cache under storage pressure. If that proves real
+  on-device, add a durable document-dir cache — `AppBackground`'s remote-URL contract allows it
+  without a breaking change. [lib/app-content/](src/lib/app-content/),
+  [store/app-content-store.ts](src/store/app-content-store.ts)
+- **Wall-clock reads use the *venue's* zone, never the device's** — a visitor carries the zone they
+  flew in with, so device-local time would show a Rome host as closed at noon and hand a lunchtime
+  visitor the night background. Both `isHostAvailableNow` and `getCurrentTimeOfDay` take
+  `remote.venueTimezone`. This mirrors the server rule; see the backend CLAUDE.md §8.
+- **Host availability is derived on device, not polled** — `useHosts` used `refetchInterval: 30_000`
+  purely to refresh a server-computed `isAvailableNow`. The inputs (hours, zone) change rarely; only
+  *now* moves. `useHostAvailability` ticks locally each minute instead: no requests, works offline,
+  and the chip stays live between fetches. The server field remains as the Hermes fallback.
 - **On-disk bundle is the source of truth for offline availability** — "is this tour installed?" is
   answered by the presence of `content.json`/`bundle-meta.json` on disk, not by the in-memory Zustand
   store. Per-tour queries gate on `tourId` and read from disk; the store is a convenience/cache only.
@@ -267,15 +295,17 @@ Last updated: **2026-07-16** (reminder cadence → admin-controlled)
 ## 8. Testing & Verification Status
 
 - ✅ TypeScript `tsc --noEmit` clean — both `aurelia-app` and `admin-and-server-aurelia`.
-- ✅ Unit tests **69/69 pass** (`pnpm test`, Vitest, aurelia-app) across 13 files — expanded from 14.
-  Newest: `src/lib/entitlements/access.test.ts` (expiry / snapshot-usable gate),
-  `src/lib/bundle/expiry.test.ts` (lock+sweep rules incl. renewal extending an older stamp), and
-  `src/store/entitlements-store.test.ts` (hydrate / persist / clear, storage mocked).
-  Zustand store tests, navigation edge cases, **map style** (`src/lib/map/style.test.ts`), and
-  **content preferences** (`src/lib/bundle/content-preferences.test.ts`: `resolveTourPreferences` disk-
-  over-store precedence, the core offline-fix helper). Backend also has a Vitest suite (**88 tests**) —
+- ✅ Unit tests **158/158 pass** (`pnpm test`, Vitest, aurelia-app) across 21 files.
+  Newest: `src/lib/host/availability.test.ts` (venue-clock window + server fallback),
+  `src/lib/app-content/resolve-asset.test.ts` (slot fallbacks + de-dup), and
+  `src/store/app-content-store.test.ts` (hydrate / disk-first persist, storage mocked).
+  Plus `src/lib/entitlements/access.test.ts`, `src/lib/bundle/expiry.test.ts`,
+  `src/store/entitlements-store.test.ts`, zustand store tests, navigation edge cases,
+  **map style** (`src/lib/map/style.test.ts`), and **content preferences**
+  (`src/lib/bundle/content-preferences.test.ts`). Backend also has a Vitest suite (**183 tests**) —
   see its CLAUDE.md §10.
-- ✅ Lint — no new errors introduced (diffed against baseline).
+- ✅ Lint — **0 errors**, 31 warnings. (Was 8 errors: 5 × `set-state-in-effect`, 2 × `refs-during-render`.
+  These are React Compiler correctness rules and were fixed by restructuring, not suppressing — see §12.)
 - ✅ Android dev build installed on emulator; **Metro bundles all 2144 modules** (no resolve/syntax
   errors).
 - ✅ Backend: the previously-500ing `/api/v1/app/catalog/tours` now returns **401** (expected auth gate
@@ -318,11 +348,57 @@ Last updated: **2026-07-16** (reminder cadence → admin-controlled)
 - Tour authoring (Admin) must provide **accurate coordinates and route edges**; the client cannot
   correct bad source geometry.
 - The Android **emulator cannot validate** the magnetometer compass or real GPS movement.
-- All current changes are **uncommitted** working-tree edits across both repos.
+- Tour authoring (Admin) must supply an accurate **venue timezone** in remote config; host hours and
+  the time-of-day background are meaningless without it, and the app cannot infer it.
 
 ---
 
 ## 12. Changelog
+
+- **2026-07-17** — **Venue timezone, offline app content, and a perf/lint pass.** Outcome of a
+  full-project review; no new features.
+  - **Host availability now reads the venue's clock.** The server was computing `isAvailableNow` off
+    its own UTC clock (see backend CLAUDE.md §11) — and the device clock would have been just as wrong,
+    since visitors carry foreign zones. `remote.venueTimezone` now ships in release-config;
+    [lib/host/availability.ts](src/lib/host/availability.ts) mirrors the server window logic on device
+    (`venueWallClock` via `Intl` + `formatToParts` + `hourCycle: "h23"`), with a one-time
+    `supportsTimezoneFormatting` probe that falls back to the **server's** value — never the device
+    clock — if Hermes lacks `Intl` timezone data. `HostStatusChip` derives through the new
+    [use-host-availability.ts](src/hooks/use-host-availability.ts) (1-minute local tick), and
+    **`useHosts` lost its `refetchInterval: 30_000`** — that poll existed only to refresh a value now
+    computed locally.
+  - **App content survives a cold offline start.** react-query is memory-only here, so offline the app
+    had no `assets` and therefore no background *URL* — the bytes were on disk all along (expo-image
+    disk-caches by default). Added `aurelia/app-content.json` (plain JSON, mirroring
+    [release-config/storage.ts](src/lib/release-config/storage.ts) exactly — the house pattern shared by
+    entitlements/tour-reminder/spot-bookmarks), an `app-content-store` (disk-first `setContent`),
+    hydration in `use-app-bootstrap`, and `useAppContent` seeding from the snapshot via `initialData`
+    + **`initialDataUpdatedAt: 0`** so the background refresh still fires (without it the global 60s
+    `staleTime` would suppress it). The snapshot carries its own `language`, so it hydrates
+    independently of the concurrently-hydrating locale store. `useCachedAppContent` **deleted** (zero
+    callers; the snapshot covers the offline case it was written for).
+  - **Time-of-day backgrounds warm ahead + follow the venue.** New `enumerateBackgroundUrls`
+    (de-duplicated — the fallback tiers are slot-independent, so a tenant may share one photo across
+    slots) + [prefetch-backgrounds.ts](src/lib/app-content/prefetch-backgrounds.ts) using
+    **`Image.prefetch`**: current slot awaited, other two fire-and-forget, failures non-fatal. No
+    filesystem cache — that would duplicate expo-image (see §6). `getCurrentTimeOfDay(venueTimezone)`
+    and `resolveAppBackgroundUrl(assets, slot)` are now venue-aware; `AppBackground` and Home pass the
+    venue slot so they can't disagree.
+  - **Navigation map stopped re-uploading the route every GPS tick.** GPS fires every ~2s, so
+    `tour-map-view` re-renders ~30×/min; `splitRouteAtIndex` was unmemoized and the three
+    `toLineFeature(...)` calls were inline in `data=`, handing MapLibre a new source identity — and the
+    whole route across the bridge — every tick. All now memoized on what they actually depend on.
+  - **Approach audio can no longer narrate the wrong stop.** `resolveInstalledMediaUri` had no
+    cancellation guard, so passing two stops quickly could let a late-settling URI for the previous stop
+    win. Resolution is now tagged with its spot id and *derived*, so a stale one simply stops matching.
+  - **8 lint errors → 0**, fixed by restructuring rather than suppressing: refs written in effects not
+    during render (`use-map-pack-ready`, `use-navigation-session`); the chat welcome seeded at mount and
+    translated at render (which also fixed it never re-translating once the conversation started);
+    `tour-prepare-screen` derives from installed prefs with a user-choice override (an async load can no
+    longer clobber a choice the user just made); `useHostVisitorLocation` yields before touching state
+    and gained a cancellation guard. Also deleted `use-version-sync` — it duplicated
+    `use-release-config-sync`'s `appContentVersion` invalidation on the same query.
+  - `tsc --noEmit` clean; **158 tests** (130 + 28).
 
 - **2026-07-16** — **Reminder cadence is now admin-controlled (remote config).** The prep-reminder
  schedule was hard-coded on device (`PREP_OFFSET_DAYS = [3,2,1]`, 09:00). It now comes from the

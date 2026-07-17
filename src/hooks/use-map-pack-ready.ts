@@ -15,8 +15,18 @@ export function useMapPackReady(
 ) {
   const [ready, setReady] = useState(false);
   const readyTourIdRef = useRef<string | null>(null);
+  // Held in a ref so the pack-build effect can read the latest content without
+  // listing it as a dependency — content's identity churns on every query
+  // refresh, which would tear down and restart the build. Assigned in an effect
+  // rather than during render (a render-phase ref write is not safe under
+  // concurrent rendering); this effect is declared first, so it lands before
+  // the effect below reads it.
   const contentRef = useRef(content);
-  contentRef.current = content;
+
+  useEffect(() => {
+    contentRef.current = content;
+  }, [content]);
+
   const contentTourId = content?.tour.id;
 
   useEffect(() => {

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -101,24 +101,28 @@ function TourPrepareForm({
   );
   const downloadTour = useDownloadTour();
 
-  const [audience, setAudience] = useState<AudienceType>(DEFAULT_AUDIENCE);
-  const [contentLanguage, setContentLanguage] = useState<AppLanguage>(uiLanguage);
-  const [downloadMode, setDownloadMode] =
-    useState<DownloadMode>(DEFAULT_DOWNLOAD_MODE);
+  // State holds only what the user has actually picked; everything else is
+  // derived. An installed tour's preferences arrive asynchronously, so an effect
+  // used to copy them into state on arrival — which meant writing state on
+  // render, and silently overwriting a choice the user made while the read was
+  // still in flight. Falling back through installed → default instead keeps the
+  // user's pick authoritative the moment they make it.
+  const [audienceChoice, setAudienceChoice] = useState<AudienceType | null>(null);
+  const [languageChoice, setLanguageChoice] = useState<AppLanguage | null>(null);
+  const [downloadModeChoice, setDownloadModeChoice] =
+    useState<DownloadMode | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [downloadProgress, setDownloadProgress] = useState<DownloadProgress | null>(
     null,
   );
 
-  useEffect(() => {
-    if (!installed?.downloadPreferences) {
-      return;
-    }
-
-    setAudience(installed.downloadPreferences.audience);
-    setContentLanguage(installed.downloadPreferences.contentLanguage);
-    setDownloadMode(installed.downloadPreferences.downloadMode);
-  }, [installed]);
+  const preferences = installed?.downloadPreferences;
+  const audience =
+    audienceChoice ?? preferences?.audience ?? DEFAULT_AUDIENCE;
+  const contentLanguage =
+    languageChoice ?? preferences?.contentLanguage ?? uiLanguage;
+  const downloadMode =
+    downloadModeChoice ?? preferences?.downloadMode ?? DEFAULT_DOWNLOAD_MODE;
 
   const languages = APP_LANGUAGES.filter((value) =>
     supportedLanguages.includes(value),
@@ -177,7 +181,7 @@ function TourPrepareForm({
                     key={value}
                     label={audienceLabel(value)}
                     selected={audience === value}
-                    onPress={() => setAudience(value)}
+                    onPress={() => setAudienceChoice(value)}
                   />
                 ))}
               </Section>
@@ -188,7 +192,7 @@ function TourPrepareForm({
                     key={value}
                     label={languageLabel(value)}
                     selected={contentLanguage === value}
-                    onPress={() => setContentLanguage(value)}
+                    onPress={() => setLanguageChoice(value)}
                   />
                 ))}
               </Section>
@@ -200,7 +204,7 @@ function TourPrepareForm({
                     label={downloadModeLabel(value)}
                     description={downloadModeDescription(value)}
                     selected={downloadMode === value}
-                    onPress={() => setDownloadMode(value)}
+                    onPress={() => setDownloadModeChoice(value)}
                   />
                 ))}
               </Section>

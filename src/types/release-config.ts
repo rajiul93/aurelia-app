@@ -14,6 +14,12 @@ export type RemoteConfig = {
   reminderHour: number;
   /** Whether the undated daily "set a date" nudge runs. */
   reminderNudgeEnabled: boolean;
+  /**
+   * The venue's IANA timezone. Host opening hours and the time-of-day
+   * background are read against the venue's clock, not the device's — a
+   * visitor's phone carries whatever zone they flew in with.
+   */
+  venueTimezone: string;
 };
 
 export type ReleaseConfig = {

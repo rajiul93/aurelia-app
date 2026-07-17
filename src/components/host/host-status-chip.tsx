@@ -2,6 +2,7 @@ import { StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { Spacing } from "@/constants/theme";
+import { useHostAvailability } from "@/hooks/use-host-availability";
 import type { Host } from "@/types/host";
 
 type HostStatusChipProps = {
@@ -9,7 +10,7 @@ type HostStatusChipProps = {
 };
 
 export function HostStatusChip({ host }: HostStatusChipProps) {
-  const available = host.isAvailableNow;
+  const available = useHostAvailability(host);
 
   return (
     <View

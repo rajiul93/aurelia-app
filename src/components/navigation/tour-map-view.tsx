@@ -150,12 +150,28 @@ export function TourMapView({
   }, [tourBounds]);
 
   const routeIndex = snapshot?.snappedLocation?.routeIndex ?? 0;
-  const { completed, upcoming } = splitRouteAtIndex(
-    routeCoordinates,
-    routeIndex,
+  // GPS ticks every ~2s, so this component re-renders ~30x/min while walking.
+  // Rebuilding these GeoJSON objects each time handed MapLibre a new source
+  // identity every tick and re-uploaded the whole route across the bridge, even
+  // when the geometry hadn't moved. Memoized on what they actually depend on.
+  const { completed, upcoming } = useMemo(
+    () => splitRouteAtIndex(routeCoordinates, routeIndex),
+    [routeCoordinates, routeIndex],
+  );
+  const completedFeature = useMemo(
+    () => toLineFeature(completed, "completed"),
+    [completed],
+  );
+  const upcomingFeature = useMemo(
+    () => toLineFeature(upcoming, "upcoming"),
+    [upcoming],
   );
   const displayLocation = getDisplayLocation(snapshot);
-  const walkTrail = snapshot?.walkTrail ?? [];
+  const walkTrail = useMemo(() => snapshot?.walkTrail ?? [], [snapshot]);
+  const trailFeature = useMemo(
+    () => toLineFeature(walkTrail, "walk-trail"),
+    [walkTrail],
+  );
   const trailSteps = useMemo(
     () => toTrailStepFeatures(walkTrail),
     [walkTrail],
@@ -259,7 +275,7 @@ export function TourMapView({
         <Camera ref={cameraRef} initialViewState={initialViewState} />
 
         {walkTrail.length >= 2 ? (
-          <GeoJSONSource id="walk-trail" data={toLineFeature(walkTrail, "walk-trail")}>
+          <GeoJSONSource id="walk-trail" data={trailFeature}>
             <Layer
               id="walk-trail-line"
               type="line"
@@ -289,10 +305,7 @@ export function TourMapView({
         ) : null}
 
         {completed.length >= 2 ? (
-          <GeoJSONSource
-            id="completed-route"
-            data={toLineFeature(completed, "completed")}
-          >
+          <GeoJSONSource id="completed-route" data={completedFeature}>
             <Layer
               id="completed-route-line"
               type="line"
@@ -307,10 +320,7 @@ export function TourMapView({
         ) : null}
 
         {upcoming.length >= 2 ? (
-          <GeoJSONSource
-            id="upcoming-route"
-            data={toLineFeature(upcoming, "upcoming")}
-          >
+          <GeoJSONSource id="upcoming-route" data={upcomingFeature}>
             <Layer
               id="upcoming-route-line"
               type="line"

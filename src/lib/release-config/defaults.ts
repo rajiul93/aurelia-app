@@ -13,6 +13,10 @@ export const DEFAULT_REMOTE_CONFIG: RemoteConfig = {
   reminderOffsetDays: [3, 2, 1],
   reminderHour: 9,
   reminderNudgeEnabled: true,
+  // Seeds the pre-sync config to match the DB column default; the first sync
+  // overwrites it. A data default, like every other value in this object — the
+  // venue's real zone always comes from remote config.
+  venueTimezone: "Europe/Rome",
 };
 
 export const DEFAULT_RELEASE_CONFIG: ReleaseConfig = {
