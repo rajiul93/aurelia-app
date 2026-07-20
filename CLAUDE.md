@@ -364,6 +364,12 @@ Last updated: **2026-07-20** (Account → subscribe lag + plan-page contrast ove
 - **Start order:** permission → `startSession` → **bootstrap fired without `await`** →
   `watchPositionAsync`. The bootstrap must not block the subscription; it is only there to fill the
   gap before the first watch fix, and `ingestBootstrapFix` drops it once any fix has landed.
+- **`Location.Accuracy` is named by power draw, not by speed** — and the names mislead:
+  `Lowest` 3 km · **`Low` 1 km** · **`Balanced` 100 m** · `High` 10 m. `Balanced` already avoids a
+  GPS lock, so it is the tier that works indoors; there is nothing below it worth reaching for.
+  Anything coarser than `maxAccuracyM` (65 m) fails `isFixAccuracyAcceptable` and renders unsnapped,
+  so a "cheaper" accuracy buys a marker in the wrong place. Both the watch and the bootstrap
+  fallback stay on `Balanced` (dropping the bootstrap to `Low` was tried and reverted, §12).
 
 ---
 
@@ -408,9 +414,13 @@ Last updated: **2026-07-20** (Account → subscribe lag + plan-page contrast ove
     Those inputs moved into a `handlersRef` (written in an effect, not during render — the React
     Compiler rule from 2026-07-17 holds); deps are now `canNavigate`/`tourId`/`floorId` plus the
     stable zustand actions.
-  - Bootstrap's live fallback asks for `Accuracy.Low` instead of `Balanced` — it only has to place a
-    first marker, and wifi/network triangulation keeps working indoors where GPS struggles, which is
-    exactly the case it exists for.
+  - ~~Bootstrap's live fallback asks for `Accuracy.Low` instead of `Balanced`.~~ **Reverted the same
+    day — the reasoning was wrong.** The claim was that `Low` means wifi/network triangulation and so
+    suits indoors; in fact `Balanced` is already that tier, and the enum is named by power draw, not
+    speed: `Low` = "accurate to the nearest kilometer", `Balanced` = "to within one hundred meters"
+    (expo-location 57 `Location.types.d.ts`). A `Low` fix also exceeds `maxAccuracyM: 65` and takes
+    the unsnapped branch, so it would paint the marker up to a kilometre away — worse on a walking
+    map than showing nothing. Bootstrap stays on `Balanced`.
   - New [navigation-session-store.test.ts](src/store/navigation-session-store.test.ts) (4 tests,
     **158 → 162**) covering the guard. Verified it *fails* without the guard (2 failures) rather than
     passing for the wrong reason. `tsc` clean; lint at baseline (0 errors, 31 warnings).

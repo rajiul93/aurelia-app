@@ -30,11 +30,13 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number) {
  * Returns a location fix as quickly as possible: cached last-known first, then
  * a live fix (with timeout so UI never hangs forever).
  *
- * The live fallback asks for `Low` rather than `Balanced` on purpose. It only
- * has to put a marker on screen — the watch delivers the accurate position
- * moments later — and `Low` resolves from wifi/network triangulation, which
- * keeps working inside a building where GPS struggles. That is the case this
- * path exists for: a first-time visitor indoors, where last-known is empty.
+ * Keep the live fallback at `Balanced`. It is tempting to drop to `Low` for a
+ * faster first marker, but the enum is named by power, not by speed:
+ * `Low` is "accurate to the nearest kilometer" and `Balanced` "to within one
+ * hundred meters" — and `Balanced` already avoids a GPS lock, so it is the tier
+ * that works indoors. A `Low` fix would also exceed `maxAccuracyM` (65) and take
+ * the unsnapped branch of processBootstrapLocation, painting the marker up to a
+ * kilometre from the user — worse on a walking map than showing nothing yet.
  */
 export async function resolveBootstrapLocation(): Promise<Location.LocationObject | null> {
   try {
@@ -53,7 +55,7 @@ export async function resolveBootstrapLocation(): Promise<Location.LocationObjec
   try {
     return await withTimeout(
       Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Low,
+        accuracy: Location.Accuracy.Balanced,
       }),
       CURRENT_FIX_TIMEOUT_MS,
     );
