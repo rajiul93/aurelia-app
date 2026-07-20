@@ -9,8 +9,6 @@ type StopPinProps = {
   label: number | string;
   /** The tour's first stop is emphasised with a brand-gold ring. */
   isStart?: boolean;
-  /** Highlighted state while its popup is open. */
-  selected?: boolean;
 };
 
 /**
@@ -19,16 +17,10 @@ type StopPinProps = {
  * layer — it needs no cached glyphs and renders fully offline. Meant to be
  * placed in a `<Marker anchor="bottom">` so the tail tip sits on the coordinate.
  */
-export function StopPin({ label, isStart = false, selected = false }: StopPinProps) {
+export function StopPin({ label, isStart = false }: StopPinProps) {
   return (
     <View style={styles.container}>
-      <View
-        style={[
-          styles.head,
-          isStart && styles.headStart,
-          selected && styles.headSelected,
-        ]}
-      >
+      <View style={[styles.head, isStart && styles.headStart]}>
         <Text style={styles.label}>{label}</Text>
       </View>
       <View style={styles.tail} />
@@ -56,9 +48,6 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     borderColor: BrandColors.primary,
     borderWidth: 3,
-  },
-  headSelected: {
-    borderColor: BrandColors.primary,
   },
   label: {
     color: "#ffffff",

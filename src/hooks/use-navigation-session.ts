@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { AppState } from "react-native";
 
 import { useStrings } from "@/hooks/use-strings";
+import { resetApproachVoice } from "@/lib/navigation/approach-voice";
 import {
   resetArrivalVoice,
   speakArrival,
@@ -300,6 +301,7 @@ export function useNavigationSession({
       stopOffRouteWarning();
       resetOffRouteVoiceCooldown();
       resetArrivalVoice();
+      resetApproachVoice();
       appStateSubscription.remove();
       reset();
       setLocationStatus("pending");

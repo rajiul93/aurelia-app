@@ -11,6 +11,7 @@ import {
 import { shouldRejectGpsFix, smoothLocation } from "@/lib/navigation/smooth-location";
 import { snapToRoute } from "@/lib/navigation/snap-to-route";
 import { appendWalkTrail } from "@/lib/navigation/walk-trail";
+import { DEFAULT_NAVIGATION_THRESHOLDS } from "@/lib/navigation/types";
 import {
   hasCompleteRouteFootprints,
   hasNavigationGeoData,
@@ -188,7 +189,7 @@ describe("proximity", () => {
         minMovementM: 5,
         offRouteDistanceM: 10,
         offRouteClearCount: 1,
-        approachRadiusM: 40,
+        approachRadiusM: 30,
         arrivalRadiusM: 20,
         arrivalDwellRadiusM: 30,
         arrivalDwellMs: 10_000,
@@ -199,6 +200,36 @@ describe("proximity", () => {
 
     expect(result.shouldTriggerApproachAudio).toBe(true);
     expect(result.shouldMarkArrived).toBe(true);
+  });
+
+  // Both radii are measured against the same "next incomplete spot", and
+  // crossing the arrival radius completes that spot, which advances to the next
+  // one. So an approach radius inside the arrival radius describes a window
+  // that never opens and the approach cue is silently never spoken.
+  it("keeps the approach radius outside the arrival radius", () => {
+    expect(DEFAULT_NAVIGATION_THRESHOLDS.approachRadiusM).toBeGreaterThan(
+      DEFAULT_NAVIGATION_THRESHOLDS.arrivalRadiusM,
+    );
+  });
+
+  it("announces the approach before the stop is marked arrived", () => {
+    const nextSpot = sampleContent.tour.spots[1]!;
+    const spotPoint = { lat: nextSpot.latitude!, lng: nextSpot.longitude! };
+    // Sit between the two radii: ~25 m out with approach 30 m / arrival 20 m.
+    const betweenRadii = {
+      lat: spotPoint.lat + 0.000225,
+      lng: spotPoint.lng,
+    };
+
+    const result = evaluateProximity(
+      betweenRadii,
+      nextSpot,
+      DEFAULT_NAVIGATION_THRESHOLDS,
+      { spotId: null, enteredAt: null },
+    );
+
+    expect(result.shouldTriggerApproachAudio).toBe(true);
+    expect(result.shouldMarkArrived).toBe(false);
   });
 });
 

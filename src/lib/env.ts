@@ -66,12 +66,33 @@ function resolveApiBaseUrl() {
   return configured;
 }
 
+/**
+ * The API key must come from the environment. It used to fall back to
+ * "your-app-key" — the placeholder committed in .env.example on both sides —
+ * so a build where EXPO_PUBLIC_MOBILE_API_KEY failed to inline shipped a key
+ * anyone could read out of the repo, and it looked like it worked.
+ *
+ * Falling back to "" instead means the server answers 401 and the home screen
+ * shows its existing "Check API URL and MOBILE_API_KEY" message. Throwing here
+ * would be louder but runs at import time, i.e. a crash on launch.
+ */
+function resolveMobileApiKey() {
+  const configured =
+    process.env.EXPO_PUBLIC_MOBILE_API_KEY ?? extra?.mobileApiKey ?? "";
+
+  if (!configured && __DEV__) {
+    console.warn(
+      "[env] EXPO_PUBLIC_MOBILE_API_KEY is not set — every API call will 401. " +
+        "Set it in .env to match MOBILE_API_KEY in the admin server.",
+    );
+  }
+
+  return configured;
+}
+
 export const env = {
   apiBaseUrl: resolveApiBaseUrl(),
-  mobileApiKey:
-    process.env.EXPO_PUBLIC_MOBILE_API_KEY ??
-    extra?.mobileApiKey ??
-    "your-app-key",
+  mobileApiKey: resolveMobileApiKey(),
   apiVersion: Number(
     process.env.EXPO_PUBLIC_API_VERSION ?? extra?.apiVersion ?? 1,
   ),

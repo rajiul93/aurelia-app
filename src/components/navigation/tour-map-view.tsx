@@ -11,9 +11,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Platform, StyleSheet, View } from "react-native";
 
 import { FootprintMarker } from "@/components/navigation/footprint-overlay";
-import { StopCallout } from "@/components/navigation/stop-callout";
 import { StopPin } from "@/components/navigation/stop-pin";
-import { useStrings } from "@/hooks/use-strings";
 import { getFloorScope } from "@/lib/bundle/floor-routing";
 import {
   MAP_CAMERA_PADDING,
@@ -44,8 +42,6 @@ type TourMapViewProps = {
   floorId?: string;
   orderedSpots: BundleSpot[];
   snapshot: NavigationSessionSnapshot | null;
-  /** Localized stop names keyed by spot id, used in the tap popup. */
-  stopTitleById?: Record<string, string>;
   onLoadError?: () => void;
 };
 
@@ -116,15 +112,12 @@ export function TourMapView({
   floorId,
   orderedSpots,
   snapshot,
-  stopTitleById,
   onLoadError,
 }: TourMapViewProps) {
   const router = useRouter();
-  const { t } = useStrings();
   const cameraRef = useRef<CameraRef>(null);
   const mapReadyRef = useRef(false);
   const initialTourFitRef = useRef(false);
-  const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
   const styleRetryRef = useRef(0);
   const [styleAttempt, setStyleAttempt] = useState(0);
 
@@ -177,10 +170,6 @@ export function TourMapView({
   );
 
   const stopPins = useMemo(() => buildStopPins(orderedSpots), [orderedSpots]);
-  const selectedPin = useMemo(
-    () => stopPins.find((pin) => pin.spot.id === selectedStopId) ?? null,
-    [stopPins, selectedStopId],
-  );
   // Offline-safe inline style (no sprite/glyph fetches). Retries swap to the
   // minimal fallback if tile attachment is still slow on cold start.
   const mapStyle = useMemo(
@@ -191,13 +180,15 @@ export function TourMapView({
     [styleAttempt],
   );
 
-  const openSelectedStopDetails = useCallback(() => {
-    if (!selectedPin) {
-      return;
-    }
-    setSelectedStopId(null);
-    router.push(`/tour/${tourId}/spot/${selectedPin.spot.id}`);
-  }, [router, selectedPin, tourId]);
+  // One tap straight to the stop. The old flow put a callout in between (tap →
+  // popup → "View Details" → push), which was an extra tap for information the
+  // detail page shows anyway.
+  const openStopDetails = useCallback(
+    (spotId: string) => {
+      router.push(`/tour/${tourId}/spot/${spotId}`);
+    },
+    [router, tourId],
+  );
 
   const fitTourArea = useCallback(
     (includeUser = false) => {
@@ -251,7 +242,6 @@ export function TourMapView({
         touchRotate={false}
         touchPitch={false}
         attribution={false}
-        onPress={() => setSelectedStopId(null)}
         onDidFinishLoadingMap={() => {
           styleRetryRef.current = 0;
           mapReadyRef.current = true;
@@ -340,34 +330,13 @@ export function TourMapView({
             id={`stop-${pin.spot.id}`}
             lngLat={[pin.spot.longitude!, pin.spot.latitude!]}
             anchor="bottom"
-            onPress={() => setSelectedStopId(pin.spot.id)}
+            onPress={() => openStopDetails(pin.spot.id)}
           >
             <View style={styles.stopPinHitArea}>
-              <StopPin
-                label={pin.label}
-                isStart={pin.isStart}
-                selected={pin.spot.id === selectedStopId}
-              />
+              <StopPin label={pin.label} isStart={pin.isStart} />
             </View>
           </Marker>
         ))}
-
-        {selectedPin ? (
-          <Marker
-            id={`stop-callout-${selectedPin.spot.id}`}
-            lngLat={[selectedPin.spot.longitude!, selectedPin.spot.latitude!]}
-            anchor="bottom"
-            offset={[0, -54]}
-          >
-            <StopCallout
-              label={selectedPin.label}
-              title={stopTitleById?.[selectedPin.spot.id] ?? `#${selectedPin.label}`}
-              viewDetailsLabel={t("nav.viewDetails")}
-              onViewDetails={openSelectedStopDetails}
-              onClose={() => setSelectedStopId(null)}
-            />
-          </Marker>
-        ) : null}
 
         {displayLocation ? (
           <>

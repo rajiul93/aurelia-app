@@ -304,9 +304,9 @@ const en = {
   "nav.offRouteHint": "Head back toward the route — about {distance} m away.",
   "nav.offRouteVoice":
     "You are moving away from the planned route. If this is intentional, you may continue. Otherwise, please return to the marked route.",
+  "nav.approachVoice": "Please proceed to {title}.",
   "nav.arrivedVoice": "You have arrived at this location.",
   "nav.refresh": "Reload map",
-  "nav.viewDetails": "View Details",
   "nav.locatingYou": "Getting your location…",
   "nav.preparingMap": "Preparing offline map…",
   "nav.locationDenied":
@@ -689,9 +689,9 @@ const es: Record<StringKey, string> = {
   "nav.offRouteHint": "Regresa hacia la ruta — a unos {distance} m.",
   "nav.offRouteVoice":
     "Te estás alejando de la ruta planificada. Si es intencional, puedes continuar. De lo contrario, regresa a la ruta marcada.",
+  "nav.approachVoice": "Diríjase a {title}.",
   "nav.arrivedVoice": "Has llegado a este lugar.",
   "nav.refresh": "Recargar mapa",
-  "nav.viewDetails": "Ver detalles",
   "nav.locatingYou": "Obteniendo tu ubicación…",
   "nav.preparingMap": "Preparando mapa sin conexión…",
   "nav.locationDenied":
@@ -1069,9 +1069,9 @@ const fr: Record<StringKey, string> = {
   "nav.offRouteHint": "Revenez vers l'itinéraire — environ {distance} m.",
   "nav.offRouteVoice":
     "Vous vous éloignez de l'itinéraire prévu. Si c'est intentionnel, vous pouvez continuer. Sinon, veuillez revenir sur l'itinéraire marqué.",
+  "nav.approachVoice": "Veuillez vous rendre à {title}.",
   "nav.arrivedVoice": "Vous êtes arrivé à cet endroit.",
   "nav.refresh": "Recharger la carte",
-  "nav.viewDetails": "Voir les détails",
   "nav.locatingYou": "Localisation en cours…",
   "nav.preparingMap": "Préparation de la carte hors ligne…",
   "nav.locationDenied":

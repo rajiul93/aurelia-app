@@ -44,12 +44,25 @@ export type NavigationThresholds = {
 
 export const OFF_ROUTE_VOICE_COOLDOWN_MS = 60_000;
 
+/**
+ * ⚠️ Invariant: `approachRadiusM` **must stay greater than** `arrivalRadiusM`.
+ *
+ * Both are measured against the same "next incomplete spot", and crossing the
+ * arrival radius marks that spot complete — which advances the next spot. So an
+ * approach radius inside the arrival radius describes a window that never opens:
+ * the stop is already completed by the time you reach it, and the approach cue
+ * is silently never spoken. A test in navigation.test.ts guards this.
+ *
+ * The gap also has to survive real GPS error (10–20 m outdoors in Rome), which
+ * is why arrival is not tightened instead — at ~6 m a stop would often never be
+ * marked complete at all, stalling tour progress.
+ */
 export const DEFAULT_NAVIGATION_THRESHOLDS: NavigationThresholds = {
   maxAccuracyM: 65,
   minMovementM: 1,
   offRouteDistanceM: 10,
   offRouteClearCount: 1,
-  approachRadiusM: 40,
+  approachRadiusM: 30,
   arrivalRadiusM: 20,
   arrivalDwellRadiusM: 30,
   arrivalDwellMs: 10_000,

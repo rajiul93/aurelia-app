@@ -1,7 +1,19 @@
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { useQueryClient } from "@tanstack/react-query";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useFocusEffect,
+  useLocalSearchParams,
+  useRouter,
+} from "expo-router";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -16,7 +28,6 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Spacing } from "@/constants/theme";
 import { useDeviceHeading } from "@/hooks/use-device-heading";
-import { useNavigationApproachAudio } from "@/hooks/use-navigation-approach-audio";
 import { useNavigationSession } from "@/hooks/use-navigation-session";
 import { useInstalledTourView } from "@/hooks/use-installed-tour-view";
 import { useMapPackReady } from "@/hooks/use-map-pack-ready";
@@ -31,9 +42,11 @@ import { getFloorScope } from "@/lib/bundle/floor-routing";
 import { orderSpotsByRoute } from "@/lib/bundle/route-order";
 import { useFloorSelection } from "@/hooks/use-floor-selection";
 import { isMapLibreNativeAvailable } from "@/lib/map/native-available";
+import { speakApproach } from "@/lib/navigation/approach-voice";
 import { ensureOfflineMapPack, readMapPackMeta } from "@/lib/map/offline-pack";
 import { getNextIncompleteSpot } from "@/lib/navigation/proximity";
 import { queryKeys } from "@/lib/query/keys";
+import { useRemoteConfig } from "@/store/release-config-store";
 import { useTourProgressStore } from "@/store/tour-progress-store";
 
 const TourMapView = lazy(() =>
@@ -45,7 +58,8 @@ const TourMapView = lazy(() =>
 export default function TourNavigationScreen() {
   const router = useRouter();
   const theme = useTheme();
-  const { t } = useStrings();
+  const { t, language } = useStrings();
+  const remote = useRemoteConfig();
   const queryClient = useQueryClient();
   const { tourId: routeTourId, floorId: initialFloorId } =
     useLocalSearchParams<{ tourId: string; floorId?: string }>();
@@ -61,9 +75,24 @@ export default function TourNavigationScreen() {
   const completedSpotIds =
     useTourProgressStore((state) => state.byTourId[tourId ?? ""]?.completedSpotIds) ??
     [];
-  const [approachSpotId, setApproachSpotId] = useState<string | null>(null);
   const [mapReloadKey, setMapReloadKey] = useState(0);
   const [mapLoadFailed, setMapLoadFailed] = useState(false);
+
+  // Pushing a spot detail leaves this screen mounted, so the GPS session keeps
+  // running and would announce the next stop from behind the stack. Tracked in
+  // a ref rather than via useIsFocused(): `enableFreeze(true)` +
+  // `freezeOnBlur` stop a blurred screen from re-rendering, so a state-based
+  // flag is not guaranteed to reach the GPS callback — and reading a ref keeps
+  // onApproachSpot stable, which the tracking effect depends on.
+  const isFocusedRef = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      isFocusedRef.current = true;
+      return () => {
+        isFocusedRef.current = false;
+      };
+    }, []),
+  );
 
   // The walk runs on one floor: its spots, its route. Crossing floors is a
   // transition point, not a route edge.
@@ -100,7 +129,7 @@ export default function TourNavigationScreen() {
     )?.title;
   }, [nextSpot, preferences]);
 
-  // Localized stop names for the map tap popup, keyed by spot id.
+  // Localized stop names keyed by spot id, spoken by the approach cue.
   const stopTitleById = useMemo(() => {
     const titles: Record<string, string> = {};
     if (!preferences) {
@@ -122,9 +151,24 @@ export default function TourNavigationScreen() {
     return titles;
   }, [orderedSpots, preferences]);
 
-  const approachSpot = useMemo(
-    () => orderedSpots.find((spot) => spot.id === approachSpotId) ?? null,
-    [approachSpotId, orderedSpots],
+  // Spoken once when the walker comes within approachRadiusM of the next
+  // incomplete stop — never for whichever pin happens to be nearest. TTS from
+  // the bundle's own title, so it works offline; the recorded narration that
+  // used to auto-play here was removed deliberately (see CLAUDE.md §12).
+  const announceApproach = useCallback(
+    (spotId: string) => {
+      if (!isFocusedRef.current || !remote.enableVoiceGuidance) {
+        return;
+      }
+
+      const title = stopTitleById[spotId];
+      if (!title) {
+        return;
+      }
+
+      speakApproach(spotId, t("nav.approachVoice", { title }), language);
+    },
+    [language, remote.enableVoiceGuidance, stopTitleById, t],
   );
 
   const { canNavigate, snapshot, isAwaitingLocation, locationStatus } =
@@ -133,14 +177,8 @@ export default function TourNavigationScreen() {
       content: content ?? undefined,
       floorId: selectedFloorId,
       enabled: Boolean(tourId && content),
-      onApproachSpot: setApproachSpotId,
+      onApproachSpot: announceApproach,
     });
-
-  useNavigationApproachAudio(
-    tourId ?? "",
-    approachSpot,
-    Boolean(approachSpotId && approachSpot),
-  );
 
   const heading = useDeviceHeading(canNavigate);
 
@@ -255,7 +293,6 @@ export default function TourNavigationScreen() {
           floorId={selectedFloorId}
           orderedSpots={orderedSpots}
           snapshot={snapshot}
-          stopTitleById={stopTitleById}
           onLoadError={() => setMapLoadFailed(true)}
         />
       </Suspense>

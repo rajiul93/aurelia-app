@@ -106,10 +106,10 @@ Last updated: **2026-07-20** (Account → subscribe lag + plan-page contrast ove
   anchored at its lat/lng above the footprint line; number rendered as **RN `<Text>`** (no MapLibre
   glyphs → offline-safe). [src/components/navigation/stop-pin.tsx](src/components/navigation/stop-pin.tsx)
 - ✅ **Start-point pin** — stop "1" emphasized (larger head, brand-gold ring).
-- ✅ **Stop pin tap → popup → detail** — tapping a pin opens a `StopCallout` popup (numbered badge +
-  localized stop name + **"View Details"**); "View Details" routes to `/tour/{tourId}/spot/{spotId}`.
-  Tapping the map/close dismisses it. All client-side/offline.
-  [src/components/navigation/stop-callout.tsx](src/components/navigation/stop-callout.tsx),
+- ✅ **Stop pin tap → detail, one tap** — tapping a pin routes straight to
+  `/tour/{tourId}/spot/{spotId}`. Client-side/offline. (Was pin → `StopCallout` popup → "View
+  Details"; the popup was an extra tap for a name the detail page shows anyway, and was removed
+  along with `nav.viewDetails` and `StopPin`'s `selected` state.)
   [src/components/navigation/tour-map-view.tsx](src/components/navigation/tour-map-view.tsx)
 - ✅ **Refresh button** — remounts the map (rebuilds all layers), invalidates installed-content query,
   restarts nav session, rebuilds the pack if incomplete.
@@ -118,8 +118,14 @@ Last updated: **2026-07-20** (Account → subscribe lag + plan-page contrast ove
   `watchHeadingAsync` (no new native dep).
   [src/hooks/use-device-heading.ts](src/hooks/use-device-heading.ts),
   [src/components/navigation/compass-overlay.tsx](src/components/navigation/compass-overlay.tsx)
-- ✅ **Voice guidance** — off-route TTS + approach recorded-audio (pre-existing) **+ new arrival TTS**
-  ("You have arrived…", en/es/fr, de-duped per stop). Gated by `enableVoiceGuidance` (default **true**).
+- ✅ **Voice guidance — all TTS, all offline.** Three cues, each de-duped per stop and gated by
+  `enableVoiceGuidance` (default **true**): off-route, **approach at 30 m** ("Please proceed to
+  {title}", title read from the installed bundle), and arrival at 20 m ("You have arrived…").
+  en/es/fr. The approach cue is gated on the nav screen being focused, so a pushed spot detail is
+  not narrated from behind the stack.
+  ⚠️ The **recorded** approach narration (`useNavigationApproachAudio`) was **deliberately removed** —
+  spot audio is now play-on-demand from the spot page only. See §12 (2026-07-20).
+  [src/lib/navigation/approach-voice.ts](src/lib/navigation/approach-voice.ts),
   [src/lib/navigation/arrival-voice.ts](src/lib/navigation/arrival-voice.ts),
   [src/hooks/use-navigation-session.ts](src/hooks/use-navigation-session.ts)
 - ✅ **Performance** — react-query `networkMode: "offlineFirst"`; map lazy-loaded; feature builders
@@ -338,7 +344,7 @@ Last updated: **2026-07-20** (Account → subscribe lag + plan-page contrast ove
 | Route footprints | ✅ | Local `content.json`; straight-line fallback; renders once base tiles load offline |
 | Stop pins (teardrop) | ✅ | RN `Marker` per spot-with-coords at its lat/lng, above the route; null-coord spots skipped (#4.1) |
 | Start point "1" + numbering | ✅ | Emphasized start pin; numbers are RN text (glyph-independent) |
-| Stop pin tap → popup → detail | ✅ | Popup (name + View Details) → `/tour/{tourId}/spot/{spotId}` |
+| Stop pin tap → detail | ✅ | One tap → `/tour/{tourId}/spot/{spotId}` (callout popup removed) |
 | User live location | ✅ | Smoothed marker, camera follow |
 | Base tiles/style offline | ✅ | Pack always built; zoom 12–17; on-device verification pending |
 
@@ -355,8 +361,15 @@ Last updated: **2026-07-20** (Account → subscribe lag + plan-page contrast ove
 - **Data flow:** `useInstalledTourView(tourId)` → `content` → `orderSpotsByRoute` /
   `buildRouteCoordinates` → `splitRouteAtIndex`; live GPS via `useNavigationSession` produces a
   `snapshot` (`displayLocation`, `displayBearing`, `proximity`, `status`, `walkTrail`).
-- **Thresholds:** approach 40 m, arrival 20 m, dwell 30 m/10 s, off-route 10 m — `DEFAULT_NAVIGATION_
-  THRESHOLDS` in [src/lib/navigation/types.ts](src/lib/navigation/types.ts).
+- **Thresholds:** approach **30 m**, arrival 20 m, dwell 30 m/10 s, off-route 10 m —
+  `DEFAULT_NAVIGATION_THRESHOLDS` in [src/lib/navigation/types.ts](src/lib/navigation/types.ts).
+- ⚠️ **Invariant: `approachRadiusM` > `arrivalRadiusM`.** Both are measured against the same *next
+  incomplete* spot, and crossing the arrival radius completes that spot — which advances the next
+  one. So an approach radius **inside** the arrival radius describes a window that never opens: the
+  approach cue is silently never spoken. Tightening arrival instead is not the answer either — real
+  outdoor GPS error in Rome is 10–20 m, so a ~6 m arrival would often never fire and tour progress
+  would stall. Guarded by a test in
+  [navigation.test.ts](src/lib/navigation/navigation.test.ts).
 - **GPS watch:** `Accuracy.Balanced`, `timeInterval: 1_000`, **`distanceInterval: 0`**. The distance
   gate must stay 0 — at 5 m a user standing still (exactly what someone who just opened the map from
   a spot page is doing) received no callbacks at all and no marker ever appeared. Same value in
@@ -384,6 +397,36 @@ Last updated: **2026-07-20** (Account → subscribe lag + plan-page contrast ove
 ---
 
 ## 12. Changelog
+
+- **2026-07-20** — **One-tap pin → detail, and an approach announcement at 30 m.**
+  - **Pin tap goes straight to the stop.** The `StopCallout` popup in between was an extra tap for a
+    name the detail page shows anyway. Removed with it: `selectedStopId` state, the callout `Marker`,
+    the now-unused `stopTitleById` **prop** on `TourMapView` (nav still computes the map — the
+    approach cue speaks from it), `useStrings` in the map view, `StopPin`'s `selected` prop +
+    `headSelected` style, `stop-callout.tsx`, and `nav.viewDetails` in all three locales. Each
+    deletion was grep-verified as an orphan first.
+  - **Approach TTS at 30 m**, not 10 m as first drafted. **10 m could never have fired**: approach and
+    arrival are both measured against the same *next incomplete* spot, and crossing arrival (20 m)
+    completes that spot, advancing `getNextIncompleteSpot` — so by 10 m the cue is being evaluated
+    against the *following* stop. The feature would have shipped silently dead. Tightening arrival to
+    ~6 m instead was rejected: outdoor GPS error in Rome is 10–20 m, so stops would often never
+    complete and progress would stall. **The invariant `approachRadiusM > arrivalRadiusM` is now
+    documented on the constant and asserted by a test** — this is exactly the class of bug that hides.
+  - New [approach-voice.ts](src/lib/navigation/approach-voice.ts), a deliberate mirror of
+    `arrival-voice.ts` (per-spot de-dupe, `Speech.stop()` then `speak`). `resetApproachVoice()` runs
+    in the session cleanup beside `resetArrivalVoice()`. New `nav.approachVoice` string (en/es/fr).
+  - **Focus gate uses `useFocusEffect` + a ref, not `useIsFocused()`.** Pushing a spot detail leaves
+    nav mounted and the GPS session running, so the cue needs gating — but `enableFreeze(true)` +
+    `freezeOnBlur` stop a blurred screen from re-rendering, so a state-based flag is not guaranteed
+    to reach the GPS callback. Reading a ref also keeps `onApproachSpot` stable, preserving the
+    trimmed tracking-effect deps from the fix earlier today.
+  - ⚠️ **`useNavigationApproachAudio` deleted — this is an intentional product removal, not an
+    oversight.** Walking up to a stop no longer auto-plays its recorded narration; the audio is now
+    play-on-demand from the spot page's `SpotAudioPlayer`. §2 updated to match.
+  - `tsc` clean; **162 → 164 tests**; lint at baseline (0 errors, 31 warnings).
+  - ⏳ On-device verification pending (emulator cannot test GPS, §11): one tap opens the stop; ~30 m
+    out speaks the localized title once with no narration clip, then arrival TTS at 20 m; opening a
+    spot detail from the map silences the approach cue.
 
 - **2026-07-20** — **Spot → Map: the user's own position now appears on the first open.** Reported as
   "opening the map from a spot page shows the route but not my location the first time, and it keeps
