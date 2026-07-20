@@ -5,6 +5,7 @@ import { lineString } from "@turf/helpers";
 
 import {
   createNavigationSessionInternals,
+  hasLocationFix,
   processBootstrapLocation,
   processLocationUpdate,
   type NavigationSessionInternals,
@@ -121,6 +122,17 @@ export const useNavigationSessionStore = create<NavigationSessionState>(
       const state = get();
 
       if (!state.isTracking || !state.internals) {
+        return null;
+      }
+
+      // The bootstrap fix exists only to fill the gap before the first watch
+      // update, and it is resolved in parallel with the watch — so it can land
+      // late. Applying it then would not merely nudge the marker: the
+      // poor-accuracy branch of processBootstrapLocation returns an empty
+      // walkTrail, a null snappedLocation and zero progress, wiping the walk.
+      // Once any fix has arrived this one is obsolete regardless of timestamps
+      // (last-known is by definition older, and a live fix always beats it).
+      if (hasLocationFix(state.snapshot)) {
         return null;
       }
 

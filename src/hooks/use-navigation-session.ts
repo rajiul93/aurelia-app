@@ -17,7 +17,10 @@ import {
   stopOffRouteWarning,
 } from "@/lib/navigation/off-route-voice";
 import { buildRouteCoordinates } from "@/lib/navigation/route-geometry";
-import type { LocationUpdateResult } from "@/lib/navigation/process-location-update";
+import {
+  hasLocationFix,
+  type LocationUpdateResult,
+} from "@/lib/navigation/process-location-update";
 import { hasNavigationGeoData } from "@/lib/navigation/validate-geo";
 import { getFloorScope } from "@/lib/bundle/floor-routing";
 import { orderSpotsByRoute } from "@/lib/bundle/route-order";
@@ -78,14 +81,6 @@ function handleLocationResult(
   }
 }
 
-function hasLocationFix(
-  snapshot: ReturnType<
-    typeof useNavigationSessionStore.getState
-  >["snapshot"],
-) {
-  return Boolean(snapshot?.displayLocation ?? snapshot?.rawLocation);
-}
-
 export function useNavigationSession({
   tourId,
   content,
@@ -114,6 +109,22 @@ export function useNavigationSession({
   const snapshot = useNavigationSessionStore((state) => state.snapshot);
   const isTracking = useNavigationSessionStore((state) => state.isTracking);
   const subscriptionRef = useRef<Location.LocationSubscription | null>(null);
+  // Everything handleLocationResult needs that is *not* a reason to restart GPS.
+  // These churn for unrelated reasons — `t` changes whenever the app-content
+  // query returns a new object, the voice flag with any remote-config sync — and
+  // listing them as effect dependencies tore down the session, whose cleanup
+  // calls reset() and so wiped the user's position mid-walk. Written in an
+  // effect, not during render (unsafe under concurrent rendering).
+  const handlersRef = useRef({
+    tourId,
+    markSpotComplete,
+    onApproachSpot,
+    onArriveSpot,
+    voiceEnabled: remote.enableVoiceGuidance,
+    offRouteMessage: "",
+    arrivedMessage: "",
+    language,
+  });
   // Kept in a ref so the tracking effect can read the latest content without
   // depending on it — content's identity churns on query refresh, and
   // re-subscribing to GPS on every churn would drop the fix. Written in an
@@ -126,6 +137,27 @@ export function useNavigationSession({
   useEffect(() => {
     contentRef.current = content;
   }, [content]);
+
+  useEffect(() => {
+    handlersRef.current = {
+      tourId,
+      markSpotComplete,
+      onApproachSpot,
+      onArriveSpot,
+      voiceEnabled: remote.enableVoiceGuidance,
+      offRouteMessage: t("nav.offRouteVoice"),
+      arrivedMessage: t("nav.arrivedVoice"),
+      language,
+    };
+  }, [
+    language,
+    markSpotComplete,
+    onApproachSpot,
+    onArriveSpot,
+    remote.enableVoiceGuidance,
+    t,
+    tourId,
+  ]);
 
   // Navigation is available for any installed tour with usable geo data. The
   // enableGpsNavigation remote flag no longer gates offline navigation; voice
@@ -190,30 +222,36 @@ export function useNavigationSession({
         completedSpotIds,
       });
 
-      const initial = await resolveBootstrapLocation();
-
-      if (!cancelled && initial) {
-        const bootstrapResult = ingestBootstrapFix(toGpsFix(initial));
-        if (bootstrapResult) {
-          setLocationStatus("ready");
-          handleLocationResult(bootstrapResult, {
-            tourId,
-            markSpotComplete,
-            onApproachSpot,
-            onArriveSpot,
-            voiceEnabled: remote.enableVoiceGuidance,
-            offRouteMessage: t("nav.offRouteVoice"),
-            arrivedMessage: t("nav.arrivedVoice"),
-            language,
-          });
+      // Fire-and-forget, deliberately not awaited. Resolving a first fix can
+      // take seconds (a cold device has no last-known position, so it falls
+      // through to a live fix with a timeout) and the watch below used to sit
+      // behind it — leaving a window with no subscription at all, during which
+      // any fix that arrived had nobody to receive it.
+      //
+      // Racing the watch is safe because ingestBootstrapFix refuses to apply
+      // once a real fix has landed; see the guard in navigation-session-store.
+      void resolveBootstrapLocation().then((initial) => {
+        if (cancelled || !initial) {
+          return;
         }
-      }
 
-      subscriptionRef.current = await Location.watchPositionAsync(
+        const bootstrapResult = ingestBootstrapFix(toGpsFix(initial));
+        if (!bootstrapResult) {
+          return;
+        }
+
+        setLocationStatus("ready");
+        handleLocationResult(bootstrapResult, handlersRef.current);
+      });
+
+      const subscription = await Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.Balanced,
-          timeInterval: 2_000,
-          distanceInterval: 5,
+          timeInterval: 1_000,
+          // No distance gate. At 5 m a user standing still — which is exactly
+          // what someone who just opened the map from a spot page is doing —
+          // received no updates at all, so the marker never appeared.
+          distanceInterval: 0,
         },
         (position) => {
           const result = ingestFix(toGpsFix(position));
@@ -224,18 +262,18 @@ export function useNavigationSession({
 
           setLocationStatus("ready");
 
-          handleLocationResult(result, {
-            tourId,
-            markSpotComplete,
-            onApproachSpot,
-            onArriveSpot,
-            voiceEnabled: remote.enableVoiceGuidance,
-            offRouteMessage: t("nav.offRouteVoice"),
-            arrivedMessage: t("nav.arrivedVoice"),
-            language,
-          });
+          handleLocationResult(result, handlersRef.current);
         },
       );
+
+      // The effect may have been cleaned up while we awaited the subscription;
+      // its cleanup already ran, so nothing else will remove this one.
+      if (cancelled) {
+        subscription.remove();
+        return;
+      }
+
+      subscriptionRef.current = subscription;
     }
 
     void startTracking();
@@ -266,20 +304,19 @@ export function useNavigationSession({
       reset();
       setLocationStatus("pending");
     };
+    // Only what genuinely warrants tearing down GPS and starting over: a
+    // different tour, a different floor (different route), or navigation
+    // becoming (un)available. The rest reaches the callbacks through
+    // handlersRef. The zustand actions below are stable for the store's
+    // lifetime, so they never trigger a restart.
   }, [
     canNavigate,
     floorId,
     ingestBootstrapFix,
     ingestFix,
-    language,
-    markSpotComplete,
-    onApproachSpot,
-    onArriveSpot,
-    remote.enableVoiceGuidance,
     reset,
     startSession,
     stopSession,
-    t,
     tourId,
   ]);
 

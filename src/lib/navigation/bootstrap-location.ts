@@ -28,7 +28,13 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number) {
 
 /**
  * Returns a location fix as quickly as possible: cached last-known first, then
- * a balanced-accuracy current fix (with timeout so UI never hangs forever).
+ * a live fix (with timeout so UI never hangs forever).
+ *
+ * The live fallback asks for `Low` rather than `Balanced` on purpose. It only
+ * has to put a marker on screen — the watch delivers the accurate position
+ * moments later — and `Low` resolves from wifi/network triangulation, which
+ * keeps working inside a building where GPS struggles. That is the case this
+ * path exists for: a first-time visitor indoors, where last-known is empty.
  */
 export async function resolveBootstrapLocation(): Promise<Location.LocationObject | null> {
   try {
@@ -47,7 +53,7 @@ export async function resolveBootstrapLocation(): Promise<Location.LocationObjec
   try {
     return await withTimeout(
       Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
+        accuracy: Location.Accuracy.Low,
       }),
       CURRENT_FIX_TIMEOUT_MS,
     );

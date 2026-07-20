@@ -357,6 +357,13 @@ Last updated: **2026-07-20** (Account → subscribe lag + plan-page contrast ove
   `snapshot` (`displayLocation`, `displayBearing`, `proximity`, `status`, `walkTrail`).
 - **Thresholds:** approach 40 m, arrival 20 m, dwell 30 m/10 s, off-route 10 m — `DEFAULT_NAVIGATION_
   THRESHOLDS` in [src/lib/navigation/types.ts](src/lib/navigation/types.ts).
+- **GPS watch:** `Accuracy.Balanced`, `timeInterval: 1_000`, **`distanceInterval: 0`**. The distance
+  gate must stay 0 — at 5 m a user standing still (exactly what someone who just opened the map from
+  a spot page is doing) received no callbacks at all and no marker ever appeared. Same value in
+  [useHostVisitorLocation.ts](src/hooks/useHostVisitorLocation.ts).
+- **Start order:** permission → `startSession` → **bootstrap fired without `await`** →
+  `watchPositionAsync`. The bootstrap must not block the subscription; it is only there to fill the
+  gap before the first watch fix, and `ingestBootstrapFix` drops it once any fix has landed.
 
 ---
 
@@ -371,6 +378,49 @@ Last updated: **2026-07-20** (Account → subscribe lag + plan-page contrast ove
 ---
 
 ## 12. Changelog
+
+- **2026-07-20** — **Spot → Map: the user's own position now appears on the first open.** Reported as
+  "opening the map from a spot page shows the route but not my location the first time, and it keeps
+  reloading". Causes, all in the GPS start path:
+  - **The watch had a 5 m distance gate.** `watchPositionAsync` used `distanceInterval: 5`, which on
+    Android suppresses callbacks entirely until the user physically moves 5 m — and someone who just
+    opened the map is standing still, looking at the phone. Now `0`. The same value was in
+    [useHostVisitorLocation.ts](src/hooks/useHostVisitorLocation.ts) (Find Host had the same latent
+    bug); fixed together.
+  - **The subscription was created *after* an awaited bootstrap.** `resolveBootstrapLocation()` was
+    awaited before `watchPositionAsync`, and it can take ~6 s (a live fix behind a timeout). During
+    that window no subscription existed, so a fix arriving then had nobody to receive it. The
+    bootstrap is now fired without `await`, in parallel.
+  - **Racing the watch needed a guard, and the guard mattered more than it looked.**
+    `ingestBootstrapFix` applied unconditionally, so a late bootstrap fix could overwrite a newer
+    watch fix. Not merely a marker jump: the poor-accuracy branch of `processBootstrapLocation`
+    returns `walkTrail: []`, `snappedLocation: null`, `traversedFraction: 0`, so it **erases the
+    walk**. The store now drops a bootstrap fix once `hasLocationFix(snapshot)` — a shared predicate
+    moved into [process-location-update.ts](src/lib/navigation/process-location-update.ts) so the
+    store and the hook cannot disagree. Timestamp comparison was considered and rejected: last-known
+    is older by definition and a live fix always beats it, so it would add state for nothing.
+  - **Two permission prompts raced.** `TourMapView` called `LocationManager.requestPermissions()`
+    while `useNavigationSession` was already requesting; on Android a second request can cancel the
+    first. Removed — the map draws the user from `snapshot`, never from MapLibre's native puck.
+  - **The tracking effect restarted for unrelated reasons.** Its deps included `t`, `language`,
+    `onApproachSpot` and the voice flag; `t` changes whenever the app-content query returns a new
+    object. The cleanup calls `reset()`, so each restart **wiped the user's position mid-walk**.
+    Those inputs moved into a `handlersRef` (written in an effect, not during render — the React
+    Compiler rule from 2026-07-17 holds); deps are now `canNavigate`/`tourId`/`floorId` plus the
+    stable zustand actions.
+  - Bootstrap's live fallback asks for `Accuracy.Low` instead of `Balanced` — it only has to place a
+    first marker, and wifi/network triangulation keeps working indoors where GPS struggles, which is
+    exactly the case it exists for.
+  - New [navigation-session-store.test.ts](src/store/navigation-session-store.test.ts) (4 tests,
+    **158 → 162**) covering the guard. Verified it *fails* without the guard (2 failures) rather than
+    passing for the wrong reason. `tsc` clean; lint at baseline (0 errors, 31 warnings).
+  - ⏳ **Not done, deliberately:** the style-retry map remount (`<Map key={styleAttempt}>`) stays. It
+    only runs when a style load genuinely fails and was added to fix a real problem (§2, inline
+    style); whether it still causes visible reloads must be observed on device after these fixes,
+    not assumed.
+  - ⏳ On-device verification pending — the emulator cannot test this (no real GPS movement, §11).
+    Acceptance: fresh install → spot page → map button → **one** permission prompt and a marker
+    within seconds **while standing still**; then 60+ s on the same screen with no session restart.
 
 - **2026-07-20** — **Account → subscribe: snappier nav + readable plan form on the photo bg.** Global
  `AppBackground` unchanged (one photo under every screen). Account tab: lighter `FadeInDown` (no

@@ -2,7 +2,6 @@ import {
   Camera,
   GeoJSONSource,
   Layer,
-  LocationManager,
   Map,
   Marker,
   type CameraRef,
@@ -220,9 +219,10 @@ export function TourMapView({
     [displayLocation, tourBounds],
   );
 
-  useEffect(() => {
-    void LocationManager.requestPermissions();
-  }, []);
+  // No permission request here. useNavigationSession already asks, and this
+  // component mounts at the same moment — two prompts racing, which on Android
+  // can cancel the first. The map draws the user from `snapshot`, not from
+  // MapLibre's native location puck, so it needs no permission of its own.
 
   useEffect(() => {
     if (!mapReadyRef.current || !initialTourFitRef.current || !displayLocation) {

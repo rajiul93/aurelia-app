@@ -44,6 +44,17 @@ export type NavigationSessionSnapshot = {
   walkTrail: GeoPoint[];
 };
 
+/**
+ * Whether the session has any position to draw yet. Shared so the store and the
+ * hook cannot disagree about what "we have a fix" means — the store uses it to
+ * reject a late bootstrap fix, the hook to decide whether it is still waiting.
+ */
+export function hasLocationFix(
+  snapshot: NavigationSessionSnapshot | null | undefined,
+) {
+  return Boolean(snapshot?.displayLocation ?? snapshot?.rawLocation);
+}
+
 export type NavigationSessionInternals = {
   smoothState: SmoothLocationState;
   offRouteTracker: OffRouteTracker;

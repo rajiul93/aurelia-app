@@ -59,8 +59,10 @@ export function useHostVisitorLocation(options?: UseHostVisitorLocationOptions) 
       subscriptionRef.current = await Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.Balanced,
-          timeInterval: 2000,
-          distanceInterval: 5,
+          timeInterval: 1000,
+          // No distance gate: at 5 m a stationary visitor received no updates
+          // at all. Same fix as the tour navigation watch.
+          distanceInterval: 0,
         },
         (location) => {
           setPosition({
