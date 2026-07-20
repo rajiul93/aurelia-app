@@ -16,16 +16,23 @@ import { ScreenHeader } from '@/components/screen-header';
 import { CheckoutAuthSheet } from '@/components/subscribe/checkout-auth-sheet';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { GlassCard } from '@/components/ui/glass-card';
 import { COLOSSEUM_TOUR_ID } from '@/constants/tours';
 import { Spacing } from '@/constants/theme';
 import { useCheckout } from '@/hooks/mutations/use-checkout';
+import { useAppContent } from '@/hooks/queries/use-app-content';
 import { useSubscriptionConfig } from '@/hooks/queries/use-subscription-config';
 import { usePurchaseStatus } from '@/hooks/queries/use-purchase-status';
 import { useStrings } from '@/hooks/use-strings';
 import { useTheme } from '@/hooks/use-theme';
 import { refreshEntitlements } from '@/lib/entitlements/refresh';
+import {
+  getCurrentTimeOfDay,
+  resolveAppBackgroundUrl,
+} from '@/lib/app-content/resolve-asset';
 import { computeSubscriptionPrice } from '@/lib/subscription-pricing';
 import { useAuthStore } from '@/store/auth-store';
+import { useRemoteConfig } from '@/store/release-config-store';
 
 type Phase = 'form' | 'processing' | 'finalizing';
 
@@ -43,6 +50,13 @@ export default function SubscribeScreen() {
   const queryClient = useQueryClient();
   const sessionToken = useAuthStore((state) => state.sessionToken);
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
+  const { data: appContent } = useAppContent();
+  const { venueTimezone } = useRemoteConfig();
+  const backgroundUrl = resolveAppBackgroundUrl(
+    appContent?.data.assets,
+    getCurrentTimeOfDay(venueTimezone),
+  );
+  const heroOnDark = Boolean(backgroundUrl);
 
   const {
     data: configResponse,
@@ -187,13 +201,8 @@ export default function SubscribeScreen() {
       <ThemedView transparent style={styles.container}>
         <SafeAreaView style={styles.safeArea} edges={['top']}>
           <View style={styles.content}>
-            <ScreenHeader title={t('subscribe.title')} />
-            <View
-              style={[
-                styles.card,
-                { backgroundColor: theme.backgroundElement },
-              ]}
-            >
+            <ScreenHeader title={t('subscribe.title')} onDark={heroOnDark} />
+            <GlassCard style={styles.card}>
               <ThemedText type="subtitle">{t('subscribe.success')}</ThemedText>
               <ThemedText themeColor="textSecondary">
                 {t('subscribe.successHint')}
@@ -214,7 +223,7 @@ export default function SubscribeScreen() {
                   {t('subscribe.done')}
                 </ThemedText>
               </Pressable>
-            </View>
+            </GlassCard>
           </View>
         </SafeAreaView>
       </ThemedView>
@@ -226,13 +235,8 @@ export default function SubscribeScreen() {
       <ThemedView transparent style={styles.container}>
         <SafeAreaView style={styles.safeArea} edges={['top']}>
           <View style={styles.content}>
-            <ScreenHeader title={t('subscribe.title')} />
-            <View
-              style={[
-                styles.card,
-                { backgroundColor: theme.backgroundElement },
-              ]}
-            >
+            <ScreenHeader title={t('subscribe.title')} onDark={heroOnDark} />
+            <GlassCard style={styles.card}>
               <ThemedText themeColor="textSecondary">
                 {t('subscribe.errorPayment')}
               </ThemedText>
@@ -252,7 +256,7 @@ export default function SubscribeScreen() {
                   {t('subscribe.title')}
                 </ThemedText>
               </Pressable>
-            </View>
+            </GlassCard>
           </View>
         </SafeAreaView>
       </ThemedView>
@@ -265,7 +269,13 @@ export default function SubscribeScreen() {
         <SafeAreaView style={styles.safeArea} edges={['top']}>
           <View style={[styles.content, styles.centered]}>
             <ActivityIndicator size="large" color={theme.primary} />
-            <ThemedText themeColor="textSecondary" style={styles.centerText}>
+            <ThemedText
+              themeColor={heroOnDark ? undefined : 'textSecondary'}
+              style={[
+                styles.centerText,
+                heroOnDark ? styles.onDarkMuted : null,
+              ]}
+            >
               {phase === 'finalizing'
                 ? t('subscribe.finalizing')
                 : t('subscribe.processing')}
@@ -286,18 +296,22 @@ export default function SubscribeScreen() {
           <ScreenHeader
             title={t('subscribe.title')}
             subtitle={t('subscribe.subtitle')}
+            onDark={heroOnDark}
           />
 
           {configLoading ? <ActivityIndicator color={theme.primary} /> : null}
 
           {configError || (!configLoading && !config) ? (
-            <ThemedText themeColor="textSecondary">
+            <ThemedText
+              themeColor={heroOnDark ? undefined : 'textSecondary'}
+              style={heroOnDark ? styles.onDarkMuted : null}
+            >
               {t('subscribe.errorGeneric')}
             </ThemedText>
           ) : null}
 
           {config ? (
-            <>
+            <GlassCard style={styles.formCard}>
               <ThemedText type="smallBold">
                 {t('subscribe.planLabel')}
               </ThemedText>
@@ -316,7 +330,7 @@ export default function SubscribeScreen() {
                             : theme.backgroundSelected,
                           backgroundColor: selected
                             ? theme.backgroundSelected
-                            : 'transparent',
+                            : theme.backgroundElement,
                         },
                       ]}
                     >
@@ -347,7 +361,7 @@ export default function SubscribeScreen() {
                             : theme.backgroundSelected,
                           backgroundColor: selected
                             ? theme.backgroundSelected
-                            : 'transparent',
+                            : theme.backgroundElement,
                         },
                       ]}
                     >
@@ -360,7 +374,7 @@ export default function SubscribeScreen() {
               {priceBreakdown ? (
                 <View
                   style={[
-                    styles.card,
+                    styles.pricePanel,
                     { backgroundColor: theme.backgroundElement },
                   ]}
                 >
@@ -443,7 +457,7 @@ export default function SubscribeScreen() {
                       : t('subscribe.title')}
                 </ThemedText>
               </Pressable>
-            </>
+            </GlassCard>
           ) : null}
         </ScrollView>
       </SafeAreaView>
@@ -513,9 +527,22 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
   },
   card: {
-    borderRadius: Spacing.three,
-    padding: Spacing.four,
     gap: Spacing.two,
+  },
+  formCard: {
+    gap: Spacing.three,
+    alignSelf: 'stretch',
+  },
+  pricePanel: {
+    borderRadius: Spacing.two,
+    padding: Spacing.three,
+    gap: Spacing.two,
+  },
+  onDarkMuted: {
+    color: 'rgba(255, 255, 255, 0.85)',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 5,
   },
   priceRow: {
     flexDirection: 'row',

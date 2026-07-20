@@ -8,7 +8,7 @@
 
 **Status legend:** ✅ Completed · 🚧 In Progress · ⚠️ Known Issue · ⏳ Pending · ❌ Not Started
 
-Last updated: **2026-07-17** (venue timezone, offline app-content, perf/lint pass)
+Last updated: **2026-07-20** (Account → subscribe lag + plan-page contrast over global bg)
 
 ---
 
@@ -250,10 +250,27 @@ Last updated: **2026-07-17** (venue timezone, offline app-content, perf/lint pas
   (`cachePolicy: 'disk'`), so persisting `aurelia/app-content.json` fixes it and a hand-rolled
   file cache would only duplicate what expo-image does. `Image.prefetch` warms the slots instead:
   current slot awaited, the other two fire-and-forget.
-  ⚠️ Trade-off: the OS may evict expo-image's cache under storage pressure. If that proves real
-  on-device, add a durable document-dir cache — `AppBackground`'s remote-URL contract allows it
-  without a breaking change. [lib/app-content/](src/lib/app-content/),
+  ~~⚠️ Trade-off: the OS may evict expo-image's cache under storage pressure.~~ **Covered** by the
+  bundled fallback below — an evicted cache now costs a crossfade, not a blank screen. A durable
+  document-dir cache is therefore no longer worth building. [lib/app-content/](src/lib/app-content/),
   [store/app-content-store.ts](src/store/app-content-store.ts)
+- **The first frame is a bundled asset, not a remote one** — the background URL *lives in* the
+  app-content payload, so on a fresh install there is nothing to render until the first fetch lands.
+  `assets/images/backpu-time.png` ships in the binary and is both the `source` when no URL is known
+  and the `placeholder` under a remote photo that is still decoding, so no path renders an empty
+  background. It is deliberately **light**, unlike the dark CMS photos: anything styling foreground
+  text must keep keying off the remote URL (`heroOnDark`), never off "a background exists", and the
+  dark scrims in `PageBackground` stay gated on `uri` for the same reason.
+  [lib/app-content/fallback-background.ts](src/lib/app-content/fallback-background.ts),
+  [components/page-background.tsx](src/components/page-background.tsx)
+- **The cold-start image warm belongs in `useAppBootstrap`, not in a hook** — `AppProviders` (and with
+  it react-query, `AppBackground`, and `useBackgroundPrefetch`) only mounts *after* the bootstrap
+  reports ready, so anything that hook warmed arrived after the splash had already revealed the
+  screen — it could never help the frame it was written for. The bootstrap now does the first pass.
+  The bundled asset is **awaited** (local only — the splash never waits on the network, by decision);
+  `prefetchBackgrounds` is fire-and-forget. `useBackgroundPrefetch` stays for *later* changes (new CMS
+  payload, a venueTimezone that only arrives with the first config sync).
+  [hooks/use-app-bootstrap.ts](src/hooks/use-app-bootstrap.ts)
 - **Wall-clock reads use the *venue's* zone, never the device's** — a visitor carries the zone they
   flew in with, so device-local time would show a Rome host as closed at noon and hand a lunchtime
   visitor the night background. Both `isHostAvailableNow` and `getCurrentTimeOfDay` take
@@ -354,6 +371,50 @@ Last updated: **2026-07-17** (venue timezone, offline app-content, perf/lint pas
 ---
 
 ## 12. Changelog
+
+- **2026-07-20** — **Account → subscribe: snappier nav + readable plan form on the photo bg.** Global
+ `AppBackground` unchanged (one photo under every screen). Account tab: lighter `FadeInDown` (no
+ spring), prefetch `/subscribe` route + subscription config while the tab is open; plan screen uses
+ `fade` stack transition (180 ms). Subscribe: header uses `onDark` when a CMS background URL is
+ active; plan/device/pricing live in `GlassCard` with opaque chip surfaces so light-mode text is not
+ painted directly on the dark photo.
+ [explore.tsx](src/app/(tabs)/explore.tsx), [subscribe.tsx](src/app/subscribe.tsx),
+ [screen-header.tsx](src/components/screen-header.tsx), [_layout.tsx](src/app/_layout.tsx).
+
+- **2026-07-20** — **The background is never blank on first paint.** Reported as "the background
+  takes a moment to load when the app first opens". Two causes, and the second was the real one:
+  - **The warm-up could never have worked.** `useBackgroundPrefetch` lives in
+    `ReleaseConfigSyncListener`, inside `AppProviders` — which
+    [_layout.tsx](src/app/_layout.tsx) mounts only *after* `useAppBootstrap` reports ready. So
+    react-query, `AppBackground`, and that hook all start after the splash has already revealed the
+    screen; the `<Image>` began fetching/decoding at that moment. The prefetch was structurally
+    always too late for the frame it existed to help. The first pass moved into
+    [use-app-bootstrap.ts](src/hooks/use-app-bootstrap.ts), which is what holds the splash. The
+    bundled asset is **awaited** via `Asset.loadAsync` and gated into `ready`; `prefetchBackgrounds`
+    is **fire-and-forget** — the splash must never wait on the network (product decision). Neither
+    lengthens the splash in practice: `MIN_SPLASH_MS` is already 900 ms and both run inside it.
+  - **On a fresh install there was nothing to show at all** — the background URL lives *in* the
+    app-content payload, so with no `aurelia/app-content.json` on disk the app didn't know what to
+    ask for. Added `assets/images/backpu-time.png` +
+    [fallback-background.ts](src/lib/app-content/fallback-background.ts) (one module, so the
+    preloader and the renderer can't reference different assets).
+    [page-background.tsx](src/components/page-background.tsx) now always renders an `<Image>`:
+    fallback as `source` when no URL is known, and as `placeholder` under a remote photo that is
+    still decoding. Also `cachePolicy="memory-disk"` so a re-mount doesn't decode from disk again.
+  - ⚠️ **The fallback is a *light* image; the CMS photos are dark.** So `heroOnDark` on Home stays
+    `Boolean(backgroundUrl)` — forcing it true (the obvious-looking simplification) would put white
+    section titles on a near-white background while the fallback shows. The dark scrims in
+    `PageBackground` stay gated on `uri` for the same reason. Worth re-reading before touching either.
+  - **`expo-asset` promoted to a direct dependency** (57.0.6) — it was only a transitive dep of
+    `expo`, which pnpm's strict `node_modules` does not make importable. `expo install` also appended
+    `"expo-asset"` to `app.json` `plugins`; harmless with no options, but it is a native-config
+    change, so the next build regenerates (CNG — `ios`/`android` are gitignored).
+  - Asset re-encoded losslessly to drop a fully-opaque alpha channel: **954 KB → 646 KB**, verified
+    pixel-identical. A JPEG q88 of the same image is **98 KB** with no visible banding — a further
+    ~85% cut, left as the user's call since it is lossy and a brand asset.
+  - `tsc --noEmit` clean; **158 tests** pass; lint at baseline (0 errors, 31 warnings).
+  - ⏳ On-device verification pending (see §4) — the acceptance test is: uninstall → install → open,
+    and the frame the splash reveals must already show the fallback, with the CMS photo crossfading in.
 
 - **2026-07-17** — **Venue timezone, offline app content, and a perf/lint pass.** Outcome of a
   full-project review; no new features.

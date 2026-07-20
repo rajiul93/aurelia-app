@@ -10,9 +10,16 @@ type ScreenHeaderProps = {
   title: string;
   subtitle?: string;
   onBack?: () => void;
+  /** White text over the global photo when a CMS background is active. */
+  onDark?: boolean;
 };
 
-export function ScreenHeader({ title, subtitle, onBack }: ScreenHeaderProps) {
+export function ScreenHeader({
+  title,
+  subtitle,
+  onBack,
+  onDark,
+}: ScreenHeaderProps) {
   const router = useRouter();
   const theme = useTheme();
 
@@ -30,11 +37,18 @@ export function ScreenHeader({ title, subtitle, onBack }: ScreenHeaderProps) {
         </Pressable>
       </View>
       <View style={styles.titleBlock}>
-        <ThemedText type="smallBold" style={styles.title}>
+        <ThemedText
+          type="smallBold"
+          style={[styles.title, onDark ? styles.onDarkTitle : null]}
+        >
           {title}
         </ThemedText>
         {subtitle ? (
-          <ThemedText type="small" themeColor="textSecondary">
+          <ThemedText
+            type="small"
+            themeColor={onDark ? undefined : "textSecondary"}
+            style={onDark ? styles.onDarkSubtitle : null}
+          >
             {subtitle}
           </ThemedText>
         ) : null}
@@ -66,5 +80,17 @@ const styles = StyleSheet.create({
   },
   title: {
     alignSelf: "stretch",
+  },
+  onDarkTitle: {
+    color: "#ffffff",
+    textShadowColor: "rgba(0, 0, 0, 0.55)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
+  },
+  onDarkSubtitle: {
+    color: "rgba(255, 255, 255, 0.85)",
+    textShadowColor: "rgba(0, 0, 0, 0.5)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 5,
   },
 });

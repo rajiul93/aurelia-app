@@ -4,8 +4,11 @@ import {
   Roboto_700Bold,
   useFonts,
 } from "@expo-google-fonts/roboto";
+import { Asset } from "expo-asset";
 import { useEffect, useState } from "react";
 
+import { FALLBACK_BACKGROUND } from "@/lib/app-content/fallback-background";
+import { prefetchBackgrounds } from "@/lib/app-content/prefetch-backgrounds";
 import { rescheduleAllReminders } from "@/lib/tour-reminder/scheduler";
 import { useAppContentStore } from "@/store/app-content-store";
 import { useAuthStore } from "@/store/auth-store";
@@ -26,13 +29,19 @@ import { useTourReminderStore } from "@/store/tour-reminder-store";
 const MIN_SPLASH_MS = 900;
 
 /**
- * Drives the app's offline bootstrap: loads fonts and hydrates every persisted
- * store from on-device storage. Returns `true` only once fonts are ready *and*
- * all hydration has settled, so the splash screen can stay visible until the
- * app is fully initialised offline (no network required).
+ * Drives the app's offline bootstrap: loads fonts, hydrates every persisted
+ * store from on-device storage, and warms the background image. Returns `true`
+ * only once all of that has settled, so the splash screen stays visible until
+ * the app is fully initialised offline (no network required).
+ *
+ * Warming the background belongs *here* rather than in `useBackgroundPrefetch`:
+ * the provider tree (and with it react-query, AppBackground, and that hook)
+ * only mounts once this returns true, so anything it warms arrives too late for
+ * the frame the splash reveals.
  *
  * `Promise.allSettled` guarantees a single failing store can never leave the
- * app stuck on the splash forever.
+ * app stuck on the splash forever; the asset load is `.catch()`ed for the same
+ * reason.
  */
 export function useAppBootstrap(): boolean {
   const [fontsLoaded] = useFonts({
@@ -42,6 +51,7 @@ export function useAppBootstrap(): boolean {
   });
   const [hydrated, setHydrated] = useState(false);
   const [minTimeElapsed, setMinTimeElapsed] = useState(false);
+  const [assetsWarmed, setAssetsWarmed] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setMinTimeElapsed(true), MIN_SPLASH_MS);
@@ -71,6 +81,17 @@ export function useAppBootstrap(): boolean {
         setHydrated(true);
       }
 
+      // The stores now hold whatever the disk knew, so the current slot's photo
+      // can be warmed into expo-image's cache while the splash is still up.
+      // Deliberately not awaited: this may reach the network, and the splash
+      // must never wait on it. On a warm start it is a cache hit and returns
+      // almost immediately, which is what makes the reveal seamless.
+      const { content } = useAppContentStore.getState();
+      const { venueTimezone } = useReleaseConfigStore.getState().config.remote;
+      void prefetchBackgrounds(content?.assets, venueTimezone).catch(
+        () => undefined,
+      );
+
       // Cold-start resync so timezone/clock drift self-heals. Fire-and-forget:
       // it must never hold up the splash, and needs no permission to be a no-op.
       void rescheduleAllReminders().catch(() => undefined);
@@ -81,5 +102,25 @@ export function useAppBootstrap(): boolean {
     };
   }, []);
 
-  return fontsLoaded && hydrated && minTimeElapsed;
+  useEffect(() => {
+    let cancelled = false;
+
+    // Local-only, so this never puts the splash on the network's clock: in a
+    // release build the asset is already inside the binary and resolves almost
+    // instantly (it is fetched from Metro in dev). Gating `ready` on it means
+    // the fallback is decode-ready the moment the overlay fades.
+    void Asset.loadAsync(FALLBACK_BACKGROUND)
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) {
+          setAssetsWarmed(true);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return fontsLoaded && hydrated && minTimeElapsed && assetsWarmed;
 }

@@ -78,7 +78,13 @@ export default function RootLayout() {
                 <Stack.Screen name="tour" />
                 <Stack.Screen name="pages/[key]" />
                 <Stack.Screen name="faq" />
-                <Stack.Screen name="subscribe" />
+                <Stack.Screen
+                  name="subscribe"
+                  options={{
+                    animation: "fade",
+                    animationDuration: 180,
+                  }}
+                />
               </Stack>
               <TourReminderListener />
               <TourReminderGate />

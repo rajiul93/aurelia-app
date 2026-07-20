@@ -1,9 +1,11 @@
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { useCallback, useEffect } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { AccountPanel } from '@/components/auth/account-panel';
 import { HamburgerButton } from '@/components/navigation/hamburger-button';
@@ -12,9 +14,17 @@ import { ThemedView } from '@/components/themed-view';
 import { WhyBuyCard } from '@/components/tours/why-buy-card';
 import { GlassCard } from '@/components/ui/glass-card';
 import { BottomTabInset, Spacing } from '@/constants/theme';
+import { useAppContent } from '@/hooks/queries/use-app-content';
 import { useEntitlementStatus } from '@/hooks/use-entitlement-status';
 import { useStrings } from '@/hooks/use-strings';
 import { useTheme } from '@/hooks/use-theme';
+import {
+  getCurrentTimeOfDay,
+  resolveAppBackgroundUrl,
+} from '@/lib/app-content/resolve-asset';
+import { queryKeys } from '@/lib/query/keys';
+import { subscriptionsService } from '@/services/subscriptions.service';
+import { useRemoteConfig } from '@/store/release-config-store';
 import { GoldGradientHorizontal } from '@/theme/gradients';
 
 function SubscriptionCard({
@@ -29,7 +39,7 @@ function SubscriptionCard({
 
   return (
     <Animated.View
-      entering={FadeInDown.delay(delay).duration(440).springify().damping(18)}
+      entering={FadeInDown.delay(Math.min(delay, 80)).duration(260)}
       style={styles.cardWrap}
     >
       <Pressable
@@ -71,8 +81,36 @@ function SubscriptionCard({
 
 export default function AccountScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { t } = useStrings();
   const { hasActivePlan } = useEntitlementStatus();
+  const { data: appContent } = useAppContent();
+  const { venueTimezone } = useRemoteConfig();
+  const backgroundUrl = resolveAppBackgroundUrl(
+    appContent?.data.assets,
+    getCurrentTimeOfDay(venueTimezone),
+  );
+  const heroOnDark = Boolean(backgroundUrl);
+
+  useEffect(() => {
+    if (hasActivePlan) {
+      return;
+    }
+
+    void queryClient.prefetchQuery({
+      queryKey: queryKeys.subscriptions.config,
+      queryFn: () => subscriptionsService.getConfig(),
+    });
+    router.prefetch('/subscribe');
+  }, [hasActivePlan, queryClient, router]);
+
+  const openSubscribe = useCallback(() => {
+    void queryClient.prefetchQuery({
+      queryKey: queryKeys.subscriptions.config,
+      queryFn: () => subscriptionsService.getConfig(),
+    });
+    router.push('/subscribe');
+  }, [queryClient, router]);
 
   return (
     <ThemedView transparent style={styles.container}>
@@ -89,7 +127,7 @@ export default function AccountScreen() {
             <ThemedText
               type="smallBold"
               numberOfLines={1}
-              style={styles.brandTitle}
+              style={[styles.brandTitle, heroOnDark && styles.onDarkText]}
             >
               {t('account.title')}
             </ThemedText>
@@ -97,16 +135,10 @@ export default function AccountScreen() {
 
           {/* Nothing to sell to someone who already has an active plan. */}
           {!hasActivePlan ? (
-            <SubscriptionCard
-              delay={90}
-              onPress={() => router.push('/subscribe')}
-            />
+            <SubscriptionCard delay={90} onPress={openSubscribe} />
           ) : null}
           <Animated.View
-            entering={FadeInDown.delay(20)
-              .duration(420)
-              .springify()
-              .damping(18)}
+            entering={FadeInDown.delay(20).duration(260)}
             style={styles.cardWrap}
           >
             <AccountPanel />
@@ -114,10 +146,7 @@ export default function AccountScreen() {
 
           {!hasActivePlan ? (
             <Animated.View
-              entering={FadeInDown.delay(150)
-                .duration(420)
-                .springify()
-                .damping(18)}
+              entering={FadeInDown.delay(120).duration(260)}
               style={styles.cardWrap}
             >
               <WhyBuyCard />
@@ -157,6 +186,12 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     textAlign: 'right',
     marginLeft: Spacing.three,
+  },
+  onDarkText: {
+    color: '#ffffff',
+    textShadowColor: 'rgba(0, 0, 0, 0.55)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
   },
   cardWrap: {
     alignSelf: 'stretch',
