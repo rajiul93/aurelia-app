@@ -8,7 +8,7 @@
 
 **Status legend:** ✅ Completed · 🚧 In Progress · ⚠️ Known Issue · ⏳ Pending · ❌ Not Started
 
-Last updated: **2026-07-20** (Account → subscribe lag + plan-page contrast over global bg)
+Last updated: **2026-07-21** (mobile API-key hardening + leaked secret found in `.env`)
 
 ---
 
@@ -161,6 +161,19 @@ Last updated: **2026-07-20** (Account → subscribe lag + plan-page contrast ove
 
 ## 4. Known Issues (⚠️)
 
+- ⚠️ **A real `EXPO_PUBLIC_MOBILE_API_KEY` secret is committed to git, on `main`, pushed to origin.**
+  Commit `52a5f06` (2026-07-20) uncommented `.env`'s placeholder and filled in the live key
+  (`qRhmYQkIwInfwe1GMjOYe-FNshn5lqm8gPzbGBY63o0`) — `.env` has been tracked since the repo's first
+  commit (`.gitignore` only excludes `.env*.local`, not `.env` itself), so this value is now in
+  history on the remote. The same commit also added a stray `.env.bak-1784545804` (an accidental
+  local backup file, holding the *old* placeholder-only `.env`) that has no reason to be tracked.
+  **Action needed, not yet done:** rotate `MOBILE_API_KEY` on the server (admin `.env` / Vercel env
+  var) and in this repo's `.env`, then `git rm --cached .env.bak-1784545804` and decide whether to
+  keep `.env` tracked at all going forward (if it must stay for onboarding, at minimum stop
+  committing real secrets into it — use `.env.local`, which *is* gitignored). Not fixed here since
+  rotating a shared secret and rewriting how config is distributed are both actions the user should
+  confirm.
+  ⚠️ Same commit **did** improve the *code-side* handling: see §12 (2026-07-20, API-key hardening).
 - ⚠️ **In-app Stripe purchase now fails for a phone-only buyer.** Buyers are identified by phone and
   carry no email, but Stripe needs one for the receipt — the server rejects a checkout without one
   (*"An email address is required to complete the purchase."*). The **subscribe screen must collect an
@@ -397,6 +410,23 @@ Last updated: **2026-07-20** (Account → subscribe lag + plan-page contrast ove
 ---
 
 ## 12. Changelog
+
+- **2026-07-21** — **Documentation pass over 2026-07-20's commits; found a live secret in `.env`.**
+  No new feature — the user asked for the last day's UI/other work to be checked against this file.
+  Every 2026-07-20 commit already carried its own CLAUDE.md update except one piece of `52a5f06`,
+  which bundled the documented nav/voice change together with an **undocumented** API-key hardening
+  fix in [env.ts](src/lib/env.ts): `env.mobileApiKey` used to fall back to the literal string
+  `"your-app-key"` — the same placeholder committed in `.env.example` — so a build where
+  `EXPO_PUBLIC_MOBILE_API_KEY` failed to inline would ship a key anyone could read out of the repo,
+  and every API call would *look* like it worked while authenticating as that shared placeholder.
+  `resolveMobileApiKey()` now falls back to `""` instead (server answers 401, home screen already
+  has a "Check API URL and MOBILE_API_KEY" message for that case) and warns once in `__DEV__` if the
+  key is missing. Throwing was considered and rejected — `env.ts` resolves at import time, so a throw
+  there is a crash on launch, not a friendly error screen.
+  - **While checking this, found the fix's own commit had committed a real production secret** (see
+    §4) — filed as a known issue rather than rotated, since rotating a shared credential isn't mine
+    to do unasked.
+  - No code changed in this pass beyond CLAUDE.md itself.
 
 - **2026-07-20** — **One-tap pin → detail, and an approach announcement at 30 m.**
   - **Pin tap goes straight to the stop.** The `StopCallout` popup in between was an extra tap for a
