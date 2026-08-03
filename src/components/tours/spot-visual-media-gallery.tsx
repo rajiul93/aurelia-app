@@ -114,9 +114,25 @@ export function SpotVisualMediaGallery({
       ) : null}
 
       <View style={styles.panel}>
-        {activeItem && playbackUrl ? (
+        {activeItem ? (
           <>
-            {resolvedTab === "VIDEO" ? (
+            {/*
+              The media box is reserved before its uri resolves. `playbackUrl`
+              comes from an async query, so gating the whole panel on it left
+              this View at 0px on first render and then grew the page by the
+              full media height a moment later — right as the screen appeared.
+            */}
+            {!playbackUrl ? (
+              <View
+                style={[
+                  styles.mediaBox,
+                  {
+                    aspectRatio: resolvedTab === "VIDEO" ? 16 / 9 : 4 / 3,
+                    backgroundColor: theme.backgroundSelected,
+                  },
+                ]}
+              />
+            ) : resolvedTab === "VIDEO" ? (
               <SpotVideoPlayer key={activeItem.id} url={playbackUrl} />
             ) : (
               <Image
@@ -180,6 +196,11 @@ const styles = StyleSheet.create({
   image: {
     width: "100%",
     aspectRatio: 4 / 3,
+    borderRadius: Spacing.three,
+  },
+  /** Same footprint as the media it stands in for; ratio is set per tab. */
+  mediaBox: {
+    width: "100%",
     borderRadius: Spacing.three,
   },
   navigator: {

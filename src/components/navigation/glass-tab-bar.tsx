@@ -86,7 +86,6 @@ const ICONS: Record<string, { active: IoniconName; inactive: IoniconName }> = {
   index: { active: "home", inactive: "home-outline" },
   explore: { active: "person-circle", inactive: "person-circle-outline" },
   settings: { active: "settings", inactive: "settings-outline" },
-  assistant: { active: "sparkles", inactive: "sparkles-outline" },
 };
 
 const BAR_HEIGHT = TAB_BAR_BASE_HEIGHT;

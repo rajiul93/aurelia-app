@@ -1,11 +1,13 @@
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { Platform, View } from "react-native";
+import { Platform } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { enableFreeze } from "react-native-screens";
 
 import { AnimatedSplash } from "@/components/animated-splash";
 import { AppBackground } from "@/components/app-background";
+import { FloatingChat } from "@/components/chat/floating-chat";
 import { TourReminderGate } from "@/components/tour-reminder/tour-reminder-gate";
 import { TourReminderListener } from "@/components/tour-reminder/tour-reminder-listener";
 import { useAppBootstrap } from "@/hooks/use-app-bootstrap";
@@ -46,7 +48,10 @@ export default function RootLayout() {
   const ready = useAppBootstrap();
 
   return (
-    <View style={{ flex: 1, backgroundColor: SPLASH_BACKGROUND }}>
+    // Required for the draggable chat head — gesture-handler was only ever
+    // pulled in transitively by react-navigation, so without this root the pan
+    // gesture silently does nothing on Android.
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: SPLASH_BACKGROUND }}>
       {ready ? (
         <AppProviders>
           <ThemeProvider
@@ -59,11 +64,12 @@ export default function RootLayout() {
                   headerShown: false,
                   contentStyle: { backgroundColor: "transparent" },
                   freezeOnBlur: true,
-                  // Android default stack animation is heavy with transparent
-                  // scenes + photo background; simple_push stays snappy.
-                  animation:
-                    Platform.OS === "android" ? "simple_push" : "default",
-                  animationDuration: 250,
+                  // Scenes are transparent over one shared photo, so any slide
+                  // drags both screens' content across it and reads as shaking.
+                  // A cross-dissolve is the only clean option here; iOS keeps
+                  // its native push.
+                  animation: Platform.OS === "android" ? "fade" : "default",
+                  animationDuration: Platform.OS === "android" ? 200 : 250,
                 }}
               >
                 <Stack.Screen name="welcome" />
@@ -88,12 +94,13 @@ export default function RootLayout() {
               </Stack>
               <TourReminderListener />
               <TourReminderGate />
+              <FloatingChat />
             </AppBackground>
           </ThemeProvider>
         </AppProviders>
       ) : null}
 
       <AnimatedSplash ready={ready} />
-    </View>
+    </GestureHandlerRootView>
   );
 }

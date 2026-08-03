@@ -17,6 +17,10 @@ export const DEFAULT_REMOTE_CONFIG: RemoteConfig = {
   // overwrites it. A data default, like every other value in this object — the
   // venue's real zone always comes from remote config.
   venueTimezone: "Europe/Rome",
+  // Matches the DB column default. Until the first sync lands (or on a cold
+  // start before the cached config is read) the app follows the device, which
+  // is the least surprising thing to show.
+  appTheme: "system",
 };
 
 export const DEFAULT_RELEASE_CONFIG: ReleaseConfig = {

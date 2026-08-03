@@ -1,5 +1,6 @@
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useMemo } from "react";
 import {
   Pressable,
   ScrollView,
@@ -56,6 +57,65 @@ export default function SpotDetailScreen() {
   );
   const toggleBookmark = useSpotBookmarksStore((state) => state.toggleBookmark);
 
+  // Derived above the early returns (hooks cannot run after them). Navigating
+  // in from the floor screen reuses the same cached query, so nothing is
+  // waiting on I/O here — the cost that showed up as jank was this work being
+  // redone on every render of a freshly-mounted screen.
+  const spots = useMemo(
+    () => (content ? orderSpotsAcrossFloors(content) : []),
+    [content],
+  );
+
+  const spotIndex = useMemo(
+    () => spots.findIndex((entry) => entry.id === spotId),
+    [spots, spotId],
+  );
+  const spot = spotIndex >= 0 ? spots[spotIndex] : undefined;
+
+  const translation = useMemo(
+    () =>
+      spot && preferences
+        ? pickAudienceTranslation(
+            spot.translations.map((entry) => ({
+              ...entry,
+              audience: entry.audience ?? "ADULTS",
+            })),
+            preferences.contentLanguage,
+            preferences.audience,
+          )
+        : null,
+    [spot, preferences],
+  );
+
+  const faqItems = useMemo(
+    () =>
+      (spot?.faqs ?? [])
+        .map((faq) => {
+          const faqTranslation = preferences
+            ? pickAudienceTranslation(
+                faq.translations.map((entry) => ({
+                  ...entry,
+                  audience: entry.audience ?? "ADULTS",
+                })),
+                preferences.contentLanguage,
+                preferences.audience,
+              )
+            : null;
+
+          if (!faqTranslation?.question) {
+            return null;
+          }
+
+          return {
+            id: faq.id,
+            question: faqTranslation.question,
+            answer: faqTranslation.answerText,
+          };
+        })
+        .filter((item): item is NonNullable<typeof item> => item !== null),
+    [spot, preferences],
+  );
+
   if (isResolving) {
     return <SpotDetailSkeleton />;
   }
@@ -73,10 +133,6 @@ export default function SpotDetailScreen() {
     );
   }
 
-  const spots = orderSpotsAcrossFloors(content);
-  const spotIndex = spots.findIndex((spot) => spot.id === spotId);
-  const spot = spots[spotIndex];
-
   if (!spot) {
     return (
       <ThemedView transparent style={styles.centered}>
@@ -90,44 +146,9 @@ export default function SpotDetailScreen() {
     );
   }
 
-  const translation = preferences
-    ? pickAudienceTranslation(
-        spot.translations.map((entry) => ({
-          ...entry,
-          audience: entry.audience ?? "ADULTS",
-        })),
-        preferences.contentLanguage,
-        preferences.audience,
-      )
-    : null;
   const previousSpot = spotIndex > 0 ? spots[spotIndex - 1] : null;
   const nextSpot =
     spotIndex < spots.length - 1 ? spots[spotIndex + 1] : null;
-
-  const faqItems = spot.faqs
-    .map((faq) => {
-      const faqTranslation = preferences
-        ? pickAudienceTranslation(
-            faq.translations.map((entry) => ({
-              ...entry,
-              audience: entry.audience ?? "ADULTS",
-            })),
-            preferences.contentLanguage,
-            preferences.audience,
-          )
-        : null;
-
-      if (!faqTranslation?.question) {
-        return null;
-      }
-
-      return {
-        id: faq.id,
-        question: faqTranslation.question,
-        answer: faqTranslation.answerText,
-      };
-    })
-    .filter((item): item is NonNullable<typeof item> => item !== null);
 
   const transcript =
     translation?.descriptionText?.trim() ||

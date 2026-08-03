@@ -8,7 +8,6 @@ import type {
   BundleSpot,
   BundleSpotFaq,
   BundleSpotMedia,
-  SearchDocument,
 } from "@/types/bundle-content";
 import type { TourDownloadPreferences } from "@/types/tour-preferences";
 
@@ -115,17 +114,6 @@ export function filterAiKnowledgeForPreferences(
       ),
     }))
     .filter((entry) => entry.translations.length > 0);
-}
-
-export function filterSearchDocuments(
-  documents: SearchDocument[],
-  preferences: TourDownloadPreferences,
-) {
-  return documents.filter(
-    (document) =>
-      document.language === preferences.contentLanguage &&
-      document.audience === preferences.audience,
-  );
 }
 
 /**

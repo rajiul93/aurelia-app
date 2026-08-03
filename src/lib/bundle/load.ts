@@ -14,10 +14,12 @@ import {
   normalizeInstalledTourMeta,
   synthesizeInstalledTourMeta,
 } from "@/lib/bundle/synthesize-meta";
+import type { BundleContent } from "@/types/bundle-content";
 import type { InstalledTourMeta, SearchDocument } from "@/types/tour-bundle";
 import type { TourDownloadPreferences } from "@/types/tour-preferences";
 
 const META_FILE = "bundle-meta.json";
+const CONTENT_FILE = "content.json";
 
 export { loadInstalledTourContent } from "@/lib/bundle/find-tour-on-disk";
 
@@ -85,8 +87,21 @@ export async function loadInstalledTour(
 }
 
 export async function loadInstalledTourSearchDocuments(tourId: string) {
-  const scanned = await findTourContentByScanning(tourId);
-  const directory = scanned?.directory ?? getInstalledTourDirectory(tourId);
+  // Canonical directory first, scan only as a fallback. This used to call
+  // findTourContentByScanning up-front, which JSON.parses *every* installed
+  // tour's content.json looking for a match — so building the chat corpus over
+  // N tours cost N² full parses on the JS thread, all at once.
+  const directDirectory = getInstalledTourDirectory(tourId);
+  const directContent = directDirectory.exists
+    ? await readJsonFile<BundleContent>(
+        new File(directDirectory, CONTENT_FILE),
+      )
+    : null;
+
+  const scanned = directContent ? null : await findTourContentByScanning(tourId);
+  const directory = scanned?.directory ?? directDirectory;
+  const content = directContent ?? scanned?.content ?? null;
+
   const searchFile = new File(directory, "search", "documents.json");
 
   let documents: SearchDocument[] = [];
@@ -98,7 +113,6 @@ export async function loadInstalledTourSearchDocuments(tourId: string) {
     documents = parsed?.documents ?? [];
   }
 
-  const content = scanned?.content ?? (await loadInstalledTourContent(tourId));
   if (content) {
     documents = mergeSearchDocuments(
       documents,

@@ -1,9 +1,19 @@
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
 import type { ComponentProps } from 'react';
+import { useEffect } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useIsFocused } from 'expo-router';
+import Animated, {
+  cancelAnimation,
+  Easing,
+  FadeInDown,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
@@ -11,7 +21,7 @@ import { useStrings } from '@/hooks/use-strings';
 import { useTheme } from '@/hooks/use-theme';
 
 /** Shared radius so shadow, clip, and cover image all match (Android clips badly otherwise). */
-const CARD_RADIUS = 28;
+const CARD_RADIUS = 20;
 
 type FloorCardProps = {
   name: string;
@@ -59,6 +69,34 @@ export function FloorCard({
   const chipLabel = locked ? lockedLabel : exploreLabel;
   const chipIcon = locked ? 'lock-closed' : exploreIcon;
 
+  // Bouncing animation for the explore chip. Gated on focus: an uncancelled
+  // infinite loop per card, on an elevated overflow-hidden container, was
+  // running right through the push transition and costing frames on Android.
+  const isFocused = useIsFocused();
+  const bounce = useSharedValue(0);
+  useEffect(() => {
+    if (!isFocused) {
+      cancelAnimation(bounce);
+      bounce.value = withTiming(0, { duration: 160 });
+      return;
+    }
+
+    bounce.value = withRepeat(
+      withSequence(
+        withTiming(-4, { duration: 420, easing: Easing.out(Easing.quad) }),
+        withTiming(0, { duration: 420, easing: Easing.in(Easing.quad) }),
+      ),
+      -1,
+      false,
+    );
+
+    return () => cancelAnimation(bounce);
+  }, [bounce, isFocused]);
+
+  const bounceStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: bounce.value }],
+  }));
+
   return (
     <Animated.View
       entering={FadeInDown.delay(Math.min(delay, 100)).duration(260)}
@@ -93,27 +131,51 @@ export function FloorCard({
             />
           )}
 
-          <LinearGradient
-            colors={
-              locked
-                ? ['rgba(12, 10, 9, 0.35)', 'rgba(12, 10, 9, 0.82)']
-                : ['transparent', 'rgba(12, 10, 9, 0.72)']
-            }
-            style={styles.scrim}
-          />
+          <View style={styles.topRightStack}>
+            <View
+              style={styles.verifiedBadge}
+              accessibilityLabel={t('floors.verifiedAuthentic')}
+            >
+              <Ionicons
+                name="shield-checkmark"
+                size={13}
+                color={theme.primary}
+              />
+              <ThemedText
+                type="smallBold"
+                style={styles.verifiedLabel}
+                numberOfLines={1}
+              >
+                {t('floors.verifiedAuthentic')}
+              </ThemedText>
+            </View>
 
-          <View
-            style={styles.verifiedBadge}
-            accessibilityLabel={t('floors.verifiedAuthentic')}
-          >
-            <Ionicons
-              name="shield-checkmark"
-              size={13}
-              color={theme.primary}
-            />
-            <ThemedText type="smallBold" style={styles.verifiedLabel} numberOfLines={1}>
-              {t('floors.verifiedAuthentic')}
-            </ThemedText>
+            <Animated.View style={bounceStyle}>
+              <View
+                style={[
+                  styles.exploreChip,
+                  {
+                    backgroundColor: locked
+                      ? 'rgba(28, 25, 23, 0.88)'
+                      : theme.primary,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name={chipIcon}
+                  size={16}
+                  color={locked ? theme.primary : theme.primaryForeground}
+                />
+                <ThemedText
+                  type="smallBold"
+                  style={{
+                    color: locked ? theme.primary : theme.primaryForeground,
+                  }}
+                >
+                  {chipLabel}
+                </ThemedText>
+              </View>
+            </Animated.View>
           </View>
 
           {locked ? (
@@ -136,31 +198,6 @@ export function FloorCard({
               </ThemedText>
               <ThemedText type="small" numberOfLines={2} style={styles.stops}>
                 {secondary}
-              </ThemedText>
-            </View>
-
-            <View
-              style={[
-                styles.exploreChip,
-                {
-                  backgroundColor: locked
-                    ? 'rgba(28, 25, 23, 0.88)'
-                    : theme.primary,
-                },
-              ]}
-            >
-              <Ionicons
-                name={chipIcon}
-                size={16}
-                color={locked ? theme.primary : theme.primaryForeground}
-              />
-              <ThemedText
-                type="smallBold"
-                style={{
-                  color: locked ? theme.primary : theme.primaryForeground,
-                }}
-              >
-                {chipLabel}
               </ThemedText>
             </View>
           </View>
@@ -217,18 +254,15 @@ const styles = StyleSheet.create({
   coverDimmed: {
     opacity: 0.55,
   },
-  scrim: {
-    position: 'absolute',
-    top: '40%',
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  verifiedBadge: {
+  topRightStack: {
     position: 'absolute',
     top: Spacing.three,
     right: Spacing.three,
     maxWidth: '72%',
+    alignItems: 'flex-end',
+    gap: Spacing.two,
+  },
+  verifiedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.one,
@@ -259,23 +293,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   overlay: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    gap: Spacing.three,
     padding: Spacing.four,
   },
   textBlock: {
-    flexShrink: 1,
+    width: '100%',
     gap: Spacing.half,
   },
   name: {
     color: '#ffffff',
     fontSize: 18,
     lineHeight: 22,
+    textShadowColor: 'rgba(0, 0, 0, 0.55)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
   stops: {
-    color: 'rgba(255, 255, 255, 0.86)',
+    color: 'rgba(255, 255, 255, 0.92)',
+    textShadowColor: 'rgba(0, 0, 0, 0.55)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
   exploreChip: {
     flexDirection: 'row',

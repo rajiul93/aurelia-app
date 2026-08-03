@@ -1,3 +1,6 @@
+/** Admin-controlled appearance. The app has no user-facing theme switch. */
+export type AppTheme = "system" | "light" | "dark";
+
 export type RemoteConfig = {
   maintenanceMode: boolean;
   maintenanceMessage: string | null;
@@ -20,6 +23,12 @@ export type RemoteConfig = {
    * visitor's phone carries whatever zone they flew in with.
    */
   venueTimezone: string;
+  /**
+   * Light/dark appearance, set by the admin — appearance is a venue-wide
+   * branding decision, so there is no per-user switch. "system" defers to the
+   * device. Cached with the rest of the config, so it survives offline.
+   */
+  appTheme: AppTheme;
 };
 
 export type ReleaseConfig = {

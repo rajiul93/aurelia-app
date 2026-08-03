@@ -1,25 +1,27 @@
-import { Directory, File } from "expo-file-system";
+import { Directory, File, Paths } from "expo-file-system";
 
 import { collectMediaDownloadItems } from "@/lib/bundle/collect-media-urls";
 import { getInstalledTourDirectory } from "@/lib/bundle/tour-directory";
-import {
-  decryptMediaToCacheUri,
-  encryptFileInPlace,
-} from "@/lib/crypto/encrypted-media";
 import type { BundleContent } from "@/types/bundle-content";
 import type { TourDownloadPreferences } from "@/types/tour-preferences";
 
 const MEDIA_MAP_FILE = "media-map.json";
 const MEDIA_DIR = "media";
 
-export type MediaCacheFileEntry = {
-  path: string;
-  encrypted: true;
-};
+/**
+ * Media is stored as plain files. It used to be AES-GCM encrypted at rest, but
+ * that protected nothing: the R2 bucket serving it is public and unsigned, and
+ * every remote url is listed in plaintext in this very file and in content.json
+ * — so anyone with the file access the encryption defended against could simply
+ * read the urls and download the media directly. Version 3 marks the plaintext
+ * format; anything older is treated as stale and re-downloaded.
+ */
+export const MEDIA_CACHE_MAP_VERSION = 3;
 
 export type MediaCacheMap = {
-  version: 2;
-  files: Record<string, string | MediaCacheFileEntry>;
+  version: typeof MEDIA_CACHE_MAP_VERSION;
+  /** Remote url -> relative path inside the installed tour directory. */
+  files: Record<string, string>;
   cachedAt: string;
   failedUrls: string[];
 };
@@ -63,10 +65,17 @@ function ensureMediaDirectory(directory: Directory) {
   return directory.createDirectory(MEDIA_DIR);
 }
 
-function isEncryptedEntry(
-  entry: string | MediaCacheFileEntry | undefined,
-): entry is MediaCacheFileEntry {
-  return Boolean(entry && typeof entry === "object" && entry.encrypted);
+/**
+ * Deletes the decrypted-media cache the encrypted format used to populate.
+ * Self-limiting: once the directory is gone this is a no-op, so it can be called
+ * on every install without cost.
+ */
+export function clearLegacyDecryptedMediaCache() {
+  const legacy = new Directory(Paths.cache, "aurelia", "decrypted");
+
+  if (legacy.exists) {
+    legacy.delete();
+  }
 }
 
 export async function loadMediaCacheMap(tourId: string) {
@@ -77,26 +86,19 @@ export async function loadMediaCacheMap(tourId: string) {
     return null;
   }
 
-  const parsed = JSON.parse(await mapFile.text()) as MediaCacheMap | {
-    version: 1;
-    files: Record<string, string>;
-    cachedAt: string;
-    failedUrls: string[];
-  };
+  const parsed = JSON.parse(await mapFile.text()) as { version?: number };
 
-  if (parsed.version === 2) {
-    return parsed;
+  // Older maps point at encrypted files this build can no longer read. Treat
+  // them as absent so media resolves to its remote url until the tour is
+  // re-downloaded (see isInstallFormatStale).
+  if (parsed.version !== MEDIA_CACHE_MAP_VERSION) {
+    return null;
   }
 
-  return {
-    version: 2 as const,
-    files: parsed.files,
-    cachedAt: parsed.cachedAt,
-    failedUrls: parsed.failedUrls,
-  };
+  return parsed as MediaCacheMap;
 }
 
-export async function resolveInstalledMediaUri(
+export function resolveInstalledMediaUri(
   tourId: string,
   remoteUrl: string | undefined | null,
   map: MediaCacheMap | null | undefined,
@@ -106,25 +108,13 @@ export async function resolveInstalledMediaUri(
   }
 
   const entry = map?.files[remoteUrl];
-  if (!entry) {
+
+  if (typeof entry !== "string") {
     return remoteUrl;
   }
 
-  if (typeof entry === "string") {
-    const file = new File(getInstalledTourDirectory(tourId), entry);
-    return file.exists ? file.uri : remoteUrl;
-  }
-
-  if (isEncryptedEntry(entry)) {
-    const decryptedUri = await decryptMediaToCacheUri(
-      tourId,
-      entry.path,
-      remoteUrl,
-    );
-    return decryptedUri ?? remoteUrl;
-  }
-
-  return remoteUrl;
+  const file = new File(getInstalledTourDirectory(tourId), entry);
+  return file.exists ? file.uri : remoteUrl;
 }
 
 export async function cacheTourMediaFiles(
@@ -136,7 +126,7 @@ export async function cacheTourMediaFiles(
 ) {
   const items = collectMediaDownloadItems(content, preferences);
   const mediaDirectory = ensureMediaDirectory(directory);
-  const files: Record<string, MediaCacheFileEntry> = {};
+  const files: Record<string, string> = {};
   const failedUrls: string[] = [];
 
   for (let index = 0; index < items.length; index += 1) {
@@ -145,13 +135,11 @@ export async function cacheTourMediaFiles(
     const extension = extensionFromUrl(item.url);
     const fileName = `${sanitizeFileStem(item.id)}${extension}`;
     const plainPath = `${MEDIA_DIR}/${fileName}`;
-    const encryptedPath = `${MEDIA_DIR}/${fileName}.enc`;
     const destination = new File(mediaDirectory, fileName);
 
     try {
       await File.downloadFileAsync(item.url, destination, { idempotent: true });
-      await encryptFileInPlace(tourId, destination, encryptedPath);
-      files[item.url] = { path: encryptedPath, encrypted: true };
+      files[item.url] = plainPath;
     } catch {
       failedUrls.push(item.url);
     }
@@ -171,7 +159,7 @@ export async function cacheTourMediaFiles(
   }
 
   const map: MediaCacheMap = {
-    version: 2,
+    version: MEDIA_CACHE_MAP_VERSION,
     files,
     cachedAt: new Date().toISOString(),
     failedUrls,

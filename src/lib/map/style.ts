@@ -49,7 +49,7 @@ export function getTourMapStyleObject(): StyleSpecification {
       {
         id: "background",
         type: "background",
-        paint: { "background-color": "#1c1917" },
+        paint: { "background-color": "#f5f3f0" },
       },
       {
         id: "landuse-park",
@@ -57,14 +57,14 @@ export function getTourMapStyleObject(): StyleSpecification {
         source: "openfreemap",
         "source-layer": "landuse",
         filter: ["==", "class", "park"],
-        paint: { "fill-color": "#292524", "fill-opacity": 0.6 },
+        paint: { "fill-color": "#dfe9d8", "fill-opacity": 0.6 },
       },
       {
         id: "water",
         type: "fill",
         source: "openfreemap",
         "source-layer": "water",
-        paint: { "fill-color": "#0f172a" },
+        paint: { "fill-color": "#a8c8e8" },
       },
       {
         id: "roads-minor",
@@ -72,7 +72,7 @@ export function getTourMapStyleObject(): StyleSpecification {
         source: "openfreemap",
         "source-layer": "transportation",
         filter: ["in", "class", "path", "track", "service", "minor"],
-        paint: { "line-color": "#44403c", "line-width": 1 },
+        paint: { "line-color": "#e8e4df", "line-width": 1 },
       },
       {
         id: "roads-major",
@@ -80,14 +80,14 @@ export function getTourMapStyleObject(): StyleSpecification {
         source: "openfreemap",
         "source-layer": "transportation",
         filter: ["in", "class", "primary", "secondary", "tertiary", "trunk"],
-        paint: { "line-color": "#57534e", "line-width": 2 },
+        paint: { "line-color": "#ffffff", "line-width": 2 },
       },
       {
         id: "buildings",
         type: "fill",
         source: "openfreemap",
         "source-layer": "building",
-        paint: { "fill-color": "#292524", "fill-opacity": 0.35 },
+        paint: { "fill-color": "#e3ded7", "fill-opacity": 0.35 },
       },
     ],
   } as unknown as StyleSpecification;
@@ -113,21 +113,21 @@ export function getFallbackMapStyleObject(): StyleSpecification {
       {
         id: "background",
         type: "background",
-        paint: { "background-color": "#1c1917" },
+        paint: { "background-color": "#f5f3f0" },
       },
       {
         id: "water",
         type: "fill",
         source: "openfreemap",
         "source-layer": "water",
-        paint: { "fill-color": "#0f172a" },
+        paint: { "fill-color": "#a8c8e8" },
       },
       {
         id: "roads-major",
         type: "line",
         source: "openfreemap",
         "source-layer": "transportation",
-        paint: { "line-color": "#57534e", "line-width": 2 },
+        paint: { "line-color": "#ffffff", "line-width": 2 },
       },
     ],
   } as unknown as StyleSpecification;

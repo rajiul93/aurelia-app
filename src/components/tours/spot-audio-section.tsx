@@ -32,13 +32,26 @@ export function SpotAudioSection({
   const activeItem = audioItems[activeIndex] ?? null;
   const playbackUrl = useInstalledMediaUri(tourId, activeItem?.url).data;
 
-  if (
-    audioItems.length === 0 ||
-    !remote.enableVoiceGuidance ||
-    !activeItem ||
-    !playbackUrl
-  ) {
+  if (audioItems.length === 0 || !remote.enableVoiceGuidance || !activeItem) {
     return null;
+  }
+
+  // `playbackUrl` resolves asynchronously. Returning null until it arrived made
+  // the whole player pop in a moment after the screen appeared, growing the page
+  // by its full height — so the space is held instead.
+  if (!playbackUrl) {
+    return (
+      <View style={styles.container}>
+        <View
+          style={[
+            styles.playerPlaceholder,
+            // Matches SpotAudioPlayer: 40px controls + 16 label room, plus the
+            // card variant's 24px vertical padding.
+            { height: variant === "card" ? 104 : 56 },
+          ]}
+        />
+      </View>
+    );
   }
 
   return (
@@ -83,6 +96,9 @@ const styles = StyleSheet.create({
   container: {
     alignSelf: "stretch",
     gap: Spacing.two,
+  },
+  playerPlaceholder: {
+    alignSelf: "stretch",
   },
   navigator: {
     flexDirection: "row",

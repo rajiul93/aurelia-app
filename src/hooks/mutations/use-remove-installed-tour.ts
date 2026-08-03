@@ -1,7 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { deleteTourMediaKey } from "@/lib/crypto/media-key";
-import { clearDecryptedMediaCache } from "@/lib/crypto/encrypted-media";
 import { queryKeys } from "@/lib/query/keys";
 import { removeTourProgress } from "@/lib/tour-progress/storage";
 import { useInstalledToursStore } from "@/store/installed-tours-store";
@@ -15,8 +13,6 @@ export function useRemoveInstalledTour() {
     mutationFn: async (tourId: string) => {
       await remove(tourId);
       await removeTourProgress(tourId);
-      await deleteTourMediaKey(tourId);
-      clearDecryptedMediaCache(tourId);
     },
     onSuccess: async (_result, tourId) => {
       const progress = useTourProgressStore.getState().byTourId;

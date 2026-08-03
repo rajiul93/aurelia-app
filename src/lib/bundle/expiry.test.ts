@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { findExpiredInstalledTours, isTourAccessExpired } from "@/lib/bundle/expiry";
+import { CURRENT_INSTALL_FORMAT_VERSION } from "@/lib/bundle/version-compare";
 import type { Entitlements } from "@/types/auth";
 import type { InstalledTourMeta } from "@/types/tour-bundle";
 
@@ -29,6 +30,7 @@ function meta(overrides: Partial<InstalledTourMeta> = {}): InstalledTourMeta {
       contentLanguage: "en",
       downloadMode: "FULL",
     },
+    installFormatVersion: CURRENT_INSTALL_FORMAT_VERSION,
     accessExpiresAt: null,
     ...overrides,
   };

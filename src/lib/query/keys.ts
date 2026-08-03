@@ -21,8 +21,9 @@ export const queryKeys = {
     /** Stable per tour — do not include bundleId or cache busts on every hydrate. */
     detail: (tourId: string) =>
       [...queryKeys.installedTour.all, tourId] as const,
-    search: (tourId: string) =>
-      [...queryKeys.installedTour.all, tourId, "search"] as const,
+    /** Merged search corpus across every installed tour, keyed by the id set. */
+    searchAll: (tourIds: string) =>
+      [...queryKeys.installedTour.all, "search-all", tourIds] as const,
   },
   storage: {
     summary: ["storage", "summary"] as const,

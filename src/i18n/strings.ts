@@ -11,7 +11,6 @@ const en = {
   "tabs.account": "Account",
   "tabs.settings": "Settings",
   "tabs.faq": "FAQ",
-  "tabs.assistant": "Assistant",
 
   "knowledge.preparing": "Preparing offline content…",
 
@@ -27,12 +26,14 @@ const en = {
   "assistant.title": "Aurelia Assistant",
   "assistant.subtitle": "Ask about the app, tours, and more.",
   "assistant.placeholder": "Ask a question…",
-  "assistant.send": "Send",
   "assistant.initialMessage":
     "Hi! I'm the Aurelia Assistant. Ask me anything about the app or your tours.",
   "assistant.noAnswer":
     "I couldn't find an answer to that yet. Try rephrasing your question.",
   "assistant.empty": "The assistant is getting ready. Please try again shortly.",
+  "assistant.fromTour": "From your {title} guide",
+  "assistant.disabled": "Offline chat is currently turned off.",
+  "assistant.noKnowledge": "No offline guide is downloaded yet. Download a tour to ask about it.",
 
   "pages.notFound": "Page not found.",
 
@@ -96,6 +97,8 @@ const en = {
   "floors.mapExplore": "Map Explore",
   "floors.mapExploreHint": "Open the interactive map for this floor",
   "floors.noStops": "This floor has no stops yet.",
+  "tours.yourTours": "Tours",
+  "tours.floors": "floors",
   "home.announcement": "Announcement",
 
   "greeting.morning": "Good morning",
@@ -109,7 +112,6 @@ const en = {
   "guides.startTour": "Start tour",
   "guides.continueTour": "Continue tour",
   "guides.reviewTour": "Review tour",
-  "guides.askAurelia": "Ask Aurelia",
   "guides.accessRequired": "Access required",
   "guides.restoreAccess": "Restore access",
   "guides.updateAvailable": "Update available — tap to refresh your offline guide",
@@ -202,11 +204,6 @@ const en = {
 
   "settings.title": "Settings",
   "settings.subtitle": "Access, language, storage, and app info",
-  "settings.theme": "Theme",
-  "settings.themeHint": "Choose how the app looks. System follows your device.",
-  "settings.themeSystem": "System",
-  "settings.themeLight": "Light",
-  "settings.themeDark": "Dark",
   "settings.language": "Language",
   "settings.languageHint":
     "Applies to app UI strings. Tour content language is chosen when you download a guide.",
@@ -277,10 +274,9 @@ const en = {
   "tour.downloadFromHome": "Download the tour from Home first.",
   "tour.stopsOffline": "{count} stops · offline v{version}",
   "tour.progress": "Tour progress",
-  "tour.askAurelia": "Ask Aurelia",
-  "tour.askAureliaHint": "Offline answers from your guide",
   "tour.stopFallback": "Stop",
   "tour.chooseStop": "Choose a stop",
+  "tour.chooseFloor": "Choose a floor",
   "tour.startFromStop1": "Start from stop 1",
   "tour.continueTour": "Continue tour",
   "tour.allStopsCompleted": "All stops completed",
@@ -328,16 +324,6 @@ const en = {
   "spot.done": "Done",
   "spot.openFloorMap": "Open floor map",
 
-  "chat.title": "Ask Aurelia",
-  "chat.subtitle": "Offline answers from your downloaded guide",
-  "chat.initialMessage":
-    "Hello, I am Aurelia. Ask me about this tour using your offline guide knowledge.",
-  "chat.disabled":
-    "Offline chat is temporarily disabled by your app configuration.",
-  "chat.noKnowledge":
-    "No offline knowledge is indexed for this tour. In admin, rebuild the signed bundle after adding AI Knowledge, then re-download the tour here.",
-  "chat.placeholder": "Ask about a stop, history, or tip…",
-  "chat.send": "Send",
 
   "maintenance.title": "Maintenance",
   "maintenance.message":
@@ -403,7 +389,6 @@ const es: Record<StringKey, string> = {
   "tabs.account": "Cuenta",
   "tabs.settings": "Ajustes",
   "tabs.faq": "FAQ",
-  "tabs.assistant": "Asistente",
 
   "knowledge.preparing": "Preparando el contenido sin conexión…",
 
@@ -419,13 +404,15 @@ const es: Record<StringKey, string> = {
   "assistant.title": "Asistente Aurelia",
   "assistant.subtitle": "Pregunta sobre la app, los tours y más.",
   "assistant.placeholder": "Haz una pregunta…",
-  "assistant.send": "Enviar",
   "assistant.initialMessage":
     "¡Hola! Soy el Asistente Aurelia. Pregúntame lo que quieras sobre la app o tus tours.",
   "assistant.noAnswer":
     "Todavía no encontré una respuesta. Intenta reformular tu pregunta.",
   "assistant.empty":
     "El asistente se está preparando. Inténtalo de nuevo en un momento.",
+  "assistant.fromTour": "De tu guía de {title}",
+  "assistant.disabled": "El chat sin conexión está desactivado.",
+  "assistant.noKnowledge": "Aún no has descargado ninguna guía. Descarga un tour para preguntar sobre él.",
 
   "pages.notFound": "Página no encontrada.",
   "welcome.title.line1": "Tu viaje",
@@ -489,6 +476,8 @@ const es: Record<StringKey, string> = {
   "floors.mapExplore": "Explorar en el mapa",
   "floors.mapExploreHint": "Abre el mapa interactivo de esta planta",
   "floors.noStops": "Esta planta aún no tiene paradas.",
+  "tours.yourTours": "Tours",
+  "tours.floors": "plantas",
   "home.announcement": "Anuncio",
   "greeting.morning": "Buenos días",
   "greeting.afternoon": "Buenas tardes",
@@ -501,7 +490,6 @@ const es: Record<StringKey, string> = {
   "guides.startTour": "Iniciar tour",
   "guides.continueTour": "Continuar tour",
   "guides.reviewTour": "Repasar tour",
-  "guides.askAurelia": "Pregunta a Aurelia",
   "guides.accessRequired": "Acceso requerido",
   "guides.restoreAccess": "Restaurar acceso",
   "guides.updateAvailable":
@@ -591,12 +579,6 @@ const es: Record<StringKey, string> = {
   "auth.devCode": "Código dev: {code}",
   "settings.title": "Ajustes",
   "settings.subtitle": "Acceso, idioma, almacenamiento e info de la app",
-  "settings.theme": "Tema",
-  "settings.themeHint":
-    "Elige la apariencia de la app. Sistema sigue tu dispositivo.",
-  "settings.themeSystem": "Sistema",
-  "settings.themeLight": "Claro",
-  "settings.themeDark": "Oscuro",
   "settings.language": "Idioma",
   "settings.languageHint":
     "Aplica a los textos de la app. El idioma del tour se elige al descargar una guía.",
@@ -663,10 +645,9 @@ const es: Record<StringKey, string> = {
   "tour.downloadFromHome": "Descarga el tour desde Inicio primero.",
   "tour.stopsOffline": "{count} paradas · sin conexión v{version}",
   "tour.progress": "Progreso del tour",
-  "tour.askAurelia": "Pregunta a Aurelia",
-  "tour.askAureliaHint": "Respuestas sin conexión de tu guía",
   "tour.stopFallback": "Parada",
   "tour.chooseStop": "Elige una parada",
+  "tour.chooseFloor": "Elige una planta",
   "tour.startFromStop1": "Empezar en la parada 1",
   "tour.continueTour": "Continuar tour",
   "tour.allStopsCompleted": "Todas las paradas completadas",
@@ -711,16 +692,6 @@ const es: Record<StringKey, string> = {
   "spot.nextStop": "Siguiente parada",
   "spot.done": "Listo",
   "spot.openFloorMap": "Abrir mapa de la planta",
-  "chat.title": "Pregunta a Aurelia",
-  "chat.subtitle": "Respuestas sin conexión de tu guía descargada",
-  "chat.initialMessage":
-    "Hola, soy Aurelia. Pregúntame sobre este tour usando el conocimiento offline de tu guía.",
-  "chat.disabled":
-    "El chat sin conexión está desactivado temporalmente por la configuración de la app.",
-  "chat.noKnowledge":
-    "No hay conocimiento offline indexado para este tour. En admin, reconstruye el bundle firmado tras añadir AI Knowledge y vuelve a descargar el tour aquí.",
-  "chat.placeholder": "Pregunta sobre una parada, historia o consejo…",
-  "chat.send": "Enviar",
   "maintenance.title": "Mantenimiento",
   "maintenance.message":
     "Aurelia no está disponible temporalmente mientras actualizamos la app.",
@@ -782,7 +753,6 @@ const fr: Record<StringKey, string> = {
   "tabs.account": "Compte",
   "tabs.settings": "Réglages",
   "tabs.faq": "FAQ",
-  "tabs.assistant": "Assistant",
 
   "knowledge.preparing": "Préparation du contenu hors ligne…",
 
@@ -798,13 +768,15 @@ const fr: Record<StringKey, string> = {
   "assistant.title": "Assistant Aurelia",
   "assistant.subtitle": "Posez des questions sur l'app, les visites et plus.",
   "assistant.placeholder": "Posez une question…",
-  "assistant.send": "Envoyer",
   "assistant.initialMessage":
     "Bonjour ! Je suis l'Assistant Aurelia. Posez-moi vos questions sur l'app ou vos visites.",
   "assistant.noAnswer":
     "Je n'ai pas encore trouvé de réponse. Essayez de reformuler votre question.",
   "assistant.empty":
     "L'assistant se prépare. Veuillez réessayer dans un instant.",
+  "assistant.fromTour": "D'après votre guide {title}",
+  "assistant.disabled": "Le chat hors ligne est désactivé.",
+  "assistant.noKnowledge": "Aucun guide hors ligne téléchargé. Téléchargez une visite pour poser des questions.",
 
   "pages.notFound": "Page introuvable.",
   "welcome.title.line1": "Votre voyage",
@@ -869,6 +841,8 @@ const fr: Record<StringKey, string> = {
   "floors.mapExplore": "Explorer la carte",
   "floors.mapExploreHint": "Ouvrir la carte interactive de cet étage",
   "floors.noStops": "Cet étage n'a pas encore d'arrêts.",
+  "tours.yourTours": "Visites",
+  "tours.floors": "étages",
   "home.announcement": "Annonce",
   "greeting.morning": "Bonjour",
   "greeting.afternoon": "Bon après-midi",
@@ -881,7 +855,6 @@ const fr: Record<StringKey, string> = {
   "guides.startTour": "Commencer la visite",
   "guides.continueTour": "Continuer la visite",
   "guides.reviewTour": "Revoir la visite",
-  "guides.askAurelia": "Demander à Aurelia",
   "guides.accessRequired": "Accès requis",
   "guides.restoreAccess": "Restaurer l'accès",
   "guides.updateAvailable":
@@ -971,12 +944,6 @@ const fr: Record<StringKey, string> = {
   "auth.devCode": "Code dev : {code}",
   "settings.title": "Réglages",
   "settings.subtitle": "Accès, langue, stockage et infos de l'app",
-  "settings.theme": "Thème",
-  "settings.themeHint":
-    "Choisissez l'apparence de l'app. Système suit votre appareil.",
-  "settings.themeSystem": "Système",
-  "settings.themeLight": "Clair",
-  "settings.themeDark": "Sombre",
   "settings.language": "Langue",
   "settings.languageHint":
     "S'applique aux textes de l'app. La langue de la visite est choisie lors du téléchargement.",
@@ -1043,10 +1010,9 @@ const fr: Record<StringKey, string> = {
   "tour.downloadFromHome": "Téléchargez d'abord la visite depuis l'accueil.",
   "tour.stopsOffline": "{count} arrêts · hors ligne v{version}",
   "tour.progress": "Progression de la visite",
-  "tour.askAurelia": "Demander à Aurelia",
-  "tour.askAureliaHint": "Réponses hors ligne de votre guide",
   "tour.stopFallback": "Arrêt",
   "tour.chooseStop": "Choisir un arrêt",
+  "tour.chooseFloor": "Choisir un étage",
   "tour.startFromStop1": "Commencer à l'arrêt 1",
   "tour.continueTour": "Continuer la visite",
   "tour.allStopsCompleted": "Tous les arrêts terminés",
@@ -1091,16 +1057,6 @@ const fr: Record<StringKey, string> = {
   "spot.nextStop": "Arrêt suivant",
   "spot.done": "Terminé",
   "spot.openFloorMap": "Ouvrir la carte de l'étage",
-  "chat.title": "Demander à Aurelia",
-  "chat.subtitle": "Réponses hors ligne de votre guide téléchargé",
-  "chat.initialMessage":
-    "Bonjour, je suis Aurelia. Posez-moi des questions sur cette visite avec les connaissances hors ligne de votre guide.",
-  "chat.disabled":
-    "Le chat hors ligne est temporairement désactivé par la configuration de l'app.",
-  "chat.noKnowledge":
-    "Aucune connaissance hors ligne indexée pour cette visite. Dans l'admin, reconstruisez le bundle signé après avoir ajouté AI Knowledge, puis retéléchargez la visite ici.",
-  "chat.placeholder": "Question sur un arrêt, l'histoire ou un conseil…",
-  "chat.send": "Envoyer",
   "maintenance.title": "Maintenance",
   "maintenance.message":
     "Aurelia est temporairement indisponible pendant la mise à jour de l'app.",

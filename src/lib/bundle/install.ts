@@ -5,7 +5,11 @@ import {
   countTourStops
 } from "@/lib/bundle/collect-media-urls";
 import { readJsonFile, writeJsonFile } from "@/lib/bundle/disk-json";
-import { cacheTourMediaFiles } from "@/lib/bundle/media-cache";
+import {
+  cacheTourMediaFiles,
+  clearLegacyDecryptedMediaCache,
+} from "@/lib/bundle/media-cache";
+import { CURRENT_INSTALL_FORMAT_VERSION } from "@/lib/bundle/version-compare";
 import {
   normalizeInstalledTourMeta,
   synthesizeInstalledTourMeta,
@@ -77,6 +81,7 @@ function buildInstallMeta(input: {
     mediaCachedAt: mediaMap?.cachedAt ?? null,
     totalStops: countTourStops(input.content, input.preferences),
     downloadPreferences: input.preferences,
+    installFormatVersion: CURRENT_INSTALL_FORMAT_VERSION,
     accessExpiresAt: input.accessExpiresAt,
   };
 }
@@ -154,6 +159,9 @@ export async function installTourBundle(
 
   const directory = getInstalledTourDirectory(bundle.tourId);
   replaceDirectory(directory);
+
+  // Sweep the cache the old encrypted format decrypted into. No-op once gone.
+  clearLegacyDecryptedMediaCache();
 
   options.onProgress?.({ phase: "bundle", completed: 0, total: 1 });
 

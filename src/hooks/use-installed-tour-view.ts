@@ -19,11 +19,20 @@ export function useInstalledTourView(tourIdParam: string | string[] | undefined)
   );
   const language = useLocaleStore((state) => state.language);
 
-  const preferences: TourDownloadPreferences | null =
-    resolveTourPreferences(
-      query.data?.preferences,
-      installed?.downloadPreferences,
-    ) ?? (query.data?.content ? fallbackTourPreferences(language) : null);
+  // Memoized because `fallbackTourPreferences` returns a fresh object literal
+  // every call. Unmemoized, `preferences` changed identity on every render, so
+  // the `viewContent` memo below never hit and the whole content graph was
+  // re-filtered and re-spread each time — and every consumer saw a new `content`.
+  const storedPreferences = query.data?.preferences;
+  const installedPreferences = installed?.downloadPreferences;
+  const hasContent = Boolean(query.data?.content);
+
+  const preferences: TourDownloadPreferences | null = useMemo(
+    () =>
+      resolveTourPreferences(storedPreferences, installedPreferences) ??
+      (hasContent ? fallbackTourPreferences(language) : null),
+    [storedPreferences, installedPreferences, hasContent, language],
+  );
 
   const viewContent = useMemo(() => {
     if (!query.data?.content || !preferences) {

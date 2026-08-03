@@ -1,10 +1,13 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ActivityIndicator, ScrollView, StyleSheet, View } from "react-native";
+import { useMemo } from "react";
+import { ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ScreenHeader } from "@/components/screen-header";
+import { FloorCardSkeleton } from "@/components/tours/floor-card-skeleton";
 import { FloorCard } from "@/components/tours/floor-card";
 import { StopListCard } from "@/components/tours/stop-list-card";
+import { StopListSkeleton } from "@/components/tours/stop-list-skeleton";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { ProgressBar } from "@/components/ui/progress-bar";
@@ -50,17 +53,47 @@ export default function FloorScreen() {
   const bookmarkedSpotIds = useSpotBookmarksStore(
     (state) => state.byTourId[tourId ?? ""] ?? NO_BOOKMARKS,
   );
-  const bookmarkedSet = new Set(bookmarkedSpotIds);
+  // Memoized above the early returns — `getFloorScope` + `orderSpotsByRoute`
+  // walk and re-sort this floor's spots, and ran on every render.
+  const bookmarkedSet = useMemo(
+    () => new Set(bookmarkedSpotIds),
+    [bookmarkedSpotIds],
+  );
+
+  const spots = useMemo(() => {
+    if (!content) {
+      return [];
+    }
+    const scope = getFloorScope(content, floorId);
+    return orderSpotsByRoute(scope.spots, scope.route);
+  }, [content, floorId]);
+
+  const completedIds = useMemo(
+    () => completedSpotIds ?? [],
+    [completedSpotIds],
+  );
+  const completedSet = useMemo(() => new Set(completedIds), [completedIds]);
 
   const floor = content ? findFloor(content, floorId) : null;
   const floorCoverRemote = floor?.coverUrl ?? null;
   const floorCoverLocal =
     useInstalledMediaUri(tourId, floorCoverRemote).data ?? floorCoverRemote;
 
+  // Same shell as the loaded state — see the note on the tour screen.
   if (isResolving) {
     return (
-      <ThemedView transparent style={styles.centered}>
-        <ActivityIndicator color={theme.primary} />
+      <ThemedView transparent style={styles.container}>
+        <SafeAreaView style={styles.safeArea} edges={["top"]}>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <ScreenHeader title="" onBack={() => router.back()} />
+            {/* Mirrors the real layout: one Map Explore card, then stops. */}
+            <FloorCardSkeleton count={1} />
+            <StopListSkeleton count={5} />
+          </ScrollView>
+        </SafeAreaView>
       </ThemedView>
     );
   }
@@ -84,13 +117,6 @@ export default function FloorScreen() {
       t("floors.floorN", { number: floor.floorNo })
     : t("floors.yourFloors");
 
-  // Floor-scoped: this floor's spots, in this floor's route order. Never another
-  // floor's stops.
-  const scope = getFloorScope(content, floorId);
-  const spots = orderSpotsByRoute(scope.spots, scope.route);
-
-  const completedIds = completedSpotIds ?? [];
-  const completedSet = new Set(completedIds);
   const completedOnFloor = spots.filter((spot) =>
     completedSet.has(spot.id),
   ).length;

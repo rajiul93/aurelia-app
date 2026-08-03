@@ -7,6 +7,7 @@ import {
   getStorageShortfallMessage,
   hasEnoughStorageForDownload,
 } from "@/lib/storage/tour-storage";
+import { MIN_FREE_SPACE_BYTES } from "@/lib/storage/constants";
 import { useReleaseConfigStore } from "@/store/release-config-store";
 import { useInstalledToursStore } from "@/store/installed-tours-store";
 import type { TourDownloadPreferences } from "@/types/tour-preferences";
@@ -35,7 +36,7 @@ export function useDownloadTour() {
         useReleaseConfigStore.getState().config.remote.maxDownloadSizeMb;
       const requiredBytes = Math.max(
         maxDownloadSizeMb * 1024 * 1024,
-        250 * 1024 * 1024,
+        MIN_FREE_SPACE_BYTES,
       );
 
       if (!hasEnoughStorageForDownload(requiredBytes)) {

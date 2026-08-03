@@ -32,6 +32,8 @@ export function normalizeInstalledTourMeta(
     mediaCachedAt: partial.mediaCachedAt ?? null,
     totalStops: partial.totalStops ?? 0,
     downloadPreferences: partial.downloadPreferences ?? DEFAULT_PREFERENCES,
+    // Absent means the install predates the field — i.e. the encrypted format.
+    installFormatVersion: partial.installFormatVersion ?? 0,
     accessExpiresAt: partial.accessExpiresAt ?? null,
   };
 }
@@ -63,6 +65,9 @@ export function synthesizeInstalledTourMeta(
     mediaCachedAt: null,
     totalStops: content.tour.spots.length,
     downloadPreferences: DEFAULT_PREFERENCES,
+    // Meta was missing entirely, so the media layout on disk is unknown — assume
+    // the old format and let the update path re-download it.
+    installFormatVersion: 0,
     accessExpiresAt: null,
   };
 }

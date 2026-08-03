@@ -19,6 +19,15 @@ const CARD_HEIGHT = 170;
 type FloorCardSkeletonProps = {
   /** How many placeholder cards to render. */
   count?: number;
+  /**
+   * Cover height of the card being stood in for. Must match the real card or
+   * the list resizes the moment data lands: Home renders `TourCard` (250) while
+   * the default here is `FloorCard` (170), which shifted the page by 240px
+   * across three cards.
+   */
+  cardHeight?: number;
+  /** Corner radius of the card being stood in for (FloorCard 28, TourCard 20). */
+  radius?: number;
 };
 
 function SkeletonBone({
@@ -48,9 +57,13 @@ function SkeletonBone({
 function FloorCardSkeletonItem({
   pulse,
   delayMs,
+  cardHeight,
+  radius,
 }: {
   pulse: SharedValue<number>;
   delayMs: number;
+  cardHeight: number;
+  radius: number;
 }) {
   const theme = useTheme();
   const enter = useSharedValue(0);
@@ -72,18 +85,23 @@ function FloorCardSkeletonItem({
   }));
 
   return (
-    <Animated.View style={[styles.shadow, wrapStyle]}>
+    <Animated.View
+      style={[styles.shadow, { borderRadius: radius }, wrapStyle]}
+    >
       <View
         style={[
           styles.card,
-          { backgroundColor: theme.backgroundElement },
+          { backgroundColor: theme.backgroundElement, borderRadius: radius },
         ]}
       >
-        <View style={styles.coverWrap}>
+        <View
+          style={[styles.coverWrap, { height: cardHeight, borderRadius: radius }]}
+        >
           <SkeletonBone style={StyleSheet.absoluteFill} pulse={pulse} />
 
           <View style={styles.badgeSlot}>
             <SkeletonBone style={styles.badge} pulse={pulse} />
+            <SkeletonBone style={styles.chip} pulse={pulse} />
           </View>
 
           <View style={styles.overlay}>
@@ -91,7 +109,6 @@ function FloorCardSkeletonItem({
               <SkeletonBone style={styles.title} pulse={pulse} />
               <SkeletonBone style={styles.subtitle} pulse={pulse} />
             </View>
-            <SkeletonBone style={styles.chip} pulse={pulse} />
           </View>
         </View>
       </View>
@@ -102,7 +119,11 @@ function FloorCardSkeletonItem({
 /**
  * Floor-card shaped loading placeholders for Home while the catalog resolves.
  */
-export function FloorCardSkeleton({ count = 3 }: FloorCardSkeletonProps) {
+export function FloorCardSkeleton({
+  count = 3,
+  cardHeight = CARD_HEIGHT,
+  radius = CARD_RADIUS,
+}: FloorCardSkeletonProps) {
   const pulse = useSharedValue(0);
 
   useEffect(() => {
@@ -120,6 +141,8 @@ export function FloorCardSkeleton({ count = 3 }: FloorCardSkeletonProps) {
           key={index}
           pulse={pulse}
           delayMs={index * 80}
+          cardHeight={cardHeight}
+          radius={radius}
         />
       ))}
     </View>
@@ -165,6 +188,8 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: Spacing.three,
     right: Spacing.three,
+    alignItems: "flex-end",
+    gap: Spacing.two,
   },
   badge: {
     width: 118,
@@ -172,14 +197,10 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   overlay: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-    gap: Spacing.three,
     padding: Spacing.four,
   },
   textBlock: {
-    flex: 1,
+    width: "100%",
     gap: Spacing.two,
   },
   title: {

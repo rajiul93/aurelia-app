@@ -57,21 +57,3 @@ export function localizeTourTitle(
   return pickTranslation(tour.translations, language, audience)?.title ?? "Tour";
 }
 
-export function localizeTourDescription(
-  tour: {
-    description?: string;
-    translations: Array<{
-      language: AppLanguage;
-      audience?: AudienceType;
-      description: string;
-    }>;
-  },
-  language: AppLanguage,
-  audience?: AudienceType,
-) {
-  if (tour.description) {
-    return tour.description;
-  }
-
-  return pickTranslation(tour.translations, language, audience)?.description ?? "";
-}

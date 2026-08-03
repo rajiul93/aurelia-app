@@ -73,6 +73,12 @@ export type InstalledTourMeta = {
   totalStops: number;
   downloadPreferences: TourDownloadPreferences;
   /**
+   * On-disk layout this bundle was installed with. Bumped when a format change
+   * makes older installs unreadable, so they surface as "update available"
+   * rather than silently breaking. See CURRENT_INSTALL_FORMAT_VERSION.
+   */
+  installFormatVersion: number;
+  /**
    * Access window this bundle was downloaded under, copied from the entitlements
    * snapshot at install time. Each bundle carries its own expiry so it can be
    * locked and swept offline, without depending on any in-memory state. `null`

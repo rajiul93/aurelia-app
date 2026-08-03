@@ -6,7 +6,7 @@ import {
   encryptBytes,
   packEncryptedPayload,
   unpackEncryptedPayload,
-} from "@/lib/crypto/media-cipher";
+} from "@/lib/crypto/cipher";
 import { getOrCreateKnowledgeKey } from "@/lib/crypto/knowledge-key";
 import type { KnowledgePack } from "@/types/knowledge";
 

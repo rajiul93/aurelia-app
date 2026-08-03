@@ -47,9 +47,6 @@ const BENEFITS: {
   },
 ];
 
-/** Gold tint from BrandColors.primary (#e1a566) for the benefit icon chips. */
-const ICON_TINT = "rgba(225, 165, 102, 0.16)";
-
 export function WhyBuyCard() {
   const theme = useTheme();
   const { t } = useStrings();
@@ -68,11 +65,19 @@ export function WhyBuyCard() {
       <View style={styles.list}>
         {BENEFITS.map((benefit) => (
           <View key={benefit.titleKey} style={styles.row}>
-            <View style={[styles.iconChip, { backgroundColor: ICON_TINT }]}>
-              <Ionicons name={benefit.icon} size={20} color={theme.primary} />
+            <View
+              style={[styles.iconChip, { backgroundColor: theme.primary }]}
+            >
+              <Ionicons
+                name={benefit.icon}
+                size={20}
+                color={theme.primaryForeground}
+              />
             </View>
             <View style={styles.rowText}>
-              <ThemedText type="smallBold">{t(benefit.titleKey)}</ThemedText>
+              <ThemedText type="smallBold" style={styles.rowTitle}>
+                {t(benefit.titleKey)}
+              </ThemedText>
               <ThemedText type="small" themeColor="textSecondary">
                 {t(benefit.descKey)}
               </ThemedText>
@@ -114,5 +119,8 @@ const styles = StyleSheet.create({
   rowText: {
     flex: 1,
     gap: 2,
+  },
+  rowTitle: {
+    fontSize: 15,
   },
 });

@@ -299,13 +299,15 @@ export function searchTourKnowledge(
   return searchInLanguage(documents, query, language);
 }
 
+/**
+ * Turn the best-ranked document into a reply. Callers must handle the no-match
+ * case themselves — this used to return a hardcoded English miss message that
+ * was never translated, and `answerQuestion` now returns early instead.
+ */
 export function formatKnowledgeReply(
   query: string,
   documents: SearchDocument[],
 ) {
-  if (documents.length === 0) {
-    return "I couldn't find that in your offline guide yet. Try different words or browse the tour stops.";
-  }
-
-  return answerFromDocument(documents[0]!, query);
+  const best = documents[0];
+  return best ? answerFromDocument(best, query) : "";
 }

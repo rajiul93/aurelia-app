@@ -8,7 +8,7 @@
 
 **Status legend:** ✅ Completed · 🚧 In Progress · ⚠️ Known Issue · ⏳ Pending · ❌ Not Started
 
-Last updated: **2026-07-21** (mobile API-key hardening + leaked secret found in `.env`)
+Last updated: **2026-08-03** (Android navigation jank fixed; admin-controlled theme; chat head)
 
 ---
 
@@ -21,8 +21,9 @@ Last updated: **2026-07-21** (mobile API-key hardening + leaked secret found in 
 - **Maps:** `@maplibre/maplibre-react-native` v11 (`<Map>` + `<GeoJSONSource>`/`<Layer>` API).
 - **State/data:** Zustand stores + TanStack Query (`@tanstack/react-query`). Styling: NativeWind.
 - **Offline model:** a downloaded tour is installed to disk — `content.json` (tour + route +
-  footprint geometry), encrypted media (`media/*.enc` + `media-map.json`), and a **MapLibre
-  offline tile pack**. Nav data is read from disk, not the network.
+  footprint geometry), media as plain files (`media/*` + `media-map.json` v3), and a **MapLibre
+  offline tile pack**. Nav data is read from disk, not the network. (Media used to be AES-encrypted;
+  removed 2026-08-03 — see §12. The AI knowledge pack is still encrypted.)
 - **Geo/nav libs:** `@turf/*` (bearing, distance, nearest-point-on-line, length), `expo-location`,
   `expo-speech` (TTS), `expo-audio` (recorded narration), `@shopify/react-native-skia` (footprint).
 
@@ -142,14 +143,16 @@ Last updated: **2026-07-21** (mobile API-key hardening + leaked secret found in 
   [prisma-retry.ts](../admin-and-server-aurelia/src/lib/prisma-retry.ts),
   [handler.ts](../admin-and-server-aurelia/src/lib/api/handler.ts),
   [app-release.repository.ts](../admin-and-server-aurelia/src/lib/app-release/app-release.repository.ts)
-- ✅ **Floor cards lock after sign-out.** Signed-out users can still see downloaded floor cards on
-  Home (offline covers stay on disk) but each card is **Locked** (lock icon + Locked chip) and taps
-  route to Unlock (`/explore`). Opening any `/tour/[tourId]/…` deep link hits the tour layout
-  gate with reason `signed_out` → `TourAccessLockScreen`. Previously `getTourLockReason` returned
-  `null` when signed out (fail-open), so logout did not seal content.
+- ✅ **Cards lock after sign-out.** Signed-out users can still see their downloaded tours on Home
+  (offline covers stay on disk) but each card is **Locked** (lock icon) and taps route to Unlock
+  (`/explore`). Opening any `/tour/[tourId]/…` deep link hits the tour layout gate with reason
+  `signed_out` → `TourAccessLockScreen`. Previously `getTourLockReason` returned `null` when signed
+  out (fail-open), so logout did not seal content. Since 2026-08-01 the locked unit is the **tour
+  card** rather than per-floor cards (§12) — `unlocked` is `!isTourLocked(tourId)`, so an expired
+  grant locks the card too, not just a missing one.
   [src/hooks/use-entitlement-status.ts](src/hooks/use-entitlement-status.ts),
-  [src/components/tours/floor-card.tsx](src/components/tours/floor-card.tsx),
-  [src/components/tours/tour-floor-cards.tsx](src/components/tours/tour-floor-cards.tsx)
+  [src/components/tours/tour-card.tsx](src/components/tours/tour-card.tsx),
+  [src/components/tours/floor-card.tsx](src/components/tours/floor-card.tsx)
 
 ---
 
@@ -226,9 +229,10 @@ Last updated: **2026-07-21** (mobile API-key hardening + leaked secret found in 
 
 **Multi-floor, remaining:**
 - ✅ **Floor switcher wired** and ✅ **floor names + cover images ship in the bundle** (2026-07-15).
-- ✅ **Floor cards on the home screen** and ✅ **`hasActivePlan` predicate** (2026-07-15).
-- ✅ **Locked floor preview** — catalog `/catalog/tours` ships `floors[]`; Home shows Locked
-  floor cards for non-installed tours and for signed-out users with installs (2026-07-15).
+- ✅ **`hasActivePlan` predicate** (2026-07-15).
+- ✅ **Floor picker lives inside the tour** (2026-08-01, §12) — Home selects a *tour*; floors are
+  chosen on `/tour/[tourId]` after download. The catalog's `floors[]` is now read only for a card's
+  "{n} floors · {n} stops" line, no longer rendered as per-floor teasers.
 - ⏳ **Server does not send `spot.floorId`** — only `floor` (the number), so mobile matches spots to
   floors by number. Emitting `floorId` from `toTourDto` would make the match exact (one line, additive).
 
@@ -410,6 +414,248 @@ Last updated: **2026-07-21** (mobile API-key hardening + leaked secret found in 
 ---
 
 ## 12. Changelog
+
+- **2026-08-03** — **Offline base map switched from dark stone to a light day palette.** Colour-only
+  change, confined to [style.ts](src/lib/map/style.ts): `background` `#1c1917`→`#f5f3f0`, `water`
+  `#0f172a`→`#a8c8e8`, `roads-minor` `#44403c`→`#e8e4df`, `roads-major` `#57534e`→`#ffffff`,
+  `landuse-park` `#292524`→`#dfe9d8`, `buildings` `#292524`→`#e3ded7`. The same three values were
+  applied to `getFallbackMapStyleObject()` so a style-load retry does not flash the map back to dark.
+  Layer ids, filters, source-layers, widths and opacities are untouched.
+  - **The offline packs did not need re-downloading.** `TOUR_MAP_STYLE_URL` (liberty) is used *only*
+    by `OfflineManager.createPack` ([offline-pack.ts](src/lib/map/offline-pack.ts)), and vector tiles
+    cache geometry, not colour — the palette lives entirely in the inline style object the live map
+    renders with. Already-installed tours keep working offline unchanged.
+  - Overlay chrome (`rgba(28, 25, 23, 0.82)` chips + white text in nav.tsx) deliberately left dark —
+    a dark translucent chip reads well over a light map.
+  - ⚠️ **Three overlay colours are now low-contrast against the light background** and were left as-is
+    because this change was scoped to the base style: the user dot's `#ffffff` stroke
+    (`tour-map-view.tsx:363`), the walk-trail step stroke `rgba(255, 243, 199, 0.9)` (`:290`), and the
+    completed-route line `rgba(225, 165, 102, 0.35)` (`:303`). Fix these if they look washed out on
+    device. `style.test.ts` asserts no colours, so all 164 tests stayed green; lint clean.
+
+- **2026-08-03** — **Home → tour → floor stopped shaking on Android.** Reported as the page shaking
+  and hanging, every time. It was four separate bugs firing together — **three of them regressions
+  from earlier the same day.**
+  - **The chat head jumped exactly 62px.** [floating-chat.tsx](src/components/chat/floating-chat.tsx)
+    computed `bottom` from `segments[0] === "(tabs)"`, so leaving the tab group changed an
+    **unanimated** layout prop the instant the router updated — mid-transition. `bottom` is now
+    pinned to the off-tab value and the tab-bar delta is an animated `lift` shared value folded into
+    the transform. The drag range moves with it, so `translateY` is **clamped on read** in the
+    animated style and on pick-up in `onStart` — never written back, because reanimated's lint rule
+    forbids mutating a shared value that an effect or hook dep also owns (this is what the
+    `eslint-disable` on the gesture memo is about).
+  - **The chat corpus was O(N²) at startup.** `loadInstalledTourSearchDocuments`
+    ([load.ts](src/lib/bundle/load.ts)) called `findTourContentByScanning` **first**, which
+    `JSON.parse`s *every* installed tour's `content.json` hunting for a match — once per tour, so N
+    tours cost N² full parses on the JS thread, fired as the splash lifted. Now tries the canonical
+    directory first (matching what `loadTourContentFromDisk` always did) and the query is
+    `enabled`-gated on the chat being **open** — the corpus is not needed until someone asks.
+  - **FloatingChat re-rendered everything on every navigation** (`usePathname`/`useSegments`). The
+    gesture is memoized and the panel subtree only mounts while open, instead of being permanently
+    built and translated offscreen.
+  - **The floor-card bounce never stopped.** Added earlier that day, it ran an uncancelled infinite
+    loop per card — including through the push, on an `elevation: 6` `overflow: hidden` container.
+    Now gated on `useIsFocused()` (from **expo-router**, which re-exports it; `@react-navigation/native`
+    is not a direct dependency here).
+  - **Android transition.** Both stacks used `simple_push` with `contentStyle: transparent` over one
+    shared photo background, so *both* screens' content slid visibly across it. Switched Android to
+    `fade`/200ms; iOS keeps its native push. The transparent-over-one-photo design is deliberate, so
+    the transition was changed to suit it rather than making screens opaque.
+  - **Loading no longer changes the layout.** `FloorCardSkeleton` hard-coded a 170px `FloorCard`
+    height but Home renders `TourCard` at **250px** — a 240px jump across three cards the moment the
+    catalog landed. It now takes `cardHeight`/`radius`. The tour and floor screens rendered a
+    centered spinner and then swapped in a whole ScrollView; both now render the same shell with
+    placeholders. `TourCard` also prefetches the tour content on press, so the placeholder usually
+    never shows (the disk read has a deliberate 0/100/300/600/1200ms retry ladder).
+  - **Per-render work.** `fallbackTourPreferences` returns a fresh object literal, so
+    `use-installed-tour-view`'s `preferences` changed identity every render and its `viewContent`
+    memo never hit — the whole content graph was re-filtered each time. `preferences` is memoized,
+    and the floor/spot math on both screens is hoisted above the early returns (hooks can't run
+    after them), including a `stopCountByFloor` map that replaces an O(floors × spots) filter that
+    ran **inside** the render map.
+  - **Investigated and deliberately not changed**: the `tour/[tourId]/_layout.tsx` Slot ↔ lock-screen
+    flip was a suspected remount, but the auth store hydrates in `use-app-bootstrap` before any
+    screen renders, so `isSignedIn` cannot flicker — the existing code is correct.
+  - **Follow-up, same day — the in-tour transitions had no animation at all.** Home → tour improved,
+    but floor → stop list and stop → detail still jumped. Cause:
+    [tour/[tourId]/_layout.tsx](src/app/tour/[tourId]/_layout.tsx) rendered **`<Slot />`**, so every
+    route under a tour (index, floor, spot, nav, prepare) was a single screen to the outer stack and
+    swapped in one frame with **no transition**. Converted to a `<Stack>` with the same
+    transparent/fade options; the lock-screen branch is unchanged. Also memoized the spot-detail
+    screen's derived data (`orderSpotsAcrossFloors`, translation, FAQ mapping — all re-running per
+    render) and added [stop-list-skeleton.tsx](src/components/tours/stop-list-skeleton.tsx), because
+    the floor screen's placeholder was 4 floor cards while its real layout is one card plus stop
+    rows — a mismatch that reintroduced the very jump it was meant to prevent.
+  - **Second follow-up — the spot detail screen grew after mount.** Two components gated their whole
+    layout on an **async** `useInstalledMediaUri` result, so they occupied **zero height** on first
+    render and then pushed the page down a moment later:
+    [spot-visual-media-gallery.tsx](src/components/tours/spot-visual-media-gallery.tsx) rendered its
+    panel only once `playbackUrl` existed (the panel has no height of its own, so 0 → a full 4:3 or
+    16:9 box), and [spot-audio-section.tsx](src/components/tours/spot-audio-section.tsx) returned
+    `null` outright. Both now reserve the space with a correctly-sized placeholder — the gallery's
+    ratio follows the active tab, since video is 16:9 and images are 4:3.
+    ⚠️ **This is the pattern to watch for on any new screen**: a component whose *presence* depends
+    on an async media uri will always shift the layout. Reserve the box, don't gate the render.
+  - `tsc` clean, `pnpm lint` 0 errors, **164 tests**. ⏳ **Unverified on device** — and worth
+    measuring in a **release** build, since dev-mode Metro exaggerates all of this.
+
+- **2026-08-03** — **Theme is admin-controlled and cached; the Settings switcher is gone.**
+  Appearance is a venue-wide branding decision, not a per-user preference, so it now comes from
+  remote config set at the admin's `/app-content` page.
+  - **Why remote config and not app-content**: both persist to `Paths.document/aurelia/`, but
+    release-config also has a **compiled-in default** (`DEFAULT_REMOTE_CONFIG`), so a first-ever
+    launch with no network still has a theme — `app-content-store` leaves `content` null until disk
+    or fetch. Release-config is also language-independent, while app-content is keyed per-language
+    and only re-seeds when `snapshot.language === language`.
+  - **Offline behaviour is what was asked for**: [use-color-scheme.ts](src/hooks/use-color-scheme.ts)
+    reads `useRemoteConfig().appTheme`; the store hydrates from
+    `aurelia/release-config.json` at bootstrap, and `use-release-config-sync` silently keeps the
+    cached value when a fetch fails. After the first sync the API is no longer needed.
+  - **Deleted**: `theme-settings-panel.tsx`, `store/theme-store.ts`, `lib/theme-storage.ts` (a
+    SecureStore key `aurelia.theme`), the panel's mount in `settings.tsx`, the bootstrap hydrate in
+    `use-app-bootstrap.ts`, and 5 i18n keys × 3 languages (`settings.theme*`).
+  - ⚠️ Requires backend migration `20260803120000_add_app_theme` — **applied**, see the server's
+    CLAUDE.md for the migration-history baselining that had to happen first.
+
+- **2026-08-03** — **One global floating chat head replaces both chat surfaces.** Same day as the
+  entry below, which merged the two corpora — this removes the two *screens*. The admin wanted chat
+  reachable everywhere, Facebook-chat-head style, not a tab you navigate to and not a button buried
+  inside a tour.
+  - **Mounted once at the root** — [_layout.tsx](src/app/_layout.tsx), immediately after
+    `<TourReminderGate />` inside `<AppBackground>`, the single node above every route (tabs, tour,
+    download, subscribe, faq, pages). `TourReminderGate` was the precedent for a root-mounted,
+    store-driven global overlay.
+  - ⚠️ **`GestureHandlerRootView` had to be added** — `react-native-gesture-handler` was a direct
+    dependency but appeared **nowhere in `src/`** (only pulled in transitively by react-navigation),
+    and this codebase had **no drag interaction at all** before now. Without that root the pan
+    gesture silently does nothing on Android. It now wraps the whole tree.
+  - **No RN `<Modal>` for the panel** — Modal creates a separate native view hierarchy that
+    gesture-handler does not reach without its own nested root. Follows
+    [app-drawer.tsx](src/components/navigation/app-drawer.tsx) instead: `StyleSheet.absoluteFill` +
+    `pointerEvents` + reanimated `withTiming`, which keeps head and panel in one tree.
+  - **Drag**: `Gesture.Race(pan, tap)` — Race, not Simultaneous, so a drag never also fires as a tap.
+    Snaps to the nearer edge with `withSpring`. Position lives in shared values on the root-mounted
+    component, so it survives navigation but **deliberately is not persisted to disk** (resetting on
+    app restart is expected chat-head behaviour, and a drag shouldn't hit storage every frame).
+  - **Tour priority**: `answerQuestion` takes `preferredTourId`, derived from `usePathname()` in
+    [current-tour-id.ts](src/lib/chat/current-tour-id.ts). `useLocalSearchParams` is unusable here —
+    it returns the params of the screen a component renders *in*, and this renders above all of them;
+    `usePathname` is what the maintenance/onboarding gates already use at this level. Asked inside a
+    tour, that tour answers first; only if it has nothing does the rest of the corpus run.
+  - **Conversation state lives in [chat-store.ts](src/store/chat-store.ts)**, not the component —
+    screens under the root remount freely, and a question asked on a floor screen must still be there
+    after walking to a spot.
+  - **Features carried over from the deleted in-tour screen** (each would have been a regression):
+    `remote.enableOfflineChat` gate, `remote.maxChatHistory` truncation, the no-knowledge banner and
+    loading spinner, and the welcome text **resolved at render** rather than frozen in a `useState`
+    initializer — the old Assistant tab had that bug and stopped re-translating on language change.
+  - **Deleted**: `(tabs)/assistant.tsx`, `tour/[tourId]/chat.tsx`, `use-installed-tour-search.ts`
+    (singular — its only consumer was the chat screen), `queryKeys.installedTour.search`, the
+    "Ask Aurelia" button + its orphaned style, the `assistant` tab registration and its `sparkles`
+    icon entry (**tab bar is now three tabs**), the long-dead `filterSearchDocuments`, and 12 i18n
+    keys × 3 languages (`chat.*`, `tabs.assistant`, `tour.askAurelia*`, plus the never-read
+    `assistant.send`/`chat.send`/`guides.askAurelia`). `formatKnowledgeReply` lost its hardcoded
+    English miss string — unreachable now that `answerQuestion` returns early on no match.
+  - Head hides on `/welcome` and the full-screen `/tour/[id]/nav` map. Its resting inset keys off
+    `useSegments()[0] === "(tabs)"` because [use-tab-bar-height.ts](src/hooks/use-tab-bar-height.ts)
+    returns the tab-bar height unconditionally and would otherwise lift it ~70px on tour/download.
+  - `tsc --noEmit` clean, `pnpm lint` 0 errors, **164 tests** green. ⏳ **Drag is unverified on a real
+    device** — that is the one thing to check first, Android especially.
+
+- **2026-08-03** — **The Assistant tab can finally answer about tours; media encryption removed.**
+  Two changes from one session, both prompted by the admin noticing the assistant answered with
+  things absent from the tour while knowing nothing the tour actually contained.
+  - **Root cause: there are two assistants reading disjoint corpora.** The **Assistant tab**
+    ([(tabs)/assistant.tsx](src/app/(tabs)/assistant.tsx)) built its corpus in
+    [knowledge/assistant.ts](src/lib/knowledge/assistant.ts) from **only** `pack.faqs` +
+    `pack.knowledge` — the global `/api/v1/app/knowledge-pack` response (`Faq` + assistant-flagged
+    `KnowledgeArticle`, neither of which has a `tourId` column), hardcoding `tourId: ""` on every
+    entry. The in-tour **"Ask Aurelia"** ([tour/[tourId]/chat.tsx](src/app/tour/[tourId]/chat.tsx))
+    reads the bundle's `search/documents.json` (spots, spot FAQs, `AiKnowledge`). So tour content was
+    invisible to the tab, and the tab's global articles were unrelated to any tour. Compounding it,
+    `AiKnowledge` is authored in a **separate admin surface** from spot text with no sync — the
+    server never derives assistant knowledge from spot prose.
+  - **Fix**: new [use-installed-tours-search-documents.ts](src/hooks/queries/use-installed-tours-search-documents.ts)
+    merges every installed tour's search corpus into the tab, narrowed per tour to the **audience it
+    was downloaded with** (a bundle carries all 4 audience variants of every spot; without this the
+    top-3 ranking could be the same stop four times). `answerQuestion` takes the merged documents and
+    returns `sourceTourId`, which the screen renders as `assistant.fromTour` — a tour-specific fact
+    must not read as a claim about the whole app.
+  - **Language fallback (the reported es/fr dead end)**: `buildDocuments` took
+    `faq.question[language]` with no fallback, so an untranslated FAQ left the corpus entirely and
+    Spanish/French users got "no answer" for everything. Now falls back to `en`, matching what
+    [use-knowledge.ts](src/hooks/use-knowledge.ts) already did for the FAQ/info screens; the search
+    retries in `en` too, so an English-only tour stays answerable in any UI language. `answerQuestion`
+    now returns an **empty** reply on no match instead of `formatKnowledgeReply`'s hardcoded English
+    miss string, so the caller's translated `assistant.noAnswer` is what users actually see.
+  - ⚠️ **It is not an LLM.** No OpenAI/Anthropic/on-device model exists in either repo — it is
+    substring scoring in [knowledge-search.ts](src/lib/bundle/knowledge-search.ts) (title +12,
+    keywords +8, body +3), which takes **only `documents[0]`**, truncates at 320 chars, and drops
+    `what/where/when/why/how/who` as stop words. Odd answers are usually this, not missing data.
+  - **Media encryption deleted.** AES-256-GCM at rest protected nothing: the R2 bucket is public and
+    unsigned (`buildPublicUrl`), and every media url ships in **plaintext** inside `content.json` and
+    `media-map.json` — so file access yielded the urls directly, bypassing the cipher entirely. It
+    cost two full pure-JS AES passes per file at install plus 2× disk. `encrypted-media.ts` and
+    `media-key.ts` are gone; `media-cipher.ts` → **`crypto/cipher.ts`** because the **knowledge pack
+    (`knowledge/pack.enc`) still uses it** with its own `aurelia.knowledgeKey` — do not delete it or
+    drop `@noble/ciphers`. `media-map.json` is `version: 3` with plain string paths.
+  - **Old installs re-download**: new `installFormatVersion` on `InstalledTourMeta` +
+    `isInstallFormatStale` ([version-compare.ts](src/lib/bundle/version-compare.ts)) folded into
+    `updateAvailable`, so a pre-change install surfaces as "Update offline tour" through the existing
+    UI. Both meta readers in `synthesize-meta.ts` default it to `0`. Stale installs still open — media
+    just falls back to remote urls.
+  - ⏳ **Not fixed, known**: `filterSearchDocuments` ([content-preferences.ts:120](src/lib/bundle/content-preferences.ts#L120))
+    is **dead code — never called**, so the in-tour chat answers from spots QUICK mode excluded;
+    `searchTourKnowledge` retries without the audience filter, so CHILDREN can get ADULTS text; the
+    knowledge-pack endpoint has **no entitlement check** and `Faq` has no publish gate.
+  - `tsc --noEmit` clean, `pnpm lint` 0 errors, **164 tests** passing. Not yet verified on device.
+
+- **2026-08-01** — **Home selects a *tour*; the floor picker moved inside the tour.** A deliberate
+  product reversal of the 2026-07-15 "Home shows Locked floor cards again (not tour cards)" entry
+  below — read both together before changing either. The admin's ask: a visitor should pick **one
+  tour**, download it whole, and only then choose a floor. Home was doing the opposite: a 4-floor
+  tour rendered 4 separate cards *before* download, all deep-linking to the same
+  `/download/[tourId]`, so floor selection happened on a screen where no floor content existed yet.
+  - **Nothing under the picker changed.** `/tour/[tourId]/floor/[floorId]` and everything below it
+    (map, spots, audio, navigation) is untouched, and the new picker pushes the exact same route the
+    old `TourFloorCards` did.
+  - **No backend or data change was needed** — the two things that sound like they'd need one
+    already worked: `install.ts` has always downloaded the whole tour (every floor) in one bundle,
+    and `/me/entitlements` has always returned **every** tour in the grant, so one unlock already
+    unlocks all of them. This was purely a UI/navigation rearrangement.
+  - **New** [tour-card.tsx](src/components/tours/tour-card.tsx) — one card per tour, **whole card
+    tappable** (per the admin's choice) routing by state: locked → `/explore`, installed & current →
+    `/tour/[tourId]`, otherwise → `/download/[tourId]`. It nests the unmodified `TourDownloadButton`;
+    RN gives the inner Pressable the touch, so "Change options" still works without the outer tap
+    firing. New [use-tour-download-state.ts](src/hooks/use-tour-download-state.ts) holds the
+    `installed`/`updateAvailable` pair so the outer tap target and the inner button can never
+    disagree.
+  - **Locked state uses `isTourLocked`, not `entitledVersionsByTourId.has()`.** The old Home used
+    the weaker `unlockedTourIds.has()` for catalog teasers and the stronger `isTourLocked` only for
+    installed cards. Unifying on the weak one would have shown "Open Offline Tour" on a tour whose
+    **grant had expired** — the layout gate would still seal it, so not a hole, but the card would
+    lie. `isTourLocked` also covers `access_inactive`, preserving the 2026-07-15 sign-out invariant
+    (§2) at tour level.
+  - ⚠️ **Caught an offline regression before it shipped.** Building the list from
+    `useCatalogTours()` alone means that offline — no network, **and the catalog query is not
+    persisted** (plain `useQuery`, no `PersistQueryClientProvider` anywhere) — `tours` is empty, so a
+    visitor standing in the venue would have seen an error card and **no way to open the tour they
+    already downloaded**. The old code rendered installed floors straight off disk, so it survived
+    this. Fixed with [installed-tour-card.tsx](src/components/tours/installed-tour-card.tsx):
+    installed tours the catalog didn't return are merged in ahead of the catalog list and read their
+    cover/floor count off disk. It is a separate component so only those cards pay for a bundle
+    read — a catalog-backed card already has what it needs from the API.
+  - `/tour/[tourId]/index.tsx` now branches: `content.floors.length > 0` → floor picker (sorted by
+    `floorNo`, `tour.chooseFloor`); a **v1 bundle keeps the flat cross-floor stop list verbatim**.
+    That branch, rather than a synthetic default floor, is what avoids the self-loop the old
+    `TourFloorCards` had (its no-floors fallback linked to `/tour/[tourId]` — the very screen this
+    now lives on). Header, description, progress, `GuidedWalkSection` and the Host/Assistant buttons
+    are all tour-wide and stayed put. Safe to drop the picker's own lock check: `_layout.tsx`
+    already gates the route with `getTourLockReason`.
+  - Deleted `tour-floor-cards.tsx` (Home was its only consumer). `floor-card.tsx` is unchanged and
+    still used — by the picker. New keys `tours.yourTours` / `tours.floors` / `tour.chooseFloor` in
+    all three locales. `tsc` clean, lint 0 errors (33 pre-existing warnings, none in changed files),
+    164 tests pass. ⏳ **Not yet verified on a device** — no simulator run this session.
 
 - **2026-07-21** — **Documentation pass over 2026-07-20's commits; found a live secret in `.env`.**
   No new feature — the user asked for the last day's UI/other work to be checked against this file.

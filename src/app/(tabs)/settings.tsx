@@ -7,7 +7,6 @@ import { AccessSettingsPanel } from "@/components/settings/access-settings-panel
 import { AppInfoSettingsPanel } from "@/components/settings/app-info-settings-panel";
 import { LanguageSettingsPanel } from "@/components/settings/language-settings-panel";
 import { StorageSettingsPanel } from "@/components/settings/storage-settings-panel";
-import { ThemeSettingsPanel } from "@/components/settings/theme-settings-panel";
 import { TourDateSettingsPanel } from "@/components/settings/tour-date-settings-panel";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -42,7 +41,6 @@ export default function SettingsScreen() {
             <FeatureRow tourId={hostTourId} locked={!hasActivePlan} />
           ) : null}
           <TourDateSettingsPanel />
-          <ThemeSettingsPanel />
           <LanguageSettingsPanel />
           <StorageSettingsPanel />
           <AppInfoSettingsPanel />

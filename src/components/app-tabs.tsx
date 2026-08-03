@@ -19,7 +19,6 @@ export default function AppTabs() {
       <Tabs.Screen name="index" options={{ title: t("tabs.home") }} />
       <Tabs.Screen name="explore" options={{ title: t("tabs.account") }} />
       <Tabs.Screen name="settings" options={{ title: t("tabs.settings") }} />
-      <Tabs.Screen name="assistant" options={{ title: t("tabs.assistant") }} />
     </Tabs>
   );
 }

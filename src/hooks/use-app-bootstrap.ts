@@ -19,7 +19,6 @@ import { useLocaleStore } from "@/store/locale-store";
 import { useOnboardingStore } from "@/store/onboarding-store";
 import { useReleaseConfigStore } from "@/store/release-config-store";
 import { useSpotBookmarksStore } from "@/store/spot-bookmarks-store";
-import { useThemeStore } from "@/store/theme-store";
 import { useTourProgressStore } from "@/store/tour-progress-store";
 import { useTourReminderStore } from "@/store/tour-reminder-store";
 
@@ -74,7 +73,6 @@ export function useAppBootstrap(): boolean {
       useLocaleStore.getState().hydrate(),
       useOnboardingStore.getState().hydrate(),
       useKnowledgeStore.getState().hydrate(),
-      useThemeStore.getState().hydrate(),
       useTourReminderStore.getState().hydrate(),
     ]).then(() => {
       if (!cancelled) {

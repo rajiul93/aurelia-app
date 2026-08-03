@@ -1,48 +1,47 @@
-import { Ionicons } from "@react-native-vector-icons/ionicons";
-import { useRouter } from "expo-router";
-import { useEffect } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from '@react-native-vector-icons/ionicons';
+import { useRouter } from 'expo-router';
+import { useEffect } from 'react';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { EmergencyAnnouncementBanner } from "@/components/emergency-announcement-banner";
-import { FeatureRow } from "@/components/home/feature-row";
-import { PremiumUnlockCard } from "@/components/home/premium-unlock-card";
-import { HamburgerButton } from "@/components/navigation/hamburger-button";
-import { ThemedText } from "@/components/themed-text";
-import { FloorCard } from "@/components/tours/floor-card";
-import { FloorCardSkeleton } from "@/components/tours/floor-card-skeleton";
-import { TourDownloadButton } from "@/components/tours/tour-download-button";
-import { TourFloorCards } from "@/components/tours/tour-floor-cards";
-import { WhyBuyCard } from "@/components/tours/why-buy-card";
-import { GlassCard } from "@/components/ui/glass-card";
-import { BottomTabInset, Spacing } from "@/constants/theme";
-import { useAppContent } from "@/hooks/queries/use-app-content";
-import { useCatalogTours } from "@/hooks/queries/use-catalog";
-import { useEntitlementStatus } from "@/hooks/use-entitlement-status";
-import { useStrings } from "@/hooks/use-strings";
-import { useTheme } from "@/hooks/use-theme";
+import { EmergencyAnnouncementBanner } from '@/components/emergency-announcement-banner';
+import { FeatureRow } from '@/components/home/feature-row';
+import { PremiumUnlockCard } from '@/components/home/premium-unlock-card';
+import { HamburgerButton } from '@/components/navigation/hamburger-button';
+import { ThemedText } from '@/components/themed-text';
+import { FloorCardSkeleton } from '@/components/tours/floor-card-skeleton';
+import { InstalledTourCard } from '@/components/tours/installed-tour-card';
+import { TourCard } from '@/components/tours/tour-card';
+import { WhyBuyCard } from '@/components/tours/why-buy-card';
+import { GlassCard } from '@/components/ui/glass-card';
+import { BottomTabInset, Spacing } from '@/constants/theme';
+import { useAppContent } from '@/hooks/queries/use-app-content';
+import { useCatalogTours } from '@/hooks/queries/use-catalog';
+import { useEntitlementStatus } from '@/hooks/use-entitlement-status';
+import { useStrings } from '@/hooks/use-strings';
+import { useTheme } from '@/hooks/use-theme';
 import {
   getCurrentTimeOfDay,
   resolveAppBackgroundUrl,
-} from "@/lib/app-content/resolve-asset";
-import { env } from "@/lib/env";
-import { useAuthStore } from "@/store/auth-store";
-import { useInstalledToursStore } from "@/store/installed-tours-store";
-import { useRemoteConfig } from "@/store/release-config-store";
+} from '@/lib/app-content/resolve-asset';
+import { env } from '@/lib/env';
+import { useAuthStore } from '@/store/auth-store';
+import { useInstalledToursStore } from '@/store/installed-tours-store';
+import { useRemoteConfig } from '@/store/release-config-store';
 
 function getErrorMessage(
   error: unknown,
-  t: ReturnType<typeof useStrings>["t"],
+  t: ReturnType<typeof useStrings>['t'],
 ) {
-  if (error instanceof Error && error.message === "Network Error") {
-    return t("home.networkError", { url: env.apiBaseUrl });
+  if (error instanceof Error && error.message === 'Network Error') {
+    return t('home.networkError', { url: env.apiBaseUrl });
   }
 
   if (error instanceof Error) {
     return error.message;
   }
 
-  return t("home.checkApiConfig");
+  return t('home.checkApiConfig');
 }
 
 export default function HomeScreen() {
@@ -55,7 +54,8 @@ export default function HomeScreen() {
   const { venueTimezone } = useRemoteConfig();
   const { data, isLoading, isError, error, refetch, isFetching } =
     useCatalogTours();
-  const { hasActivePlan, entitledVersionsByTourId } = useEntitlementStatus();
+  const { hasActivePlan, entitledVersionsByTourId, isTourLocked } =
+    useEntitlementStatus();
   const installedByTourId = useInstalledToursStore(
     (state) => state.installedByTourId,
   );
@@ -67,7 +67,7 @@ export default function HomeScreen() {
     contentResponse?.data.assets,
     getCurrentTimeOfDay(venueTimezone),
   );
-  const title = strings["title.welcome"] ?? t("app.name");
+  const title = strings['title.welcome'] ?? t('app.name');
   const heroOnDark = Boolean(backgroundUrl);
 
   const tours = data?.data ?? [];
@@ -76,34 +76,47 @@ export default function HomeScreen() {
   );
   const installedTourIds = new Set(installedGuides.map((g) => g.tourId));
   const unlockedTourIds = new Set(entitledVersionsByTourId.keys());
-  // Tours the user can fetch but has not downloaded yet — floors live in the
-  // bundle, so these need a download before their floor cards can appear.
+  // Tours the user can fetch but has not downloaded yet.
   const downloadable = tours.filter((tour) => !installedTourIds.has(tour.id));
 
-  // Locked / download floor teasers from the catalog for tours not yet on disk.
-  // Entitled + signed-in → Download (prepare). Everyone else → Locked (unlock).
-  const catalogFloorTeasers = tours
-    .filter((tour) => !installedTourIds.has(tour.id))
-    .flatMap((tour) =>
-      (tour.floors ?? []).map((floor) => ({
-        tour,
-        floor,
-      })),
-    );
+  // One card per tour — a tour is the unit the user downloads, so floors are
+  // only picked once they are inside it. Downloaded tours float to the top
+  // (newest first); the rest keep catalog order.
+  const installedRank = new Map(
+    installedGuides.map((guide, index) => [guide.tourId, index]),
+  );
+  const sortedTours = [...tours].sort((left, right) => {
+    const leftRank = installedRank.get(left.id);
+    const rightRank = installedRank.get(right.id);
 
-  // Entitled tours with no floor list still need a compact download row.
-  const downloadableWithoutFloors = downloadable.filter(
-    (tour) => !(tour.floors?.length),
+    if (leftRank !== undefined && rightRank !== undefined) {
+      return leftRank - rightRank;
+    }
+
+    if (leftRank !== undefined) {
+      return -1;
+    }
+
+    if (rightRank !== undefined) {
+      return 1;
+    }
+
+    return 0;
+  });
+
+  // Downloaded tours the catalog did not return. The catalog query is not
+  // persisted, so offline it returns nothing at all — without this the visitor
+  // would lose the tour they already paid for and downloaded.
+  const catalogTourIds = new Set(tours.map((tour) => tour.id));
+  const offlineOnlyGuides = installedGuides.filter(
+    (guide) => !catalogTourIds.has(guide.tourId),
   );
 
-  const showFloorsSection =
-    installedGuides.length > 0 || catalogFloorTeasers.length > 0;
-
-  // Prefetch the lightweight root download route so floor → prepare feels instant.
+  // Prefetch the lightweight root download route so tour → prepare feels instant.
   const downloadPrefetchKey = downloadable
     .filter((tour) => unlockedTourIds.has(tour.id))
     .map((tour) => tour.id)
-    .join("|");
+    .join('|');
 
   useEffect(() => {
     if (!isSignedIn || !downloadPrefetchKey) {
@@ -116,7 +129,7 @@ export default function HomeScreen() {
       }
 
       router.prefetch({
-        pathname: "/download/[tourId]",
+        pathname: '/download/[tourId]',
         params: {
           tourId: tour.id,
           slug: tour.slug,
@@ -133,7 +146,7 @@ export default function HomeScreen() {
   const hostTourId = installedGuides[0]?.tourId ?? tours[0]?.id;
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -154,42 +167,15 @@ export default function HomeScreen() {
               numberOfLines={1}
               style={styles.brandTitle}
             >
-              {title.toLocaleUpperCase("en-US")}
+              {title.toLocaleUpperCase('en-US')}
             </ThemedText>
           </Pressable>
         </View>
 
         {!isSignedIn ? (
-          <PremiumUnlockCard onPress={() => router.navigate("/explore")} />
+          <PremiumUnlockCard onPress={() => router.navigate('/explore')} />
         ) : null}
-
         <EmergencyAnnouncementBanner />
-
-        {/* Download row only for entitled tours that have no floor teasers yet. */}
-        {sessionToken && downloadableWithoutFloors.length > 0 ? (
-          <View style={styles.section}>
-            <View style={styles.cardList}>
-              {downloadableWithoutFloors.map((tour) => (
-                <GlassCard key={tour.id} style={styles.downloadCard}>
-                  <ThemedText
-                    type="smallBold"
-                    numberOfLines={2}
-                    style={styles.wrapText}
-                  >
-                    {tour.title}
-                  </ThemedText>
-                  <TourDownloadButton
-                    tourId={tour.id}
-                    slug={tour.slug}
-                    title={tour.title}
-                    unlocked={unlockedTourIds.has(tour.id)}
-                    entitledVersions={entitledVersionsByTourId.get(tour.id)}
-                  />
-                </GlassCard>
-              ))}
-            </View>
-          </View>
-        ) : null}
 
         {/* Find Host + Reminders row: show whenever there's a tour to reference.
             Locked (routes to unlock) until the user has an active plan. */}
@@ -202,58 +188,45 @@ export default function HomeScreen() {
             />
           </View>
         ) : null}
-
-        {/* Floor cards: installed (Locked only when signed out / not entitled) +
-            catalog teasers (Download when entitled, Locked otherwise). */}
-        {showFloorsSection ? (
+        {/* <LocalFeature /> */}
+        {/* One card per tour. Locked until signed in with a grant covering it;
+            then Download, and Open once it is on disk. Floors are chosen inside
+            the tour, not here. */}
+        {sortedTours.length > 0 || offlineOnlyGuides.length > 0 ? (
           <View style={styles.section}>
+            <ThemedText
+              type="smallBold"
+              style={[styles.sectionTitle, heroOnDark && styles.onDarkText]}
+            >
+              {t('tours.yourTours')}
+            </ThemedText>
             <View style={styles.cardList}>
-              {installedGuides.map((guide, index) => (
-                <TourFloorCards
+              {offlineOnlyGuides.map((guide, index) => (
+                <InstalledTourCard
                   key={guide.tourId}
-                  tourId={guide.tourId}
-                  baseDelay={index * 120}
+                  guide={guide}
+                  unlocked={!isTourLocked(guide.tourId)}
+                  entitledVersions={entitledVersionsByTourId.get(guide.tourId)}
+                  delay={index * 80}
                 />
               ))}
-              {catalogFloorTeasers.map(({ tour, floor }, index) => {
-                const canDownload =
-                  isSignedIn && unlockedTourIds.has(tour.id);
+              {sortedTours.map((tour, index) => {
+                const floors = tour.floors ?? [];
                 return (
-                  <FloorCard
-                    key={floor.id}
-                    name={floor.name}
-                    coverUrl={floor.coverUrl}
-                    stopCount={floor.stopCount}
-                    stopLabel={
-                      floor.stopCount === 1
-                        ? t("floors.stop")
-                        : t("floors.stops")
-                    }
-                    exploreLabel={
-                      canDownload
-                        ? t("floors.download")
-                        : t("floors.explore")
-                    }
-                    exploreIcon={
-                      canDownload ? "cloud-download-outline" : "compass"
-                    }
-                    locked={!canDownload}
-                    lockedLabel={t("floors.locked")}
-                    delay={installedGuides.length * 120 + index * 80}
-                    onPress={() => {
-                      if (canDownload) {
-                        router.push({
-                          pathname: "/download/[tourId]",
-                          params: {
-                            tourId: tour.id,
-                            slug: tour.slug,
-                            title: tour.title,
-                          },
-                        });
-                        return;
-                      }
-                      router.navigate("/explore");
-                    }}
+                  <TourCard
+                    key={tour.id}
+                    tourId={tour.id}
+                    slug={tour.slug}
+                    title={tour.title}
+                    coverUrl={tour.coverUrl}
+                    floorCount={floors.length}
+                    stopCount={floors.reduce(
+                      (total, floor) => total + floor.stopCount,
+                      0,
+                    )}
+                    unlocked={!isTourLocked(tour.id)}
+                    entitledVersions={entitledVersionsByTourId.get(tour.id)}
+                    delay={(offlineOnlyGuides.length + index) * 80}
                   />
                 );
               })}
@@ -265,15 +238,17 @@ export default function HomeScreen() {
               type="smallBold"
               style={[styles.sectionTitle, heroOnDark && styles.onDarkText]}
             >
-              {t("floors.yourFloors")}
+              {t('tours.yourTours')}
             </ThemedText>
-            <FloorCardSkeleton count={3} />
+            {/* Home renders TourCard, so the placeholder must be TourCard-sized. */}
+            <FloorCardSkeleton count={3} cardHeight={250} radius={20} />
           </View>
         ) : null}
+
         {isError ? (
           <GlassCard>
             <ThemedText type="smallBold" style={styles.wrapText}>
-              {t("home.couldNotLoadTours")}
+              {t('home.couldNotLoadTours')}
             </ThemedText>
             <ThemedText
               type="small"
@@ -295,23 +270,23 @@ export default function HomeScreen() {
                 type="smallBold"
                 style={{ color: theme.primaryForeground }}
               >
-                {isFetching ? t("home.retrying") : t("home.tryAgain")}
+                {isFetching ? t('home.retrying') : t('home.tryAgain')}
               </ThemedText>
             </Pressable>
           </GlassCard>
         ) : null}
 
-        {!isLoading && !isError && tours.length === 0 && !showFloorsSection ? (
+        {!isLoading && !isError && tours.length === 0 ? (
           <GlassCard>
             <ThemedText type="smallBold" style={styles.wrapText}>
-              {t("home.noPublishedTours")}
+              {t('home.noPublishedTours')}
             </ThemedText>
             <ThemedText
               type="small"
               themeColor="textSecondary"
               style={styles.wrapText}
             >
-              {t("home.publishHint")}
+              {t('home.publishHint')}
             </ThemedText>
           </GlassCard>
         ) : null}
@@ -336,10 +311,10 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
   },
   topBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    alignSelf: "stretch",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    alignSelf: 'stretch',
     paddingTop: Spacing.two,
   },
   brandChip: {
@@ -348,61 +323,58 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two + 2,
     borderRadius: 12,
-    backgroundColor: "rgba(255, 255, 255, 0.16)",
+    backgroundColor: 'rgba(255, 255, 255, 0.16)',
     borderWidth: 1,
-    borderColor: "rgba(225, 165, 102, 0.55)",
+    borderColor: 'rgba(225, 165, 102, 0.55)',
     // Soft premium lift
-    shadowColor: "#e1a566",
+    shadowColor: '#e1a566',
     shadowOpacity: 0.22,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 2 },
     elevation: 3,
   },
   brandTitle: {
-    color: "#ffffff",
+    color: '#ffffff',
     fontSize: 14,
     lineHeight: 18,
     letterSpacing: 1.6,
-    textAlign: "center",
+    textAlign: 'center',
   },
   wrapText: {
     flexShrink: 1,
-    alignSelf: "stretch",
+    alignSelf: 'stretch',
   },
   onDarkText: {
-    color: "#ffffff",
-    textShadowColor: "rgba(0, 0, 0, 0.55)",
+    color: '#ffffff',
+    textShadowColor: 'rgba(0, 0, 0, 0.55)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 6,
   },
   onDarkMuted: {
-    color: "rgba(255, 255, 255, 0.85)",
-    textShadowColor: "rgba(0, 0, 0, 0.5)",
+    color: 'rgba(255, 255, 255, 0.85)',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 5,
   },
   section: {
-    alignSelf: "stretch",
+    alignSelf: 'stretch',
     gap: Spacing.three,
   },
   sectionTitle: {
-    alignSelf: "stretch",
+    alignSelf: 'stretch',
   },
   cardList: {
-    alignSelf: "stretch",
+    alignSelf: 'stretch',
     gap: Spacing.four,
   },
   retryButton: {
-    alignSelf: "flex-start",
-    flexDirection: "row",
-    alignItems: "center",
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: Spacing.two,
     borderRadius: Spacing.two,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     marginTop: Spacing.one,
-  },
-  downloadCard: {
-    gap: Spacing.three,
   },
 });

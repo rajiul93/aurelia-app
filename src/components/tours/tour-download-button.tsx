@@ -15,11 +15,8 @@ import { ThemedText } from "@/components/themed-text";
 import { Spacing } from "@/constants/theme";
 import { useStrings } from "@/hooks/use-strings";
 import { useTheme } from "@/hooks/use-theme";
-import {
-  isUpdateAvailable,
-  type EntitledVersions,
-} from "@/lib/bundle/version-compare";
-import { useInstalledToursStore } from "@/store/installed-tours-store";
+import { useTourDownloadState } from "@/hooks/use-tour-download-state";
+import type { EntitledVersions } from "@/lib/bundle/version-compare";
 
 type TourDownloadButtonProps = {
   tourId: string;
@@ -82,8 +79,9 @@ export function TourDownloadButton({
   const router = useRouter();
   const theme = useTheme();
   const { t } = useStrings();
-  const installed = useInstalledToursStore(
-    (state) => state.installedByTourId[tourId] ?? null,
+  const { installed, updateAvailable } = useTourDownloadState(
+    tourId,
+    entitledVersions,
   );
 
   function openPrepare() {
@@ -104,11 +102,6 @@ export function TourDownloadButton({
       </ThemedText>
     );
   }
-
-  const updateAvailable =
-    installed &&
-    entitledVersions &&
-    isUpdateAvailable(installed, entitledVersions);
 
   if (installed && !updateAvailable) {
     return (
