@@ -43,6 +43,11 @@ type TourMapViewProps = {
   orderedSpots: BundleSpot[];
   snapshot: NavigationSessionSnapshot | null;
   onLoadError?: () => void;
+  /**
+   * Fires with the map's rotation in degrees (0 = north-up) as the user turns it
+   * with two fingers. The compass reads this to stay pointed at true north.
+   */
+  onBearingChange?: (bearing: number) => void;
 };
 
 /** A stop with valid coordinates, plus its 1-based label along the route. */
@@ -113,12 +118,14 @@ export function TourMapView({
   orderedSpots,
   snapshot,
   onLoadError,
+  onBearingChange,
 }: TourMapViewProps) {
   const router = useRouter();
   const cameraRef = useRef<CameraRef>(null);
   const mapReadyRef = useRef(false);
   const initialTourFitRef = useRef(false);
   const styleRetryRef = useRef(0);
+  const lastBearingRef = useRef(0);
   const [styleAttempt, setStyleAttempt] = useState(0);
 
   const routeCoordinates = useMemo(() => {
@@ -158,7 +165,12 @@ export function TourMapView({
     () => toLineFeature(upcoming, "upcoming"),
     [upcoming],
   );
-  const displayLocation = getDisplayLocation(snapshot);
+  // Memoized on the snapshot, not rebuilt per render: the camera-follow effect
+  // below depends on this object's identity, and since the map became rotatable
+  // this component also re-renders on every degree of a two-finger turn. An
+  // unmemoized object would fire an `easeTo` on each of those frames and the
+  // camera would fight the gesture.
+  const displayLocation = useMemo(() => getDisplayLocation(snapshot), [snapshot]);
   const walkTrail = useMemo(() => snapshot?.walkTrail ?? [], [snapshot]);
   const trailFeature = useMemo(
     () => toLineFeature(walkTrail, "walk-trail"),
@@ -239,9 +251,18 @@ export function TourMapView({
         {...(Platform.OS === "android" ? { androidView: "texture" as const } : {})}
         dragPan
         touchZoom
-        touchRotate={false}
+        touchRotate
         touchPitch={false}
         attribution={false}
+        onRegionIsChanging={(event) => {
+          // Fires per frame of a gesture. Report whole degrees only, so a turn
+          // costs ~one parent render per degree instead of one per frame.
+          const bearing = Math.round(event.nativeEvent.bearing);
+          if (bearing !== lastBearingRef.current) {
+            lastBearingRef.current = bearing;
+            onBearingChange?.(bearing);
+          }
+        }}
         onDidFinishLoadingMap={() => {
           styleRetryRef.current = 0;
           mapReadyRef.current = true;

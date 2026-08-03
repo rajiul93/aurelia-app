@@ -7,6 +7,7 @@ import {
 } from "expo-router";
 import {
   lazy,
+  memo,
   Suspense,
   useCallback,
   useEffect,
@@ -49,10 +50,16 @@ import { queryKeys } from "@/lib/query/keys";
 import { useRemoteConfig } from "@/store/release-config-store";
 import { useTourProgressStore } from "@/store/tour-progress-store";
 
-const TourMapView = lazy(() =>
-  import("@/components/navigation/tour-map-view").then((module) => ({
-    default: module.TourMapView,
-  })),
+// memo, because rotating the map updates `mapBearing` on this screen once per
+// degree. Only the compass needs that; without memo every degree of a turn would
+// re-render the whole map tree. Its props must therefore stay referentially
+// stable — see the useCallback'd handlers below.
+const TourMapView = memo(
+  lazy(() =>
+    import("@/components/navigation/tour-map-view").then((module) => ({
+      default: module.TourMapView,
+    })),
+  ),
 );
 
 export default function TourNavigationScreen() {
@@ -77,6 +84,10 @@ export default function TourNavigationScreen() {
     [];
   const [mapReloadKey, setMapReloadKey] = useState(0);
   const [mapLoadFailed, setMapLoadFailed] = useState(false);
+  // The map is rotatable by two fingers, so screen-up is no longer north. Only
+  // the compass consumes this; TourMapView is memoized so a turn does not
+  // re-render the map itself.
+  const [mapBearing, setMapBearing] = useState(0);
 
   // Pushing a spot detail leaves this screen mounted, so the GPS session keeps
   // running and would announce the next stop from behind the stack. Tracked in
@@ -187,6 +198,9 @@ export default function TourNavigationScreen() {
     // Remount the map so MapLibre rebuilds the style and re-attaches every
     // GeoJSON layer — the reliable recovery for a blank/partial offline map.
     setMapReloadKey((key) => key + 1);
+    // The remount comes back north-up, so the compass must not keep showing the
+    // pre-refresh rotation.
+    setMapBearing(0);
     // Reload the installed tour content (route/footprint geometry) from disk.
     void queryClient.invalidateQueries({ queryKey: queryKeys.installedTour.all });
     // Rebuild the offline tile pack if it never completed.
@@ -199,6 +213,14 @@ export default function TourNavigationScreen() {
       })();
     }
   }, [queryClient, rawContent, tourId]);
+
+  // Stable identities so `memo(TourMapView)` actually holds while the compass
+  // re-renders through a rotation.
+  const handleMapLoadError = useCallback(() => setMapLoadFailed(true), []);
+  const handleBearingChange = useCallback(
+    (bearing: number) => setMapBearing(bearing),
+    [],
+  );
 
   // Warm the offline tile pack as soon as the tour content is available. The
   // map mount is gated on useMapPackReady; this keeps pack status fresh if the
@@ -293,7 +315,8 @@ export default function TourNavigationScreen() {
           floorId={selectedFloorId}
           orderedSpots={orderedSpots}
           snapshot={snapshot}
-          onLoadError={() => setMapLoadFailed(true)}
+          onLoadError={handleMapLoadError}
+          onBearingChange={handleBearingChange}
         />
       </Suspense>
 
@@ -332,7 +355,7 @@ export default function TourNavigationScreen() {
                   color={mapLoadFailed ? theme.primaryForeground : "#ffffff"}
                 />
               </Pressable>
-              <CompassOverlay heading={heading} />
+              <CompassOverlay heading={heading} mapBearing={mapBearing} />
             </View>
           </View>
           <View

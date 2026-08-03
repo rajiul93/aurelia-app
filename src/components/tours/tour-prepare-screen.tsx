@@ -1,10 +1,21 @@
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { Ionicons } from "@react-native-vector-icons/ionicons";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
+import { useIsFocused, useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Animated, {
+  cancelAnimation,
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from "react-native-reanimated";
 
+import { GlassCard } from "@/components/ui/glass-card";
 import { ScreenHeader } from "@/components/screen-header";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -22,10 +33,15 @@ import {
 } from "@/constants/download-mode";
 import { Spacing } from "@/constants/theme";
 import { useDownloadTour } from "@/hooks/mutations/use-download-tour";
+import { useAppContent } from "@/hooks/queries/use-app-content";
 import { useEntitlementStatus } from "@/hooks/use-entitlement-status";
 import { useStrings } from "@/hooks/use-strings";
 import { useTheme } from "@/hooks/use-theme";
 import { getApiErrorMessage } from "@/lib/api-error";
+import {
+  getCurrentTimeOfDay,
+  resolveAppBackgroundUrl,
+} from "@/lib/app-content/resolve-asset";
 import type { DownloadProgress } from "@/lib/bundle/download-progress";
 import {
   formatDownloadPercent,
@@ -33,7 +49,10 @@ import {
 } from "@/lib/bundle/download-progress-label";
 import { useLocaleStore, APP_LANGUAGES, type AppLanguage } from "@/store/locale-store";
 import { useInstalledToursStore } from "@/store/installed-tours-store";
-import { useReleaseConfigStore } from "@/store/release-config-store";
+import {
+  useReleaseConfigStore,
+  useRemoteConfig,
+} from "@/store/release-config-store";
 
 export function TourPrepareScreen() {
   const { tourId, slug, title, mode } = useLocalSearchParams<{
@@ -101,6 +120,19 @@ function TourPrepareForm({
   );
   const downloadTour = useDownloadTour();
 
+  // The header sits directly on the CMS background photo, with no card behind
+  // it. Left on the theme colour it renders near-black over that photo and is
+  // unreadable — so it switches to the white-on-dark treatment whenever a
+  // background is actually active. Same derivation as subscribe.tsx.
+  const { data: appContent } = useAppContent();
+  const { venueTimezone } = useRemoteConfig();
+  const heroOnDark = Boolean(
+    resolveAppBackgroundUrl(
+      appContent?.data.assets,
+      getCurrentTimeOfDay(venueTimezone),
+    ),
+  );
+
   // State holds only what the user has actually picked; everything else is
   // derived. An installed tour's preferences arrive asynchronously, so an effect
   // used to copy them into state on arrival — which meant writing state on
@@ -161,6 +193,7 @@ function TourPrepareForm({
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <ScreenHeader
+            onDark={heroOnDark}
             title={
               isUpdateMode ? t("prepare.updateTitle") : t("prepare.title")
             }
@@ -169,46 +202,27 @@ function TourPrepareForm({
                 ? t("prepare.updateSubtitle", {
                     version: installed.tourBundleVersion,
                   })
-                : undefined
+                : t("prepare.subtitle")
             }
           />
 
           {!isDownloading ? (
-            <>
-              <Section title={t("prepare.audience")}>
-                {AUDIENCE_TYPES.map((value) => (
-                  <OptionCard
-                    key={value}
-                    label={audienceLabel(value)}
-                    selected={audience === value}
-                    onPress={() => setAudienceChoice(value)}
-                  />
-                ))}
-              </Section>
-
-              <Section title={t("prepare.tourLanguage")}>
-                {languages.map((value) => (
-                  <OptionCard
-                    key={value}
-                    label={languageLabel(value)}
-                    selected={contentLanguage === value}
-                    onPress={() => setLanguageChoice(value)}
-                  />
-                ))}
-              </Section>
-
-              <Section title={t("prepare.downloadMode")}>
-                {DOWNLOAD_MODES.map((value) => (
-                  <OptionCard
-                    key={value}
-                    label={downloadModeLabel(value)}
-                    description={downloadModeDescription(value)}
-                    selected={downloadMode === value}
-                    onPress={() => setDownloadModeChoice(value)}
-                  />
-                ))}
-              </Section>
-            </>
+            <GlassCard style={styles.selectionsCard}>
+              <SelectionsGrid
+                audience={audience}
+                audienceLabel={audienceLabel}
+                onAudienceChange={setAudienceChoice}
+                contentLanguage={contentLanguage}
+                languageLabel={languageLabel}
+                languages={languages}
+                onLanguageChange={setLanguageChoice}
+                downloadMode={downloadMode}
+                downloadModeLabel={downloadModeLabel}
+                downloadModeDescription={downloadModeDescription}
+                onDownloadModeChange={setDownloadModeChoice}
+                t={t}
+              />
+            </GlassCard>
           ) : null}
 
           {isDownloading && downloadProgress ? (
@@ -271,14 +285,16 @@ function TourPrepareForm({
                 onPress={() => void handleDownload()}
                 style={[styles.cta, { backgroundColor: theme.primary }]}
               >
-                <Ionicons
+                <NudgingCtaIcon
                   name={
                     isUpdateMode
                       ? "cloud-upload-outline"
                       : "cloud-download-outline"
                   }
-                  size={18}
                   color={theme.primaryForeground}
+                  // Download pulls content down, an update pushes it up: the
+                  // nudge travels the same way the icon reads.
+                  distance={isUpdateMode ? -3 : 3}
                 />
                 <ThemedText type="smallBold" style={{ color: theme.primaryForeground }}>
                   {isUpdateMode
@@ -294,7 +310,71 @@ function TourPrepareForm({
   );
 }
 
-function Section({
+type SelectionsGridProps = {
+  audience: AudienceType;
+  audienceLabel: (a: AudienceType) => string;
+  onAudienceChange: (a: AudienceType) => void;
+  contentLanguage: AppLanguage;
+  languageLabel: (l: AppLanguage) => string;
+  languages: AppLanguage[];
+  onLanguageChange: (l: AppLanguage) => void;
+  downloadMode: DownloadMode;
+  downloadModeLabel: (m: DownloadMode) => string;
+  downloadModeDescription: (m: DownloadMode) => string;
+  onDownloadModeChange: (m: DownloadMode) => void;
+  t: ReturnType<typeof useStrings>["t"];
+};
+
+function SelectionsGrid(props: SelectionsGridProps) {
+  return (
+    <View style={styles.selectionsGrid}>
+      <SelectionSection title={props.t("prepare.audience")}>
+        {AUDIENCE_TYPES.map((value) => (
+          <PillOption
+            key={value}
+            label={props.audienceLabel(value)}
+            selected={props.audience === value}
+            onPress={() => props.onAudienceChange(value)}
+          />
+        ))}
+      </SelectionSection>
+
+      <SelectionSection title={props.t("prepare.tourLanguage")}>
+        {props.languages.map((value) => (
+          <PillOption
+            key={value}
+            label={props.languageLabel(value)}
+            selected={props.contentLanguage === value}
+            onPress={() => props.onLanguageChange(value)}
+          />
+        ))}
+      </SelectionSection>
+
+      <View style={styles.selectionsSubsection}>
+        <ThemedText type="smallBold">{props.t("prepare.downloadMode")}</ThemedText>
+        <View style={styles.pillRow}>
+          {DOWNLOAD_MODES.map((value) => (
+            <PillOption
+              key={value}
+              label={props.downloadModeLabel(value)}
+              selected={props.downloadMode === value}
+              onPress={() => props.onDownloadModeChange(value)}
+            />
+          ))}
+        </View>
+        <ThemedText
+          type="small"
+          themeColor="textSecondary"
+          style={styles.downloadModeDesc}
+        >
+          {props.downloadModeDescription(props.downloadMode)}
+        </ThemedText>
+      </View>
+    </View>
+  );
+}
+
+function SelectionSection({
   title,
   children,
 }: {
@@ -302,23 +382,83 @@ function Section({
   children: ReactNode;
 }) {
   return (
-    <View style={styles.section}>
-      <ThemedText type="smallBold" style={styles.sectionTitle}>
-        {title}
-      </ThemedText>
-      <View style={styles.optionList}>{children}</View>
+    <View style={styles.selectionsSubsection}>
+      <ThemedText type="smallBold">{title}</ThemedText>
+      <View style={styles.pillRow}>{children}</View>
     </View>
   );
 }
 
-function OptionCard({
+/** One nudge, then a pause — a steady bounce reads as a loading spinner. */
+const NUDGE_MS = 420;
+const NUDGE_REST_MS = 1400;
+
+/**
+ * The CTA icon nudges in a slow loop so the eye lands on it after the pickers
+ * above: pick your options, then press here. Deliberately small (a few pixels)
+ * and paused between beats — the button is the last step of the flow, not an
+ * alarm.
+ *
+ * Focus-gated with `cancelAnimation` on blur, following the same reasoning as
+ * `floor-card.tsx`: an infinite loop left running through a screen transition
+ * costs frames on Android for a nudge nobody is looking at.
+ */
+function NudgingCtaIcon({
+  name,
+  color,
+  distance,
+}: {
+  name: ComponentProps<typeof Ionicons>["name"];
+  color: string;
+  distance: number;
+}) {
+  const isFocused = useIsFocused();
+  const offset = useSharedValue(0);
+
+  useEffect(() => {
+    if (!isFocused) {
+      cancelAnimation(offset);
+      offset.value = withTiming(0, { duration: 160 });
+      return;
+    }
+
+    offset.value = withRepeat(
+      withSequence(
+        withTiming(distance, {
+          duration: NUDGE_MS,
+          easing: Easing.out(Easing.quad),
+        }),
+        withTiming(0, {
+          duration: NUDGE_MS,
+          easing: Easing.in(Easing.quad),
+        }),
+        // Hold still before the next nudge.
+        withDelay(NUDGE_REST_MS, withTiming(0, { duration: 0 })),
+      ),
+      -1,
+      false,
+    );
+
+    return () => cancelAnimation(offset);
+  }, [distance, isFocused, offset]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: offset.value }],
+  }));
+
+  return (
+    <Animated.View style={animatedStyle}>
+      <Ionicons name={name} size={18} color={color} />
+    </Animated.View>
+  );
+}
+
+function PillOption({
   label,
-  description,
   selected,
   onPress,
 }: {
   label: string;
-  description?: string;
   selected: boolean;
   onPress: () => void;
 }) {
@@ -330,64 +470,20 @@ function OptionCard({
       accessibilityRole="radio"
       accessibilityState={{ selected }}
       style={[
-        styles.optionCard,
-        selected
-          ? {
-              borderColor: theme.primary,
-              backgroundColor: theme.primary,
-            }
-          : {
-              borderColor: "rgba(255, 255, 255, 0.22)",
-              backgroundColor: "rgba(28, 25, 23, 0.55)",
-            },
+        styles.pill,
+        {
+          backgroundColor: selected ? theme.primary : theme.backgroundSelected,
+        },
       ]}
     >
-      <View style={styles.optionRow}>
-        <View
-          style={[
-            styles.radioOuter,
-            {
-              borderColor: selected
-                ? theme.primaryForeground
-                : "rgba(255, 255, 255, 0.45)",
-              backgroundColor: selected
-                ? theme.primaryForeground
-                : "transparent",
-            },
-          ]}
-        >
-          {selected ? (
-            <Ionicons
-              name="checkmark"
-              size={12}
-              color={theme.primary}
-            />
-          ) : null}
-        </View>
-
-        <View style={styles.optionCopy}>
-          <ThemedText
-            type="smallBold"
-            style={{
-              color: selected ? theme.primaryForeground : "#ffffff",
-            }}
-          >
-            {label}
-          </ThemedText>
-          {description ? (
-            <ThemedText
-              type="small"
-              style={{
-                color: selected
-                  ? "rgba(26, 18, 8, 0.72)"
-                  : "rgba(255, 255, 255, 0.7)",
-              }}
-            >
-              {description}
-            </ThemedText>
-          ) : null}
-        </View>
-      </View>
+      <ThemedText
+        type="smallBold"
+        style={{
+          color: selected ? theme.primaryForeground : theme.text,
+        }}
+      >
+        {label}
+      </ThemedText>
     </Pressable>
   );
 }
@@ -400,40 +496,28 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.six,
     gap: Spacing.four,
   },
-  section: {
+  selectionsCard: {
+    gap: Spacing.four,
+  },
+  selectionsGrid: {
+    gap: Spacing.four,
+  },
+  selectionsSubsection: {
     gap: Spacing.two,
   },
-  sectionTitle: {
-    color: "#ffffff",
-    textShadowColor: "rgba(0, 0, 0, 0.45)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
-  },
-  optionList: {
-    gap: Spacing.two,
-  },
-  optionCard: {
-    borderWidth: 2,
-    borderRadius: Spacing.three,
-    padding: Spacing.three,
-  },
-  optionRow: {
+  pillRow: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    gap: Spacing.three,
+    flexWrap: "wrap",
+    gap: Spacing.two,
   },
-  radioOuter: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 1,
+  pill: {
+    borderRadius: 999,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
   },
-  optionCopy: {
-    flex: 1,
-    gap: Spacing.half,
+  downloadModeDesc: {
+    fontSize: 12,
+    lineHeight: 16,
   },
   progressCard: {
     borderRadius: Spacing.three,

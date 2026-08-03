@@ -7,30 +7,42 @@ const SIZE = 60;
 type CompassOverlayProps = {
   /** Device heading in degrees (0–359, clockwise from north), or null if unknown. */
   heading: number | null;
+  /** Map rotation in degrees (0 = north-up), from the map's two-finger rotate. */
+  mapBearing?: number;
 };
 
 /**
- * A small compass widget. The N/E/S/W ring is fixed and aligned to the
- * north-up map (screen-up = north), while the needle rotates to the live device
- * heading so the user can see which way they are facing. Renders nothing until a
- * heading reading is available.
+ * A small compass widget. The whole dial counter-rotates by the map's bearing,
+ * so the N/E/S/W ring keeps pointing at the map's true north however the user
+ * has turned the map. The needle sits inside that dial and is rotated by the raw
+ * device heading, which puts it at `heading - mapBearing` on screen — where the
+ * user is actually facing relative to what they see.
+ *
+ * Renders whenever there is something to show: a heading, a rotated map, or
+ * both. With no heading the needle is hidden but the ring still tells you which
+ * way north is, which is the whole point once the map can be spun.
  */
-export function CompassOverlay({ heading }: CompassOverlayProps) {
-  if (heading === null) {
+export function CompassOverlay({ heading, mapBearing = 0 }: CompassOverlayProps) {
+  if (heading === null && mapBearing === 0) {
     return null;
   }
 
   return (
-    <View style={styles.container} pointerEvents="none">
+    <View
+      style={[styles.container, { transform: [{ rotate: `${-mapBearing}deg` }] }]}
+      pointerEvents="none"
+    >
       <Text style={[styles.cardinal, styles.north]}>N</Text>
       <Text style={[styles.cardinal, styles.east]}>E</Text>
       <Text style={[styles.cardinal, styles.south]}>S</Text>
       <Text style={[styles.cardinal, styles.west]}>W</Text>
 
-      <View style={[styles.needle, { transform: [{ rotate: `${heading}deg` }] }]}>
-        <View style={styles.needleNorth} />
-        <View style={styles.needleSouth} />
-      </View>
+      {heading === null ? null : (
+        <View style={[styles.needle, { transform: [{ rotate: `${heading}deg` }] }]}>
+          <View style={styles.needleNorth} />
+          <View style={styles.needleSouth} />
+        </View>
+      )}
     </View>
   );
 }
