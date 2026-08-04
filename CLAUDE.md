@@ -8,7 +8,7 @@
 
 **Status legend:** ✅ Completed · 🚧 In Progress · ⚠️ Known Issue · ⏳ Pending · ❌ Not Started
 
-Last updated: **2026-08-03** (Android navigation jank fixed; admin-controlled theme; chat head)
+Last updated: **2026-08-05** (chat retrieval: word-boundary matching, greeting guard, localized reply templates)
 
 ---
 
@@ -335,8 +335,11 @@ Last updated: **2026-08-03** (Android navigation jank fixed; admin-controlled th
 ## 8. Testing & Verification Status
 
 - ✅ TypeScript `tsc --noEmit` clean — both `aurelia-app` and `admin-and-server-aurelia`.
-- ✅ Unit tests **158/158 pass** (`pnpm test`, Vitest, aurelia-app) across 21 files.
-  Newest: `src/lib/host/availability.test.ts` (venue-clock window + server fallback),
+- ✅ Unit tests **198/198 pass** (`pnpm test`, Vitest, aurelia-app) across 26 files.
+  Newest: `src/lib/bundle/knowledge-search.test.ts` (word boundaries incl. the "us"/"museum" and
+  singular↔plural guards, small-talk detection, multi-document replies, sentence-boundary trim) —
+  the chat ranker had no tests at all before 2026-08-05.
+  Also: `src/lib/host/availability.test.ts` (venue-clock window + server fallback),
   `src/lib/app-content/resolve-asset.test.ts` (slot fallbacks + de-dup), and
   `src/store/app-content-store.test.ts` (hydrate / disk-first persist, storage mocked).
   Plus `src/lib/entitlements/access.test.ts`, `src/lib/bundle/expiry.test.ts`,
@@ -414,6 +417,160 @@ Last updated: **2026-08-03** (Android navigation jank fixed; admin-controlled th
 ---
 
 ## 12. Changelog
+
+- **2026-08-05** — **Typing "hi" answered with a random passage about the tour.** Five defects in the
+  retrieval/formatting layer, found by tracing that one report. Deliberately scoped to
+  [knowledge-search.ts](src/lib/bundle/knowledge-search.ts) + its two callers — no model download, no
+  native rebuild, no bundle-format change, so every user benefits immediately (contrast the on-device
+  Gemma path, which needs ~806 MB and a 6 GB RAM floor that excludes iPhone 13/SE and most budget
+  Android — see §11).
+  - ⚠️ **Root cause: the ranker matched substrings, not words.** `scoreDocument` used
+    `body.includes(term)`, so `"hi"` matched **t·hi·s / ·hi·story / arc·hi·tecture** — i.e. every
+    heritage document scored > 0, and an arbitrary one won. Worse for this app specifically:
+    **`"us"` matched "m·us·eum"**. Replaced with a boundary-anchored `RegExp` per term, built once
+    per query and reused across every document and field (compiling per term × document × field
+    would cost more than the `includes` it replaces).
+  - ⚠️ **A bare `\b` would have been a regression, not a fix** — "temple" would stop matching
+    "temples". The matcher tolerates a singular/plural pair explicitly. Guarded by a test that
+    **fails** if you swap in naive `\b` (verified by doing exactly that).
+  - **The token floor stays `> 1`, not `> 2`.** Raising it would have killed "hi"/"us" cheaply but
+    silently dropped **AD**/**BC**, which are real terms for "when" questions. Word boundaries fix
+    the noise without that cost.
+  - **`detectSmallTalk` returns before any search** for bare greetings/thanks in en/es/fr, gated on
+    ≤3 tokens so *"thanks, when was it built?"* still searches. This also fixes a second-order bug:
+    a greeting had `hasSources: false`, which is the signal that **enqueues an unanswered question** —
+    so the admin's knowledge-gap triage list would have filled with "hi"/"hello"/"thanks".
+  - **`formatKnowledgeReply` read `documents[0]` only**, discarding the other two the ranker had
+    already found — a fact split across a spot description and its FAQ could never be combined. Now
+    collects across the top 3, de-duplicated (the same sentence often appears in both).
+  - **`trimReply` cut at an exact character count**, so replies ended mid-word with "…". Now trims
+    back to the last complete sentence; budget 320 → **480** since up to 3 documents contribute.
+  - ⚠️ **`answerNameQuestion` returned a hardcoded English `` `It is called ${title}.` ``** — es/fr
+    users got an English sentence. This is the *third* time this file has leaked English (see the
+    2026-08-03 entry). Fixed structurally rather than by threading `t()` into a pure module:
+    `AssistantAnswer` gained **`kind: "answer" | "greeting" | "none"`** and **`subject`**, so the
+    libs return *intent* and `floating-chat` renders the localized string. Pure modules stay pure and
+    testable; there is no longer a place for a literal to hide.
+  - **New `subject` frame fixes a real comprehension problem**, not just tone: a sentence lifted out
+    of a body loses its antecedent (*"It was rebuilt in the 3rd century."* — what was?). Rendered as
+    `assistant.answerWithSubject` = `"{title} — {body}"`, deliberately keeping the title **outside**
+    the sentence: es/fr need article/gender agreement (*el* Coliseo vs *la* Basílica), so a mid-sentence
+    slot would produce broken grammar. New keys `assistant.greetingReply` / `assistant.nameReply` /
+    `assistant.answerWithSubject` in all three locales — and since `remoteStrings` overrides
+    `strings.ts`, the admin can retune this wording from `/app-content` with no app release.
+  - `generate.ts` (the LLM path) retrieves through the unchanged `retrievePassages` signature, so it
+    keeps working and inherits the better ranking.
+  - **New [knowledge-search.test.ts](src/lib/bundle/knowledge-search.test.ts)** — this module had
+    **no tests at all** despite being what every chat answer runs through. 164 → **198 tests**;
+    `tsc` clean, lint 0 errors (29 pre-existing warnings, none in changed files).
+  - ⏳ **Not device-verified.** Acceptance: type `hi`/`hola`/`merci` → localized greeting, no tour
+    content; switch to Spanish and repeat; ask a real question → answer ends on a full sentence; and
+    confirm the admin's unanswered-questions list receives **nothing** for the greetings.
+
+- **2026-08-04** — **Questions the assistant can't answer are now queued and synced to the admin, so a
+  content gap is a knowledge-base candidate instead of a dead end.** Companion to the admin repo's
+  same-day entry (read that one first for the *why* — it traces "replies don't feel human" to the
+  generative Gemma 3 1B path being fully built but switched off in production config, and separates
+  that from this: capturing the "I don't know" moments themselves).
+  - **New** [lib/unanswered-questions/](src/lib/unanswered-questions/) — `queue.ts` +
+    `storage.ts` (+ `types.ts`). Mirrors [lib/tour-reminder/storage.ts](src/lib/tour-reminder/storage.ts)'s
+    pattern exactly: a JSON snapshot file under `expo-file-system`'s `Paths.document/aurelia/`, not
+    AsyncStorage or a zustand-persisted store (this app doesn't use either). Reason for a file at all
+    rather than an in-memory fire-and-forget: visitors are routinely offline **inside the venue**,
+    which is precisely when the assistant is asked things it can't answer — losing those would defeat
+    the point of collecting them.
+  - **Trigger point is `floating-chat.tsx`'s `retrievalAnswer`**, specifically
+    `answerQuestion(...).hasSources === false`. This one signal covers both the direct
+    keyword-fallback path and the "generation ran and then failed mid-stream" path, because
+    `generateAnswer` (in `knowledge/generate.ts`) never even starts unless `retrievePassages` already
+    found at least one passage — so by the time `retrievalAnswer` runs with nothing, the corpus
+    genuinely had nothing, in either path. Deliberately **not** pattern-matching the model's own
+    generated refusal text ("I do not have that information…") — that phrase gets reworded by the LLM
+    across English/Spanish/French output, and matching against it would be fragile in exactly the
+    cases that matter.
+  - **`enqueueUnansweredQuestion`** persists to disk first, then makes one best-effort send attempt
+    (most visitors have *some* connectivity most of the time, so this usually clears immediately).
+    **`flushUnansweredQuestionQueue`** retries the rest — batches of 20 (the server's per-request cap)
+    — on every `AppState` "active" transition and once at cold start, stopping at the first failed
+    batch and leaving everything from there queued for next time. No `NetInfo` dependency was added:
+    this app has none anywhere already, and `use-release-config-sync.ts` solves the identical
+    "retry when connectivity might be back" problem the same way (foreground-triggered, not a true
+    reachability listener) — followed that precedent instead of introducing a new native module.
+    Queue capped at 200 items, oldest evicted first, so a visitor offline for days can't grow the
+    file without bound.
+  - **Mounted as `UnansweredQuestionsSyncListener`** in
+    [providers/app-providers.tsx](src/providers/app-providers.tsx), alongside
+    `ReleaseConfigSyncListener` — same "listener component that owns one `useEffect`, mounted once at
+    the provider root" shape every other background-sync concern in this app already uses.
+  - Server side (new table, dedup-by-repeat-count, admin triage viewer) is entirely in
+    `admin-and-server-aurelia`'s CLAUDE.md — nothing here needed a schema change.
+  - `pnpm typecheck`/`expo lint` clean (0 new errors; pre-existing warning count unchanged); **184
+    tests** still green — no new tests were added for the queue module itself (file-system + network
+    side effects, not pure logic; this app's existing test suite is scoped to pure logic and stores,
+    per §8).
+
+- **2026-08-03** — **Live API 404 fixed: `.env` base URL had lost its `/app` segment.**
+  `EXPO_PUBLIC_API_BASE_URL` was `https://colosseum.dreamtourism.it/api/v1`, but every service path is
+  base-relative (`/catalog/tours`, `/tours/{id}/download`, `/release-config`) — so every call resolved
+  to `/api/v1/<path>`, the **admin** API surface, where none of those routes exist. Restored to
+  `…/api/v1/app`, which is what [.env.example](.env.example) and the `hosts.service.ts:7` comment both
+  already specify. **`EXPO_PUBLIC_*` is inlined at bundle time**, so this needs `pnpm start --clear`
+  in dev and a fresh EAS build for any installed binary — the old URL is baked into it.
+  - The same session uncovered a **server-side outage behind it**: every `/api/v1/app/*` endpoint was
+    500ing because the admin repo had deployed the on-device-LLM config columns without applying their
+    migration (`getConfig()` runs on every mobile request). Fixed in the admin repo; see its CLAUDE.md.
+  - ⚠️ **`EXPO_PUBLIC_COLOSSEUM_TOUR_ID` is stale** — it holds `cmr6g15i4…` while the live published
+    tour is `cmsalq4l5…`. It is read only by [constants/tours.ts](src/constants/tours.ts) and used only
+    for `subscribe.tsx`'s Stripe `tourIds`, so tour loading is unaffected, but **checkout would
+    reference a tour that does not exist**. Update it before self-service purchase is exercised.
+  - ⚠️ **No remote config is reaching the app** — the server's `AppReleaseConfig.publishStatus` is not
+    `PUBLISHED`, so `/release-config` 404s and `use-release-config-sync.ts` falls back to the cached
+    config by design. Theme, maintenance mode, reminder cadence and the LLM config all stay at their
+    cached/default values until an admin publishes it on the dashboard's `/app-content`.
+
+- **2026-08-03** — **On-device Gemma 3 1B writes the assistant's answers (Phase 2).** The assistant
+  was retrieval-only — substring scoring that quoted one or two sentences verbatim. It now runs a
+  real RAG loop on-device: the existing ranker retrieves, Gemma 3 1B writes the reply. Planned as
+  "Phase 2" back in `cached-stargazing-minsky.md`; `assistant.ts`'s own comment named the model.
+  - **Runtime: `llama.rn` 0.12.8**, not `react-native-executorch`. It has an Expo config plugin, it
+    supports Gemma 3 GGUF *today* (ExecuTorch's site still says Gemma "soon"), and its
+    `completion(params, callback)` streams tokens off a background thread. Added to `app.json`
+    plugins — ⚠️ **needs `expo prebuild` + a dev-client rebuild on both platforms.** (The IDE flags
+    it as an invalid config plugin; so is the pre-existing `@maplibre/maplibre-react-native`, and
+    `npx expo config --type prebuild` resolves both cleanly. It is the IDE's parser, not the plugin.)
+  - **New `src/lib/llm/`** — `device-capability.ts` (6 GB total-RAM floor, memoized; simulators are
+    flagged because they report the host Mac's RAM), `model-manager.ts` (resumable
+    `File.createDownloadTask`, free-space check with a 300 MB margin, then **size + native `File.md5`**
+    verification), `llama-runtime.ts` (one context held open across questions, released on
+    `AppState` "background" only, `clearCache()` before each answer), `prompt.ts` (the grounding
+    contract + 700-char passage trimming).
+  - **`answerQuestion` was NOT replaced.** The original plan said the model would swap in behind it
+    without touching callers; streaming makes that impossible, so instead `retrievePassages` was
+    extracted from it and a separate async `generate.ts` was added. The sync retrieval path — the
+    fallback — is byte-for-byte the behaviour that shipped before, and its tests still pass unchanged.
+  - **Top-3 passages now reach the model**, where `formatKnowledgeReply` only ever used
+    `documents[0]`. Facts spread across two entries can finally be combined.
+  - **Fallback chain, every link silent** (flag off → device under 6 GB → native runtime missing →
+    no model on disk → **nothing retrieved** → context failed → generation failed/empty). All seven
+    are covered by `generate.test.ts`; the no-passages guard was **mutation-tested** — removing it
+    fails that one test and passes the other seven.
+  - ⚠️ **The no-passages guard is the hallucination guard.** With nothing retrieved a 1B model
+    invents an answer, and on a paid heritage tour a confidently wrong date is worse than "I don't
+    know". It sits *before* the context load, so the model is not even started.
+  - **UI**: `chat-store` gained `startAssistantMessage`/`appendToAssistantMessage`/
+    `finishAssistantMessage` so tokens grow the last bubble; `floating-chat`'s `handleSend` is async
+    with a **stop button** (a 1B model takes seconds — closing the sheet was the only escape
+    otherwise) and stops generation on unmount. Stopping keeps the partial text; *failing* replaces
+    it with the retrieval answer.
+  - **Model is opt-in**, downloaded from a new Settings panel — never bundled, never automatic. It is
+    ~0.5 GB and the typical user is standing at the venue on mobile data.
+  - ⚠️ **Known, accepted risks** (§4/§11): this runs alongside GPS, MapLibre and TTS, so heat,
+    battery and RAM are all real concerns; a mid-range phone will take seconds per answer where
+    retrieval was instant. Target floor is **6 GB RAM**; below that the assistant is unchanged.
+    Remote `enableOnDeviceLlm` is the kill switch — it needs no app release.
+  - ⏳ **Nothing here is device-verified.** Static checks only: `tsc --noEmit` clean, lint 0 errors
+    (29 pre-existing warnings, unchanged), **164 → 184 tests**. Token/sec, thermals, memory under a
+    live nav session, and the whole download path still need a real phone after the rebuild.
 
 - **2026-08-03** — **Offline base map switched from dark stone to a light day palette.** Colour-only
   change, confined to [style.ts](src/lib/map/style.ts): `background` `#1c1917`→`#f5f3f0`, `water`

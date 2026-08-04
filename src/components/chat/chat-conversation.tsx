@@ -26,6 +26,12 @@ type ChatConversationProps = {
   isBusy?: boolean;
   canSend: boolean;
   onSend: (question: string) => void;
+  /**
+   * Provided only when generation can be interrupted. While busy the send
+   * button turns into a stop button — an on-device model takes seconds, and
+   * without this the user's only escape is closing the sheet.
+   */
+  onStop?: () => void;
 };
 
 /**
@@ -41,6 +47,7 @@ export function ChatConversation({
   isBusy = false,
   canSend,
   onSend,
+  onStop,
 }: ChatConversationProps) {
   const theme = useTheme();
   const { t } = useStrings();
@@ -82,6 +89,7 @@ export function ChatConversation({
     scrollToBottom();
   }
 
+  const canStop = isBusy && Boolean(onStop);
   const sendDisabled = !input.trim() || isBusy || !canSend;
 
   return (
@@ -186,17 +194,22 @@ export function ChatConversation({
           onSubmitEditing={handleSend}
         />
         <Pressable
-          disabled={sendDisabled}
-          onPress={handleSend}
+          accessibilityLabel={canStop ? t("assistant.stop") : undefined}
+          disabled={canStop ? false : sendDisabled}
+          onPress={canStop ? onStop : handleSend}
           style={[
             styles.sendButton,
             {
               backgroundColor: theme.primary,
-              opacity: sendDisabled ? 0.5 : 1,
+              opacity: !canStop && sendDisabled ? 0.5 : 1,
             },
           ]}
         >
-          <Ionicons name="send" size={20} color={theme.primaryForeground} />
+          <Ionicons
+            name={canStop ? "stop" : "send"}
+            size={20}
+            color={theme.primaryForeground}
+          />
         </Pressable>
       </View>
     </View>

@@ -32,8 +32,28 @@ const en = {
     "I couldn't find an answer to that yet. Try rephrasing your question.",
   "assistant.empty": "The assistant is getting ready. Please try again shortly.",
   "assistant.fromTour": "From your {title} guide",
+  "assistant.greetingReply":
+    "Hello! Ask me anything about your tour — a stop, its history, or what to see next.",
+  "assistant.nameReply": "It is called {title}.",
+  "assistant.answerWithSubject": "{title} — {body}",
   "assistant.disabled": "Offline chat is currently turned off.",
   "assistant.noKnowledge": "No offline guide is downloaded yet. Download a tour to ask about it.",
+  "assistant.stop": "Stop generating",
+
+  "llm.title": "Smarter answers",
+  "llm.description":
+    "Download the offline language model so the assistant writes proper answers instead of quoting your guides.",
+  "llm.download": "Download model",
+  "llm.delete": "Remove model",
+  "llm.ready": "Ready · {size}",
+  "llm.notDownloaded": "Not downloaded · {size}",
+  "llm.downloading": "Downloading… {percent}%",
+  "llm.wifiHint": "Large download — best on Wi-Fi.",
+  "llm.unsupported": "This device does not have enough memory for the model. The assistant will keep using offline search.",
+  "llm.errorSpace": "Not enough free space. Free some storage and try again.",
+  "llm.errorChecksum": "The download was damaged. Please try again.",
+  "llm.errorNetwork": "Download failed. Check your connection and try again.",
+  "llm.deleteConfirm": "Remove the downloaded model? The assistant will fall back to offline search.",
 
   "pages.notFound": "Page not found.",
 
@@ -412,8 +432,28 @@ const es: Record<StringKey, string> = {
   "assistant.empty":
     "El asistente se está preparando. Inténtalo de nuevo en un momento.",
   "assistant.fromTour": "De tu guía de {title}",
+  "assistant.greetingReply":
+    "¡Hola! Pregúntame lo que quieras sobre tu tour: una parada, su historia o qué ver a continuación.",
+  "assistant.nameReply": "Se llama {title}.",
+  "assistant.answerWithSubject": "{title} — {body}",
   "assistant.disabled": "El chat sin conexión está desactivado.",
   "assistant.noKnowledge": "Aún no has descargado ninguna guía. Descarga un tour para preguntar sobre él.",
+  "assistant.stop": "Detener generación",
+
+  "llm.title": "Respuestas más inteligentes",
+  "llm.description":
+    "Descarga el modelo de lenguaje sin conexión para que el asistente redacte respuestas en lugar de citar tus guías.",
+  "llm.download": "Descargar modelo",
+  "llm.delete": "Eliminar modelo",
+  "llm.ready": "Listo · {size}",
+  "llm.notDownloaded": "No descargado · {size}",
+  "llm.downloading": "Descargando… {percent}%",
+  "llm.wifiHint": "Descarga grande — mejor con Wi-Fi.",
+  "llm.unsupported": "Este dispositivo no tiene memoria suficiente para el modelo. El asistente seguirá usando la búsqueda sin conexión.",
+  "llm.errorSpace": "No hay espacio suficiente. Libera almacenamiento e inténtalo de nuevo.",
+  "llm.errorChecksum": "La descarga se dañó. Inténtalo de nuevo.",
+  "llm.errorNetwork": "Falló la descarga. Revisa tu conexión e inténtalo de nuevo.",
+  "llm.deleteConfirm": "¿Eliminar el modelo descargado? El asistente volverá a la búsqueda sin conexión.",
 
   "pages.notFound": "Página no encontrada.",
   "welcome.title.line1": "Tu viaje",
@@ -777,8 +817,28 @@ const fr: Record<StringKey, string> = {
   "assistant.empty":
     "L'assistant se prépare. Veuillez réessayer dans un instant.",
   "assistant.fromTour": "D'après votre guide {title}",
+  "assistant.greetingReply":
+    "Bonjour ! Posez-moi une question sur votre visite : une étape, son histoire ou la suite du parcours.",
+  "assistant.nameReply": "Cela s'appelle {title}.",
+  "assistant.answerWithSubject": "{title} — {body}",
   "assistant.disabled": "Le chat hors ligne est désactivé.",
   "assistant.noKnowledge": "Aucun guide hors ligne téléchargé. Téléchargez une visite pour poser des questions.",
+  "assistant.stop": "Arrêter la génération",
+
+  "llm.title": "Des réponses plus intelligentes",
+  "llm.description":
+    "Téléchargez le modèle de langue hors ligne pour que l'assistant rédige de vraies réponses au lieu de citer vos guides.",
+  "llm.download": "Télécharger le modèle",
+  "llm.delete": "Supprimer le modèle",
+  "llm.ready": "Prêt · {size}",
+  "llm.notDownloaded": "Non téléchargé · {size}",
+  "llm.downloading": "Téléchargement… {percent} %",
+  "llm.wifiHint": "Téléchargement volumineux — préférez le Wi-Fi.",
+  "llm.unsupported": "Cet appareil n'a pas assez de mémoire pour le modèle. L'assistant continuera d'utiliser la recherche hors ligne.",
+  "llm.errorSpace": "Espace insuffisant. Libérez de l'espace et réessayez.",
+  "llm.errorChecksum": "Le téléchargement est corrompu. Veuillez réessayer.",
+  "llm.errorNetwork": "Échec du téléchargement. Vérifiez votre connexion et réessayez.",
+  "llm.deleteConfirm": "Supprimer le modèle téléchargé ? L'assistant reviendra à la recherche hors ligne.",
 
   "pages.notFound": "Page introuvable.",
   "welcome.title.line1": "Votre voyage",

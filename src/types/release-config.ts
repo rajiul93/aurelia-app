@@ -29,6 +29,19 @@ export type RemoteConfig = {
    * device. Cached with the rest of the config, so it survives offline.
    */
   appTheme: AppTheme;
+  /**
+   * Master switch for on-device generative answers. Off means the assistant
+   * uses keyword retrieval only — the behaviour that shipped before the model.
+   * Remote so a bad model build can be turned off for everyone without an app
+   * release.
+   */
+  enableOnDeviceLlm: boolean;
+  /** Where to fetch the GGUF from. Null disables downloading entirely. */
+  llmModelUrl: string | null;
+  /** Exact byte size, checked after download and used for the free-space test. */
+  llmModelSizeBytes: number;
+  /** Native MD5 of the finished file. Null skips the digest check. */
+  llmModelMd5: string | null;
 };
 
 export type ReleaseConfig = {

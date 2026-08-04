@@ -1,4 +1,5 @@
 import {
+  detectSmallTalk,
   formatKnowledgeReply,
   searchTourKnowledge,
 } from "@/lib/bundle/knowledge-search";
@@ -77,12 +78,37 @@ export type AssistantAnswer = {
   hasSources: boolean;
   /** Tour the winning document came from; "" / null for global pack entries. */
   sourceTourId: string | null;
+  /**
+   * What kind of reply this is, so the caller can render the right localized
+   * string. These modules are pure and have no access to `t()` — returning the
+   * intent instead of the text is what keeps them testable, and what stops the
+   * hardcoded-English bugs this file has had twice before.
+   */
+  kind: "answer" | "greeting" | "none";
+  /**
+   * Winning document title, for the caller's frame template. A sentence lifted
+   * out of a body loses its antecedent ("It was rebuilt in the 3rd century." —
+   * what was?), so the caller re-attaches the subject.
+   */
+  subject: string | null;
 };
 
 const NO_ANSWER: AssistantAnswer = {
   reply: "",
   hasSources: false,
   sourceTourId: null,
+  kind: "none",
+  subject: null,
+};
+
+const GREETING: AssistantAnswer = {
+  reply: "",
+  // Not a knowledge gap: `hasSources: false` is what enqueues an unanswered
+  // question, and the admin's triage list must not fill up with "hi"/"thanks".
+  hasSources: true,
+  sourceTourId: null,
+  kind: "greeting",
+  subject: null,
 };
 
 /**
@@ -110,18 +136,25 @@ function search(
   return searchTourKnowledge(documents, query, "en");
 }
 
-export function answerQuestion(
+/**
+ * Rank the corpus for a question and return the winning passages, best first.
+ *
+ * Split out of `answerQuestion` so the generative path (`knowledge/generate.ts`)
+ * retrieves through exactly the same logic. Two rankers would drift, and the
+ * one feeding the model is the one that decides what it is allowed to say.
+ */
+export function retrievePassages(
   query: string,
   language: AppLanguage,
   pack: KnowledgePack | null,
   tourDocuments: SearchDocument[] = [],
   preferredTourId?: string | null,
-): AssistantAnswer {
+): SearchDocument[] {
   const packDocuments = pack ? buildDocuments(pack, language) : [];
   const documents = [...packDocuments, ...tourDocuments];
 
   if (documents.length === 0) {
-    return NO_ANSWER;
+    return [];
   }
 
   // Asked from inside a tour, that tour answers first — otherwise a question
@@ -141,6 +174,31 @@ export function answerQuestion(
     matches = search(documents, query, language);
   }
 
+  return matches;
+}
+
+export function answerQuestion(
+  query: string,
+  language: AppLanguage,
+  pack: KnowledgePack | null,
+  tourDocuments: SearchDocument[] = [],
+  preferredTourId?: string | null,
+): AssistantAnswer {
+  // Before any search: "hi" used to reach the ranker and match t·hi·s /
+  // ·hi·story in every heritage document, so a greeting returned a random
+  // passage about the tour.
+  if (detectSmallTalk(query)) {
+    return GREETING;
+  }
+
+  const matches = retrievePassages(
+    query,
+    language,
+    pack,
+    tourDocuments,
+    preferredTourId,
+  );
+
   if (matches.length === 0) {
     // Deliberately empty rather than a hardcoded English miss message, so the
     // caller can show its own translated string.
@@ -151,5 +209,7 @@ export function answerQuestion(
     reply: formatKnowledgeReply(query, matches),
     hasSources: true,
     sourceTourId: matches[0]?.tourId || null,
+    kind: "answer",
+    subject: matches[0]?.title?.trim() || null,
   };
 }

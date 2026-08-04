@@ -1,6 +1,6 @@
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { usePathname, useSegments } from "expo-router";
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { Dimensions, Platform, Pressable, StyleSheet, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
@@ -24,7 +24,12 @@ import {
   shouldHideChatHead,
   tourIdFromPathname,
 } from "@/lib/chat/current-tour-id";
-import { answerQuestion } from "@/lib/knowledge/assistant";
+import {
+  answerQuestion,
+  type AssistantAnswer,
+} from "@/lib/knowledge/assistant";
+import { generateAnswer, type GenerationHandle } from "@/lib/knowledge/generate";
+import { enqueueUnansweredQuestion } from "@/lib/unanswered-questions/queue";
 import { useChatStore } from "@/store/chat-store";
 import { useInstalledToursStore } from "@/store/installed-tours-store";
 import { useKnowledgeStore } from "@/store/knowledge-store";
@@ -50,6 +55,16 @@ export function FloatingChat() {
   const openChat = useChatStore((state) => state.openChat);
   const closeChat = useChatStore((state) => state.closeChat);
   const appendMessages = useChatStore((state) => state.appendMessages);
+  const streamingMessageId = useChatStore((state) => state.streamingMessageId);
+  const startAssistantMessage = useChatStore(
+    (state) => state.startAssistantMessage,
+  );
+  const appendToAssistantMessage = useChatStore(
+    (state) => state.appendToAssistantMessage,
+  );
+  const finishAssistantMessage = useChatStore(
+    (state) => state.finishAssistantMessage,
+  );
 
   const language = useLocaleStore((state) => state.language);
   const pack = useKnowledgeStore((state) => state.pack);
@@ -59,6 +74,20 @@ export function FloatingChat() {
   // Only loaded once the chat is opened — see the hook's note on cost.
   const { data: tourDocuments, isLoading } =
     useInstalledToursSearchDocuments(open);
+
+  // Refs, not state: these are read inside an in-flight async handler, where a
+  // re-rendered copy of the closure would see a stale value.
+  const generationRef = useRef<GenerationHandle | null>(null);
+  const stoppedRef = useRef(false);
+
+  // An abandoned generation keeps the model burning CPU and battery in the
+  // background — the one thing this app cannot afford mid-tour.
+  useEffect(() => {
+    return () => {
+      generationRef.current?.stop();
+      generationRef.current = null;
+    };
+  }, []);
 
   // The head rests above the tab bar on tab routes and just above the safe area
   // elsewhere. `bottom` is pinned to the lower of the two and the difference is
@@ -151,7 +180,46 @@ export function FloatingChat() {
   const documents = tourDocuments ?? [];
   const hasCorpus = Boolean(pack) || documents.length > 0;
 
-  function handleSend(question: string) {
+  function withSourceFooter(reply: string, sourceTourId: string | null) {
+    const sourceTitle = sourceTourId
+      ? installedByTourId[sourceTourId]?.title
+      : null;
+
+    return sourceTitle
+      ? `${reply}\n\n${t("assistant.fromTour", { title: sourceTitle })}`
+      : reply;
+  }
+
+  /**
+   * Render an `AssistantAnswer` as localized text.
+   *
+   * The search libs are pure and return intent rather than prose, so the
+   * templates live here where `t()` is available — a name question with no body
+   * sentence becomes "It is called {title}.", and a body sentence gets its
+   * subject re-attached, because a sentence lifted out of a document loses what
+   * "it" referred to.
+   *
+   * The title stays *outside* the sentence: Spanish and French need article and
+   * gender agreement (el Coliseo vs la Basílica), so a slot inside the sentence
+   * would produce broken grammar.
+   */
+  function composeReply(result: AssistantAnswer) {
+    if (!result.reply) {
+      return result.subject
+        ? t("assistant.nameReply", { title: result.subject })
+        : t("assistant.noAnswer");
+    }
+
+    return result.subject
+      ? t("assistant.answerWithSubject", {
+          title: result.subject,
+          body: result.reply,
+        })
+      : result.reply;
+  }
+
+  /** The pre-existing keyword assistant. Every generative failure lands here. */
+  function retrievalAnswer(question: string) {
     const result = answerQuestion(
       question,
       language,
@@ -160,28 +228,101 @@ export function FloatingChat() {
       activeTourId,
     );
 
-    const reply = hasCorpus
-      ? result.reply || t("assistant.noAnswer")
-      : t("assistant.empty");
+    // `hasSources: false` is the one deterministic "the corpus truly has
+    // nothing" signal — generation itself only ever starts once
+    // `retrievePassages` found at least one passage (see generate.ts), so
+    // this is reached whether the LLM never ran or ran and then failed
+    // mid-stream. Deliberately not scanning the *generated* reply text for a
+    // refusal phrase: that would need matching English/Spanish/French
+    // phrasing the model could word many different ways.
+    if (!result.hasSources) {
+      void enqueueUnansweredQuestion({
+        question,
+        language,
+        tourId: activeTourId ?? "",
+      });
+    }
 
-    const sourceTitle = result.sourceTourId
-      ? installedByTourId[result.sourceTourId]?.title
-      : null;
+    // A greeting is not a knowledge gap and has no source, so it skips both the
+    // enqueue above (via hasSources) and the tour footer below.
+    if (result.kind === "greeting") {
+      return t("assistant.greetingReply");
+    }
 
-    appendMessages(
-      [
-        { id: `user-${Date.now()}`, role: "user", content: question },
-        {
-          id: `assistant-${Date.now()}`,
-          role: "assistant",
-          content: sourceTitle
-            ? `${reply}\n\n${t("assistant.fromTour", { title: sourceTitle })}`
-            : reply,
-        },
-      ],
-      remote.maxChatHistory,
+    return withSourceFooter(
+      composeReply(result),
+      result.sourceTourId,
     );
   }
+
+  async function handleSend(question: string) {
+    appendMessages(
+      [{ id: `user-${Date.now()}`, role: "user", content: question }],
+      remote.maxChatHistory,
+    );
+
+    if (!hasCorpus) {
+      appendMessages(
+        [
+          {
+            id: `assistant-${Date.now()}`,
+            role: "assistant",
+            content: t("assistant.empty"),
+          },
+        ],
+        remote.maxChatHistory,
+      );
+      return;
+    }
+
+    const assistantId = `assistant-${Date.now()}`;
+    startAssistantMessage(assistantId, remote.maxChatHistory);
+    stoppedRef.current = false;
+
+    const result = await generateAnswer({
+      question,
+      language,
+      pack,
+      tourDocuments: documents,
+      preferredTourId: activeTourId,
+      enabled: remote.enableOnDeviceLlm,
+      onToken: (chunk) => appendToAssistantMessage(assistantId, chunk),
+    });
+
+    if (!result.started) {
+      finishAssistantMessage(assistantId, retrievalAnswer(question));
+      return;
+    }
+
+    generationRef.current = result.handle;
+    const text = await result.handle.completion;
+    generationRef.current = null;
+
+    // Stopped by the user: keep whatever streamed in rather than replacing it,
+    // since a partial answer is what they chose to look at.
+    if (stoppedRef.current) {
+      finishAssistantMessage(assistantId);
+      return;
+    }
+
+    // null here means the model failed mid-stream, not that it was stopped —
+    // so the retrieval answer replaces whatever half-sentence is on screen.
+    if (text === null || text.length === 0) {
+      finishAssistantMessage(assistantId, retrievalAnswer(question));
+      return;
+    }
+
+    finishAssistantMessage(
+      assistantId,
+      withSourceFooter(text, result.handle.sourceTourId),
+    );
+  }
+
+  const handleStop = useCallback(() => {
+    stoppedRef.current = true;
+    generationRef.current?.stop();
+    generationRef.current = null;
+  }, []);
 
   if (shouldHideChatHead(pathname)) {
     return null;
@@ -272,8 +413,10 @@ export function FloatingChat() {
             welcome={t("assistant.initialMessage")}
             banner={banner}
             isLoading={isLoading}
+            isBusy={streamingMessageId !== null}
             canSend={remote.enableOfflineChat}
-            onSend={handleSend}
+            onSend={(question) => void handleSend(question)}
+            onStop={handleStop}
           />
         </Animated.View>
         </View>

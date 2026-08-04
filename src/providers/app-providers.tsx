@@ -9,6 +9,7 @@ import { KnowledgeSyncListener } from "@/components/knowledge-sync-listener";
 import { MaintenanceGate } from "@/components/maintenance-gate";
 import { OnboardingGate } from "@/components/onboarding-gate";
 import { ReleaseConfigSyncListener } from "@/components/release-config-sync-listener";
+import { UnansweredQuestionsSyncListener } from "@/components/unanswered-questions-sync-listener";
 import { setupAxiosInterceptors } from "@/lib/axios/interceptors";
 import { env } from "@/lib/env";
 import { queryClient } from "@/lib/query/client";
@@ -26,6 +27,7 @@ export function AppProviders({ children }: AppProvidersProps) {
     <QueryClientProvider client={queryClient}>
       <StripeProvider publishableKey={env.stripePublishableKey}>
         <ReleaseConfigSyncListener />
+        <UnansweredQuestionsSyncListener />
         <KnowledgeSyncListener />
         <InstalledToursRehydrateListener />
         <AccessEndedListener />
