@@ -63,7 +63,18 @@ export function SpotVisualMediaGallery({
     return null;
   }
 
-  const tabBarBg = onDark ? "rgba(255,255,255,0.06)" : theme.backgroundElement;
+  // On a dark photo backdrop the page carries no surfaces of its own, so the
+  // tab strip has no fill and its colours can no longer come from the theme —
+  // `theme.text`/`textSecondary` are near-black in the light palette and the
+  // strip's fill was the only thing making them legible.
+  const tabBarBg = onDark ? "transparent" : theme.backgroundElement;
+  const idleTabColor = onDark ? "rgba(255,255,255,0.75)" : theme.text;
+  const idleTabIconColor = onDark
+    ? "rgba(255,255,255,0.6)"
+    : theme.textSecondary;
+  const mediaBoxBg = onDark
+    ? "rgba(255,255,255,0.06)"
+    : theme.backgroundSelected;
 
   function goTo(delta: -1 | 1) {
     if (activeItems.length === 0) {
@@ -97,12 +108,12 @@ export function SpotVisualMediaGallery({
                 <Ionicons
                   name={tab === "VIDEO" ? "videocam" : "images"}
                   size={16}
-                  color={selected ? theme.primaryForeground : theme.textSecondary}
+                  color={selected ? theme.primaryForeground : idleTabIconColor}
                 />
                 <ThemedText
                   type="smallBold"
                   style={{
-                    color: selected ? theme.primaryForeground : theme.text,
+                    color: selected ? theme.primaryForeground : idleTabColor,
                   }}
                 >
                   {tab === "VIDEO" ? t("spot.mediaVideo") : t("spot.mediaImages")}
@@ -128,12 +139,16 @@ export function SpotVisualMediaGallery({
                   styles.mediaBox,
                   {
                     aspectRatio: resolvedTab === "VIDEO" ? 16 / 9 : 4 / 3,
-                    backgroundColor: theme.backgroundSelected,
+                    backgroundColor: mediaBoxBg,
                   },
                 ]}
               />
             ) : resolvedTab === "VIDEO" ? (
-              <SpotVideoPlayer key={activeItem.id} url={playbackUrl} />
+              <SpotVideoPlayer
+                key={activeItem.id}
+                url={playbackUrl}
+                onDark={onDark}
+              />
             ) : (
               <Image
                 key={activeItem.id}

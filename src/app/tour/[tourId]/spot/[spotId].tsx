@@ -15,7 +15,6 @@ import { SpotDetailHeader } from "@/components/tours/spot-detail-header";
 import { SpotDetailSkeleton } from "@/components/tours/spot-detail-skeleton";
 import { SpotVisualMediaGallery } from "@/components/tours/spot-visual-media-gallery";
 import { GoldGradientButton } from "@/components/ui/gold-gradient-button";
-import { GlassCard } from "@/components/ui/glass-card";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Spacing } from "@/constants/theme";
@@ -123,12 +122,12 @@ export default function SpotDetailScreen() {
   if (!hasRawContent || !content || !resolvedTourId || !spotId) {
     return (
       <ThemedView transparent style={styles.centered}>
-        <GlassCard style={styles.messageCard}>
+        <View style={styles.messageCard}>
           <Ionicons name="cloud-offline-outline" size={28} color={theme.primary} />
           <ThemedText type="smallBold" style={styles.messageTitle}>
             {t("tour.notInstalled")}
           </ThemedText>
-        </GlassCard>
+        </View>
       </ThemedView>
     );
   }
@@ -136,12 +135,12 @@ export default function SpotDetailScreen() {
   if (!spot) {
     return (
       <ThemedView transparent style={styles.centered}>
-        <GlassCard style={styles.messageCard}>
+        <View style={styles.messageCard}>
           <Ionicons name="alert-circle-outline" size={28} color={theme.primary} />
           <ThemedText type="smallBold" style={styles.messageTitle}>
             {t("spot.notFound")}
           </ThemedText>
-        </GlassCard>
+        </View>
       </ThemedView>
     );
   }
@@ -230,24 +229,24 @@ export default function SpotDetailScreen() {
           </View>
 
           {transcript ? (
-            <GlassCard style={styles.transcriptCard}>
+            <View style={styles.transcriptCard}>
               <ThemedText type="smallBold" style={styles.transcriptLabel}>
                 {t("spot.transcript")}
               </ThemedText>
               <ThemedText type="small" style={styles.transcriptBody}>
                 {transcript}
               </ThemedText>
-            </GlassCard>
+            </View>
           ) : null}
 
           {faqItems.length > 0 ? (
-            <GlassCard style={styles.faqCard}>
+            <View style={styles.faqCard}>
               <FaqAccordion
                 title={t("spot.faqs")}
                 items={faqItems}
                 onDark
               />
-            </GlassCard>
+            </View>
           ) : null}
         </ScrollView>
 
@@ -281,10 +280,7 @@ export default function SpotDetailScreen() {
 
           <Pressable
             onPress={() => void toggleComplete(resolvedTourId, spotId)}
-            style={[
-              styles.completeButton,
-              isComplete && styles.completeButtonActive,
-            ]}
+            style={styles.completeButton}
           >
             <Ionicons
               name={isComplete ? "checkbox" : "square-outline"}
@@ -358,12 +354,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.one,
-    borderRadius: 999,
-    paddingHorizontal: Spacing.two + 2,
-    paddingVertical: Spacing.one,
-    backgroundColor: "rgba(28, 25, 23, 0.72)",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(225, 165, 102, 0.4)",
   },
   stopBadgeText: {
     color: "#ffffff",
@@ -381,13 +371,17 @@ const styles = StyleSheet.create({
     fontSize: 22,
     lineHeight: 28,
   },
+  /**
+   * No fill — the page sits bare on the photo background. The gold hairline
+   * stays because this is an icon-only tap target: with neither fill nor
+   * outline it stops reading as a button.
+   */
   mapButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(28, 25, 23, 0.72)",
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: "rgba(225, 165, 102, 0.45)",
   },
@@ -416,7 +410,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.four,
     paddingTop: Spacing.three,
     gap: Spacing.two,
-    backgroundColor: "rgba(12, 10, 9, 0.72)",
   },
   footerLink: {
     color: "rgba(255,255,255,0.78)",
@@ -429,17 +422,16 @@ const styles = StyleSheet.create({
   footerLinkDisabled: {
     color: "rgba(255,255,255,0.28)",
   },
+  /**
+   * The completed state is carried by the checkbox icon alone — the gold
+   * pill fill was removed with every other surface on this page.
+   */
   completeButton: {
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.one,
     flexShrink: 1,
-    borderRadius: 999,
-    paddingHorizontal: Spacing.two,
     paddingVertical: Spacing.one,
-  },
-  completeButtonActive: {
-    backgroundColor: "rgba(225, 165, 102, 0.16)",
   },
   completeLabel: {
     color: "rgba(255,255,255,0.85)",

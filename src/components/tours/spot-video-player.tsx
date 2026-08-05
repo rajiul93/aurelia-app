@@ -7,9 +7,10 @@ import { useTheme } from "@/hooks/use-theme";
 
 type SpotVideoPlayerProps = {
   url: string;
+  onDark?: boolean;
 };
 
-export function SpotVideoPlayer({ url }: SpotVideoPlayerProps) {
+export function SpotVideoPlayer({ url, onDark = false }: SpotVideoPlayerProps) {
   const theme = useTheme();
   const player = useVideoPlayer(url, (instance) => {
     instance.loop = false;
@@ -17,7 +18,14 @@ export function SpotVideoPlayer({ url }: SpotVideoPlayerProps) {
 
   return (
     <View
-      style={[styles.container, { backgroundColor: theme.backgroundElement }]}
+      style={[
+        styles.container,
+        // Over the dark photo backdrop the card carries no fill, so the caption
+        // cannot use `textSecondary` — it is near-black in the light palette.
+        onDark
+          ? styles.containerBare
+          : { backgroundColor: theme.backgroundElement },
+      ]}
     >
       <VideoView
         player={player}
@@ -26,7 +34,11 @@ export function SpotVideoPlayer({ url }: SpotVideoPlayerProps) {
         nativeControls
         fullscreenOptions={{ enable: true }}
       />
-      <ThemedText type="small" themeColor="textSecondary">
+      <ThemedText
+        type="small"
+        style={onDark ? styles.captionOnDark : undefined}
+        themeColor={onDark ? undefined : "textSecondary"}
+      >
         Use the player controls to play, pause, and scrub.
       </ThemedText>
     </View>
@@ -40,6 +52,12 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     padding: Spacing.two,
     gap: Spacing.two,
+  },
+  containerBare: {
+    paddingHorizontal: 0,
+  },
+  captionOnDark: {
+    color: "rgba(255,255,255,0.6)",
   },
   video: {
     width: "100%",

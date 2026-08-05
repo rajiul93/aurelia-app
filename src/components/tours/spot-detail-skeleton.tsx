@@ -133,13 +133,13 @@ const styles = StyleSheet.create({
     borderRadius: Spacing.three,
     marginTop: Spacing.one,
   },
+  /**
+   * No fill or outline — the real screen has none either, so a panel here
+   * would visibly vanish at the content handoff.
+   */
   panel: {
     gap: Spacing.two,
-    padding: Spacing.three,
-    borderRadius: Spacing.three,
-    backgroundColor: "rgba(28, 25, 23, 0.42)",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(255, 255, 255, 0.12)",
+    paddingVertical: Spacing.two,
   },
   panelLabel: {
     width: "34%",
@@ -175,7 +175,6 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.three,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(0,0,0,0.35)",
   },
   footerSide: {
     width: 64,

@@ -3,6 +3,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
 import { AccessEndedListener } from "@/components/access-ended-listener";
+import { EntitlementsSyncListener } from "@/components/entitlements-sync-listener";
 import { InstalledToursRehydrateListener } from "@/components/installed-tours-rehydrate-listener";
 import { KnowledgeGate } from "@/components/knowledge-gate";
 import { KnowledgeSyncListener } from "@/components/knowledge-sync-listener";
@@ -27,6 +28,7 @@ export function AppProviders({ children }: AppProvidersProps) {
     <QueryClientProvider client={queryClient}>
       <StripeProvider publishableKey={env.stripePublishableKey}>
         <ReleaseConfigSyncListener />
+        <EntitlementsSyncListener />
         <UnansweredQuestionsSyncListener />
         <KnowledgeSyncListener />
         <InstalledToursRehydrateListener />

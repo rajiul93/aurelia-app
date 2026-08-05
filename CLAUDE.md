@@ -8,7 +8,7 @@
 
 **Status legend:** ✅ Completed · 🚧 In Progress · ⚠️ Known Issue · ⏳ Pending · ❌ Not Started
 
-Last updated: **2026-08-05** (spot detail page stripped of every surface behind text)
+Last updated: **2026-08-05** (entitlements refresh when stale, so newly unlocked tours reach the app)
 
 ---
 
@@ -252,6 +252,11 @@ Last updated: **2026-08-05** (spot detail page stripped of every surface behind 
   only to create or renew it. Consequence to remember: **the entitlements query is disabled while the
   snapshot is valid, and a disabled query is never refetched by `invalidateQueries`** — any code that
   needs fresh entitlements must call `refreshEntitlements()`.
+  **A staleness floor sits under this** ([use-entitlements-sync.ts](src/hooks/use-entitlements-sync.ts)):
+  the snapshot also carries the *tour list*, which the server can widen (a tour published later, a
+  grant broadened) without the snapshot expiring — so a silent best-effort refresh runs at cold start
+  and on foreground once the snapshot is >6h old. It never blocks a render and a failure keeps the
+  existing snapshot; the offline guarantee is unchanged.
 - **Each bundle stamps its own `accessExpiresAt`** — so expiry survives losing the snapshot and never
   depends on store hydration. The *current* snapshot still wins when present (a renewal extends a
   bundle stamped with an older expiry; a revoked tour expires even if its stamp hasn't run out).
@@ -417,6 +422,38 @@ Last updated: **2026-08-05** (spot detail page stripped of every surface behind 
 ---
 
 ## 12. Changelog
+
+- **2026-08-05** — **A signed-in device now picks up newly unlocked tours on its own (entitlements
+  staleness refresh).** Reported as "one tour opens, the other still shows locked". The server half
+  was the real cause and is fixed in `admin-and-server-aurelia` (an active grant now entitles every
+  published tour). This is the client half of the same bug: **even with the server fixed, an
+  already-signed-in device would never have found out.**
+  - **Why:** `useEntitlements` is snapshot-first — `enabled: !isSnapshotUsable(snapshot)`,
+    `staleTime: Infinity`, `refetchOnMount/Reconnect/WindowFocus` all `false`. That is exactly right
+    for the *access window*, but the same snapshot also carries the **tour list**, and the server can
+    widen that list without the snapshot expiring. So the only paths to a fresh list were: unlock
+    (`use-auth.ts`), a Stripe purchase (`subscribe.tsx`), or the user finding the **Refresh access**
+    button in Settings ([access-settings-panel.tsx](src/components/settings/access-settings-panel.tsx)).
+    Nothing else — `useReleaseConfigSync` even invalidates `queryKeys.entitlements.all` on a
+    `schemaVersion` change, which is a **no-op**, because a disabled query is never refetched by
+    invalidation (§6 already says so).
+  - **New [use-entitlements-sync.ts](src/hooks/use-entitlements-sync.ts)** + a listener mounted in
+    `AppProviders` next to the other sync listeners: at cold start and on every `AppState` "active",
+    if signed in and the snapshot's `fetchedAt` is **older than 6 hours**, fire
+    `fetchAndPersistEntitlements()` and ignore the result. Reads the stores via `getState()` inside
+    the handler rather than subscribing, so the listener neither re-renders nor re-registers.
+  - **Deliberately not `refreshEntitlements(queryClient)`** — that path drives `isFetchingAccess` and
+    therefore a visible spinner in Settings. This one must stay invisible. It also cannot block a
+    render or a tour opening, and a failure (offline inside the venue, transient 5xx) simply leaves
+    the existing snapshot in place — the offline guarantee is unchanged.
+  - **Why 6h and not every foreground:** the point of the snapshot is that a downloaded tour opens
+    with the radio off; refreshing on every foreground would put a network call in front of a
+    frequent, cheap path for a list that changes maybe monthly. 6h self-heals within a day at ~2–4
+    requests, and an impatient user still has the Settings button.
+  - ⚠️ **Existing installs still need one manual refresh** for the tour that is locked *right now* —
+    this hook only helps from the build that contains it. Sign out + unlock, or Settings → Refresh
+    access, does it immediately.
+  - `tsc --noEmit` clean, `pnpm lint` 0 errors (29 pre-existing warnings), **198 tests** green.
 
 - **2026-08-05** — **Spot detail page has no surface behind text any more — it sits bare on the photo
   background.** The venue's CMS background is a **black** photo and `AppBackground` renders it with

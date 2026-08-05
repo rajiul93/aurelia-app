@@ -28,7 +28,9 @@ export function FaqAccordion({ title, items, onDark = false }: FaqAccordionProps
 
   const questionColor = onDark ? "#ffffff" : theme.text;
   const answerColor = onDark ? "rgba(255,255,255,0.75)" : theme.textSecondary;
-  const cardBg = onDark ? "rgba(255,255,255,0.08)" : theme.backgroundElement;
+  // `onDark` means the accordion sits straight on the photo background, where
+  // any fill reads as a grey box; items are separated by spacing alone.
+  const cardBg = onDark ? "transparent" : theme.backgroundElement;
 
   return (
     <View style={styles.section}>
