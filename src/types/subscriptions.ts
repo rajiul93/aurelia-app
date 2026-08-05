@@ -26,7 +26,6 @@ export type SubscriptionConfig = {
 export type CheckoutPayload = {
   planId: string;
   deviceCount: number;
-  tourIds: string[];
 };
 
 export type CheckoutResult = {

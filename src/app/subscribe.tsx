@@ -17,7 +17,6 @@ import { CheckoutAuthSheet } from '@/components/subscribe/checkout-auth-sheet';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { GlassCard } from '@/components/ui/glass-card';
-import { COLOSSEUM_TOUR_ID } from '@/constants/tours';
 import { Spacing } from '@/constants/theme';
 import { useCheckout } from '@/hooks/mutations/use-checkout';
 import { useAppContent } from '@/hooks/queries/use-app-content';
@@ -168,7 +167,6 @@ export default function SubscribeScreen() {
       const result = await checkout.mutateAsync({
         planId: selectedPlanId,
         deviceCount,
-        tourIds: [COLOSSEUM_TOUR_ID],
       });
 
       const { error: initError } = await initPaymentSheet({
