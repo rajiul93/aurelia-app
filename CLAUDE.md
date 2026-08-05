@@ -8,7 +8,7 @@
 
 **Status legend:** ✅ Completed · 🚧 In Progress · ⚠️ Known Issue · ⏳ Pending · ❌ Not Started
 
-Last updated: **2026-08-05** (chat retrieval: word-boundary matching, greeting guard, localized reply templates)
+Last updated: **2026-08-05** (spot detail page stripped of every surface behind text)
 
 ---
 
@@ -417,6 +417,47 @@ Last updated: **2026-08-05** (chat retrieval: word-boundary matching, greeting g
 ---
 
 ## 12. Changelog
+
+- **2026-08-05** — **Spot detail page has no surface behind text any more — it sits bare on the photo
+  background.** The venue's CMS background is a **black** photo and `AppBackground` renders it with
+  `noOverlay` (no scrim at all, §6), but the spot detail screen still painted its own translucent
+  panels — so every text block read as a grey box floating over the image. The admin asked for the
+  text itself on the photo, fully bare: no fill *and* no outline, blocks separated by spacing only.
+  - **Removed fills**: transcript + FAQ + both error `GlassCard`s, the "Stop 3 of 12" pill, the
+    footer bar (`rgba(12,10,9,0.72)`), the complete-button's gold active pill, the media tab strip,
+    the FAQ item cards (`rgba(255,255,255,0.08)`), and the video player's card — the last being the
+    only **fully opaque** panel on the page.
+  - ⚠️ **`GlassCard` itself was NOT touched.** ~12 other screens (settings panels, account,
+    subscribe, faq, find-host, host card, why-buy) depend on its frosted look. The four call sites on
+    this screen became plain `<View>`s instead; the import is gone. Note this also drops GlassCard's
+    `padding: Spacing.four` — intended, the text now aligns to the screen's own horizontal padding.
+  - ⚠️ **Removing a fill exposed a latent light-theme bug, and fixing it was mandatory, not
+    cosmetic.** The media tab strip's idle label used `theme.text` and its icon `theme.textSecondary`
+    — `#1a1208` / `#6B5E52` in the light palette, i.e. **near-black on a black photo**. They were only
+    ever legible because the strip had a fill. Same for the video caption's `themeColor="textSecondary"`.
+    All three now branch on `onDark` to white-alpha. Theme is **admin-controlled** at runtime
+    ([use-color-scheme.ts](src/hooks/use-color-scheme.ts)), so light mode is genuinely reachable —
+    this would not have been caught by testing the dark default.
+  - **Three surfaces were deliberately kept**, each because removing it destroys information rather
+    than decoration: the **selected** media tab's gold fill (the only selection indicator), the
+    progress-bar track `rgba(255,255,255,0.1)` (the scrubber rail — without it audio progress is
+    invisible), and the gold gradients on Next/Done + the play button (their label/icon is `#1a1208`,
+    unreadable without the fill). The map button keeps only its **gold hairline**: it is an icon-only
+    tap target that stops reading as a button with neither fill nor outline.
+  - **The skeleton had to change too.** [spot-detail-skeleton.tsx](src/components/tours/spot-detail-skeleton.tsx)
+    drew `rgba(28,25,23,0.42)` panels and a `rgba(0,0,0,0.35)` footer; left alone, those panels would
+    **visibly vanish** the moment content resolved — reintroducing exactly the layout-jump class of
+    bug the skeleton exists to prevent (see the 2026-08-03 entry). Fills removed; the shimmer `bone`
+    stays, since that translucent white *is* the placeholder.
+  - `FaqAccordion` and `SpotVideoPlayer` changes are confined to their `onDark` branch —
+    [faq.tsx](src/app/faq.tsx) renders the accordion **without** `onDark` and is unaffected.
+    `SpotVideoPlayer` gained an `onDark` prop, forwarded by the gallery (its only consumer).
+  - `tsc --noEmit` clean, lint **0 errors** (29 pre-existing warnings, none in changed files),
+    **198 tests** green — no test asserts on these styles.
+  - ⏳ **Not device-verified.** Acceptance: open a stop's detail page and confirm the black photo
+    shows through behind transcript, FAQ, stop label, footer and video caption; check the
+    **unselected** VIDEO/IMAGES tab label is still readable now the strip has no fill; then flip
+    `appTheme` to **light** and repeat — that is where the near-black text would show up.
 
 - **2026-08-05** — **Typing "hi" answered with a random passage about the tour.** Five defects in the
   retrieval/formatting layer, found by tracing that one report. Deliberately scoped to
