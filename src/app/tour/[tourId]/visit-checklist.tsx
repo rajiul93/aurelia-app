@@ -63,6 +63,7 @@ export default function VisitChecklistScreen() {
           title={t("visitChecklist.title")}
           subtitle={tour?.title}
           onBack={() => router.back()}
+          onDark
         />
 
         <ScrollView

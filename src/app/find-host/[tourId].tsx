@@ -142,7 +142,7 @@ export default function FindHostScreen() {
       <ThemedView transparent style={styles.container}>
         <SafeAreaView style={styles.safeArea} edges={["top"]}>
           <View style={styles.padded}>
-            <ScreenHeader title="Find Your Host" onBack={() => router.back()} />
+            <ScreenHeader title="Find Your Host" onBack={() => router.back()} onDark />
             <GlassCard style={styles.messageCard}>
               <Ionicons name="lock-closed" size={28} color={theme.primary} />
               <ThemedText type="smallBold" style={styles.messageTitle}>
@@ -174,7 +174,7 @@ export default function FindHostScreen() {
       <ThemedView transparent style={styles.container}>
         <SafeAreaView style={styles.safeArea} edges={["top"]}>
           <View style={styles.padded}>
-            <ScreenHeader title="Find Your Host" onBack={() => router.back()} />
+            <ScreenHeader title="Find Your Host" onBack={() => router.back()} onDark />
           </View>
           <LocationPermissionPrimer
             onEnable={() => void requestPermission()}
@@ -190,7 +190,7 @@ export default function FindHostScreen() {
       <ThemedView transparent style={styles.container}>
         <SafeAreaView style={styles.safeArea} edges={["top"]}>
           <View style={styles.padded}>
-            <ScreenHeader title="Find Your Host" onBack={() => router.back()} />
+            <ScreenHeader title="Find Your Host" onBack={() => router.back()} onDark />
           </View>
           <View style={styles.centered}>
             <ActivityIndicator color={theme.primary} />

@@ -32,8 +32,6 @@ const en = {
     "I couldn't find an answer to that yet. Try rephrasing your question.",
   "assistant.empty": "The assistant is getting ready. Please try again shortly.",
   "assistant.fromTour": "From your {title} guide",
-  "assistant.greetingReply":
-    "Hello! Ask me anything about your tour — a stop, its history, or what to see next.",
   "assistant.nameReply": "It is called {title}.",
   "assistant.answerWithSubject": "{title} — {body}",
   "assistant.disabled": "Offline chat is currently turned off.",
@@ -235,6 +233,13 @@ const en = {
   "settings.accessExpires": "Expires {date}",
   "settings.accessToursUnlocked": "{count} tours unlocked",
   "settings.refreshAccess": "Refresh access",
+
+  "settings.knowledgeBase": "Knowledge base",
+  "settings.knowledgeBaseHint": "FAQ, tour info, and chat content.",
+  "settings.refreshKnowledgeBase": "Refresh knowledge base",
+  "settings.knowledgeRefreshed": "Knowledge base updated",
+  "settings.knowledgeRefreshFailed": "No connection — showing saved content",
+
   "settings.appInfo": "App info",
   "settings.appVersion": "Version {version}",
 
@@ -432,8 +437,6 @@ const es: Record<StringKey, string> = {
   "assistant.empty":
     "El asistente se está preparando. Inténtalo de nuevo en un momento.",
   "assistant.fromTour": "De tu guía de {title}",
-  "assistant.greetingReply":
-    "¡Hola! Pregúntame lo que quieras sobre tu tour: una parada, su historia o qué ver a continuación.",
   "assistant.nameReply": "Se llama {title}.",
   "assistant.answerWithSubject": "{title} — {body}",
   "assistant.disabled": "El chat sin conexión está desactivado.",
@@ -632,6 +635,13 @@ const es: Record<StringKey, string> = {
   "settings.accessExpires": "Expira el {date}",
   "settings.accessToursUnlocked": "{count} tours desbloqueados",
   "settings.refreshAccess": "Actualizar acceso",
+
+  "settings.knowledgeBase": "Base de conocimientos",
+  "settings.knowledgeBaseHint": "Preguntas frecuentes, información del tour y contenido del chat.",
+  "settings.refreshKnowledgeBase": "Actualizar base de conocimientos",
+  "settings.knowledgeRefreshed": "Base de conocimientos actualizada",
+  "settings.knowledgeRefreshFailed": "Sin conexión — mostrando contenido guardado",
+
   "settings.appInfo": "Info de la app",
   "settings.appVersion": "Versión {version}",
   "storage.title": "Almacenamiento",
@@ -817,8 +827,6 @@ const fr: Record<StringKey, string> = {
   "assistant.empty":
     "L'assistant se prépare. Veuillez réessayer dans un instant.",
   "assistant.fromTour": "D'après votre guide {title}",
-  "assistant.greetingReply":
-    "Bonjour ! Posez-moi une question sur votre visite : une étape, son histoire ou la suite du parcours.",
   "assistant.nameReply": "Cela s'appelle {title}.",
   "assistant.answerWithSubject": "{title} — {body}",
   "assistant.disabled": "Le chat hors ligne est désactivé.",
@@ -1018,6 +1026,13 @@ const fr: Record<StringKey, string> = {
   "settings.accessExpires": "Expire le {date}",
   "settings.accessToursUnlocked": "{count} visites débloquées",
   "settings.refreshAccess": "Actualiser l'accès",
+
+  "settings.knowledgeBase": "Base de connaissances",
+  "settings.knowledgeBaseHint": "FAQ, infos de visite et contenu du chat.",
+  "settings.refreshKnowledgeBase": "Actualiser la base de connaissances",
+  "settings.knowledgeRefreshed": "Base de connaissances actualisée",
+  "settings.knowledgeRefreshFailed": "Pas de connexion — affichage du contenu enregistré",
+
   "settings.appInfo": "Infos de l'app",
   "settings.appVersion": "Version {version}",
   "storage.title": "Stockage",

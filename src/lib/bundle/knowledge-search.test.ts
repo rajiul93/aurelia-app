@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  detectSmallTalk,
-  formatKnowledgeReply,
-  searchTourKnowledge,
-} from "./knowledge-search";
+import { formatKnowledgeReply, searchTourKnowledge } from "./knowledge-search";
 import type { SearchDocument } from "@/types/tour-bundle";
 
 function doc(overrides: Partial<SearchDocument> & { id: string }): SearchDocument {
@@ -20,30 +16,6 @@ function doc(overrides: Partial<SearchDocument> & { id: string }): SearchDocumen
     ...overrides,
   };
 }
-
-describe("detectSmallTalk", () => {
-  it("treats bare greetings as small talk", () => {
-    for (const query of ["hi", "Hello", "hey!", "thanks", "bye", "ok"]) {
-      expect(detectSmallTalk(query)).toBe(true);
-    }
-  });
-
-  it("covers the Spanish and French greetings the app ships", () => {
-    for (const query of ["hola", "gracias", "bonjour", "merci", "salut"]) {
-      expect(detectSmallTalk(query)).toBe(true);
-    }
-  });
-
-  it("does NOT swallow a real question that opens with thanks", () => {
-    expect(detectSmallTalk("thanks, when was it built?")).toBe(false);
-    expect(detectSmallTalk("hi where is the entrance")).toBe(false);
-  });
-
-  it("ignores empty input", () => {
-    expect(detectSmallTalk("")).toBe(false);
-    expect(detectSmallTalk("   ")).toBe(false);
-  });
-});
 
 describe("searchTourKnowledge word boundaries", () => {
   const museum = doc({
@@ -80,6 +52,19 @@ describe("searchTourKnowledge word boundaries", () => {
     const dated = doc({ id: "d3", title: "Arena", body: "Completed in 80 AD." });
 
     expect(searchTourKnowledge([dated], "AD", "en")).toHaveLength(1);
+  });
+
+  it("does not let the plural tolerance turn 'hi' into 'his'", () => {
+    // The plural tolerance added for temple/temples also matched hi→his, so
+    // every line of Roman prose scored for a greeting and "Hi" was answered
+    // with an arch. Fails if MIN_PLURAL_STEM_LENGTH is dropped back to 0.
+    const prose = doc({
+      id: "d4",
+      title: "Arch of Constantine",
+      body: "To legitimize his rule, Constantine reused his predecessors' reliefs.",
+    });
+
+    expect(searchTourKnowledge([prose], "hi", "en")).toEqual([]);
   });
 });
 
@@ -125,6 +110,43 @@ describe("formatKnowledgeReply", () => {
     expect(reply.length).toBeLessThanOrEqual(480);
     expect(reply.endsWith("…")).toBe(false);
     expect(reply.endsWith(".")).toBe(true);
+  });
+
+  it("returns a short entry whole when the match came from its keywords", () => {
+    // A greeting matches on title/keywords, never in the body, so the old
+    // "best sentence" fallback replied with just "Ciao!".
+    const greeting = doc({
+      id: "kb-1",
+      title: "Hi, hello, hey, greetings",
+      keywords: "Hi, hello, hey, greetings",
+      body: "Ciao! I'm Aurelia, your Rome tour guide. Ready to explore?",
+    });
+
+    expect(formatKnowledgeReply("hi", [greeting])).toBe(
+      "Ciao! I'm Aurelia, your Rome tour guide. Ready to explore?",
+    );
+  });
+
+  it("never quotes a supporting document that has no query term", () => {
+    // Only the top-ranked document may fall back to quoting a body that
+    // matched on title/keywords alone; doing it for every document is what
+    // appended an unrelated passage to the greeting.
+    const greeting = doc({
+      id: "kb-1",
+      title: "Hi, hello, hey",
+      keywords: "Hi, hello, hey",
+      body: "Ciao! I'm Aurelia, your Rome tour guide.",
+    });
+    const unrelated = doc({
+      id: "d2",
+      title: "Arch of Constantine",
+      body: "Constantine reused marble reliefs from earlier emperors.",
+    });
+
+    const reply = formatKnowledgeReply("hi", [greeting, unrelated]);
+
+    expect(reply).toContain("Aurelia");
+    expect(reply).not.toContain("Constantine");
   });
 
   it("leaves a name question to the caller's localized template", () => {

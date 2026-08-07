@@ -1,5 +1,4 @@
 import {
-  detectSmallTalk,
   formatKnowledgeReply,
   searchTourKnowledge,
 } from "@/lib/bundle/knowledge-search";
@@ -84,7 +83,7 @@ export type AssistantAnswer = {
    * intent instead of the text is what keeps them testable, and what stops the
    * hardcoded-English bugs this file has had twice before.
    */
-  kind: "answer" | "greeting" | "none";
+  kind: "answer" | "none";
   /**
    * Winning document title, for the caller's frame template. A sentence lifted
    * out of a body loses its antecedent ("It was rebuilt in the 3rd century." —
@@ -93,21 +92,33 @@ export type AssistantAnswer = {
   subject: string | null;
 };
 
+/** Longest title still readable as a subject in front of an answer. */
+const MAX_SUBJECT_LENGTH = 60;
+
+/**
+ * The winning document's title, but only when it reads as a *subject*.
+ *
+ * The frame exists to restore the antecedent a lifted sentence lost ("It was
+ * rebuilt in the 3rd century." — what was?). A Knowledge Base entry whose title
+ * is the list of words meant to trigger it ("Hi, hello, hey, good morning, …")
+ * is not a subject, and printing it in front of the answer is noise — that list
+ * is authoring metadata, not something a visitor should ever read.
+ */
+function subjectFrom(document: SearchDocument | undefined) {
+  const title = document?.title?.trim();
+
+  if (!title || title.includes(",") || title.length > MAX_SUBJECT_LENGTH) {
+    return null;
+  }
+
+  return title;
+}
+
 const NO_ANSWER: AssistantAnswer = {
   reply: "",
   hasSources: false,
   sourceTourId: null,
   kind: "none",
-  subject: null,
-};
-
-const GREETING: AssistantAnswer = {
-  reply: "",
-  // Not a knowledge gap: `hasSources: false` is what enqueues an unanswered
-  // question, and the admin's triage list must not fill up with "hi"/"thanks".
-  hasSources: true,
-  sourceTourId: null,
-  kind: "greeting",
   subject: null,
 };
 
@@ -184,13 +195,6 @@ export function answerQuestion(
   tourDocuments: SearchDocument[] = [],
   preferredTourId?: string | null,
 ): AssistantAnswer {
-  // Before any search: "hi" used to reach the ranker and match t·hi·s /
-  // ·hi·story in every heritage document, so a greeting returned a random
-  // passage about the tour.
-  if (detectSmallTalk(query)) {
-    return GREETING;
-  }
-
   const matches = retrievePassages(
     query,
     language,
@@ -210,6 +214,6 @@ export function answerQuestion(
     hasSources: true,
     sourceTourId: matches[0]?.tourId || null,
     kind: "answer",
-    subject: matches[0]?.title?.trim() || null,
+    subject: subjectFrom(matches[0]),
   };
 }

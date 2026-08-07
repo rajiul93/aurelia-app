@@ -57,7 +57,7 @@ export default function RootLayout() {
           <ThemeProvider
             value={colorScheme === "dark" ? AureliaDarkTheme : AureliaLightTheme}
           >
-            <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
+            <StatusBar style="light" />
             <AppBackground>
               <Stack
                 screenOptions={{

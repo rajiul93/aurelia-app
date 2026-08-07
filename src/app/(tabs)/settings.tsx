@@ -6,6 +6,7 @@ import { HamburgerButton } from "@/components/navigation/hamburger-button";
 import { AccessSettingsPanel } from "@/components/settings/access-settings-panel";
 import { AppInfoSettingsPanel } from "@/components/settings/app-info-settings-panel";
 import { AssistantModelPanel } from "@/components/settings/assistant-model-panel";
+import { KnowledgeSettingsPanel } from "@/components/settings/knowledge-settings-panel";
 import { LanguageSettingsPanel } from "@/components/settings/language-settings-panel";
 import { StorageSettingsPanel } from "@/components/settings/storage-settings-panel";
 import { TourDateSettingsPanel } from "@/components/settings/tour-date-settings-panel";
@@ -44,6 +45,7 @@ export default function SettingsScreen() {
           <TourDateSettingsPanel />
           <LanguageSettingsPanel />
           <AssistantModelPanel />
+          <KnowledgeSettingsPanel />
           <StorageSettingsPanel />
           <AppInfoSettingsPanel />
         </ScrollView>

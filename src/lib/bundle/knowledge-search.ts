@@ -51,68 +51,6 @@ type QuestionIntent =
 
 const MAX_REPLY_LENGTH = 480;
 
-/**
- * Greetings/thanks in the three shipped languages. Matched only on very short
- * queries (see `detectSmallTalk`) so "thanks, when was it built?" still runs a
- * real search.
- */
-const SMALL_TALK = new Set([
-  "hi",
-  "hii",
-  "hey",
-  "hello",
-  "yo",
-  "thanks",
-  "thank",
-  "thankyou",
-  "ty",
-  "bye",
-  "goodbye",
-  "ok",
-  "okay",
-  "hola",
-  "gracias",
-  "adios",
-  "adiós",
-  "buenas",
-  "bonjour",
-  "salut",
-  "merci",
-  "coucou",
-  "revoir",
-]);
-
-const SMALL_TALK_MAX_TOKENS = 3;
-
-function rawTokens(value: string) {
-  return value
-    .toLowerCase()
-    .split(/[^\p{L}\p{N}]+/u)
-    .map((token) => token.trim())
-    .filter((token) => token.length > 0);
-}
-
-/**
- * True when the query is a bare greeting rather than a question.
- *
- * Without this, "hi" reaches the ranker and — because scoring used to be a raw
- * substring test — matched t·hi·s / ·hi·story / arc·hi·tecture in essentially
- * every heritage document, so a greeting returned a random passage.
- *
- * The token cap is what keeps it honest: every token must be small talk AND the
- * query must be short, so a real question that merely opens with "thanks" is
- * still searched.
- */
-export function detectSmallTalk(query: string) {
-  const tokens = rawTokens(query);
-
-  if (tokens.length === 0 || tokens.length > SMALL_TALK_MAX_TOKENS) {
-    return false;
-  }
-
-  return tokens.every((token) => SMALL_TALK.has(token));
-}
-
 function tokenize(value: string) {
   return value
     .toLowerCase()
@@ -126,22 +64,39 @@ function escapeRegExp(value: string) {
 }
 
 /**
+ * Shortest stem the plural tolerance below may be applied to.
+ *
+ * On a two-letter stem `(?:e?s)?` does not describe a plural, it describes a
+ * *different word* — which is how "hi" came to match "hi·s" and score every
+ * line of Roman prose ("legitimize **his** rule", "**his** reign"), so a
+ * greeting was answered with an arch. Era terms like AD/BC are two letters and
+ * never need the tolerance anyway.
+ */
+const MIN_PLURAL_STEM_LENGTH = 3;
+
+/**
  * Word-boundary matcher for one search term, tolerating a simple plural.
  *
  * Scoring used to be `body.includes(term)`, which made "us" match "m·us·eum"
  * and "hi" match "history" — junk ranking on a corpus that is mostly prose.
  * A bare `\b` fixes that but would regress recall ("temple" would stop matching
- * "temples"), so the singular/plural pair is matched explicitly.
+ * "temples"), so the singular/plural pair is matched explicitly — but only for
+ * stems long enough that the pair is really singular/plural (see above).
  *
  * Built once per term per query and reused across every document and field —
  * compiling per (term × document × field) would cost far more than the
  * `includes` this replaces.
  */
 function termMatcher(term: string) {
-  const singular = term.endsWith("s") ? term.slice(0, -1) : term;
-  const stem = escapeRegExp(singular);
+  const stripped = term.endsWith("s") ? term.slice(0, -1) : term;
+  const tolerantPlural = stripped.length >= MIN_PLURAL_STEM_LENGTH;
+  const stem = escapeRegExp(tolerantPlural ? stripped : term);
+  const suffix = tolerantPlural ? "(?:e?s)?" : "";
 
-  return new RegExp(`(?<![\\p{L}\\p{N}])${stem}(?:e?s)?(?![\\p{L}\\p{N}])`, "iu");
+  return new RegExp(
+    `(?<![\\p{L}\\p{N}])${stem}${suffix}(?![\\p{L}\\p{N}])`,
+    "iu",
+  );
 }
 
 function buildMatchers(terms: string[]) {
@@ -254,9 +209,11 @@ function pickBestSentences(
   query: string,
   intent: QuestionIntent,
   limit = 2,
+  allowFallback = true,
 ) {
   const matchers = buildMatchers(tokenize(query));
-  const ranked = splitIntoSentences(body)
+  const sentences = splitIntoSentences(body);
+  const ranked = sentences
     .map((sentence) => ({
       sentence,
       score: scoreSentence(sentence, matchers, intent),
@@ -269,7 +226,22 @@ function pickBestSentences(
     return relevant.map((entry) => entry.sentence);
   }
 
-  return ranked.slice(0, 1).map((entry) => entry.sentence);
+  // Nothing in this body carried a query term. For a *supporting* document
+  // that means it has nothing to add, and quoting it anyway is what appended
+  // an unrelated passage to every greeting.
+  if (!allowFallback) {
+    return [];
+  }
+
+  // For the winning document the match came from its title or keywords, so the
+  // entry itself is the answer. An entry short enough to fit the budget (an FAQ
+  // answer, a greeting) is returned whole rather than mined for one sentence —
+  // returning only its first sentence is how a written reply became "Ciao!".
+  if (body.trim().length <= MAX_REPLY_LENGTH) {
+    return sentences;
+  }
+
+  return sentences.slice(0, limit);
 }
 
 /**
@@ -312,8 +284,16 @@ function trimReply(text: string) {
  * it returns nothing here and the caller renders its own localized template —
  * this used to build a hardcoded English `It is called {title}.`, which
  * Spanish and French users received verbatim.
+ *
+ * `isPrimary` marks the top-ranked document. Only it may fall back to quoting a
+ * body that contains none of the query terms; a supporting document that has
+ * nothing to add must contribute nothing.
  */
-function sentencesFromDocument(document: SearchDocument, query: string) {
+function sentencesFromDocument(
+  document: SearchDocument,
+  query: string,
+  isPrimary: boolean,
+) {
   const intent = detectQuestionIntent(query);
 
   if (
@@ -329,9 +309,10 @@ function sentencesFromDocument(document: SearchDocument, query: string) {
     query,
     intent,
     intent === "name" ? 1 : 2,
+    isPrimary,
   );
 
-  if (sentences.length > 0) {
+  if (sentences.length > 0 || !isPrimary) {
     return sentences;
   }
 
@@ -440,8 +421,8 @@ export function formatKnowledgeReply(
   const seen = new Set<string>();
   const collected: string[] = [];
 
-  for (const document of documents) {
-    for (const sentence of sentencesFromDocument(document, query)) {
+  for (const [index, document] of documents.entries()) {
+    for (const sentence of sentencesFromDocument(document, query, index === 0)) {
       const key = normalizeForDedupe(sentence);
       if (!key || seen.has(key)) {
         continue;

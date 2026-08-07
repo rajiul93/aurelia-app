@@ -43,6 +43,7 @@ export default function FaqScreen() {
             title={t("faqScreen.title")}
             subtitle={t("faqScreen.subtitle")}
             onBack={() => router.back()}
+            onDark
           />
 
           {grouped.length === 0 ? (

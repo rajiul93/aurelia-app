@@ -137,6 +137,7 @@ export default function FloorScreen() {
               version: content.versions.tourBundleVersion,
             })}
             onBack={() => router.back()}
+            onDark
           />
 
           {/* Map Explore — same premium card language as home floor cards. */}

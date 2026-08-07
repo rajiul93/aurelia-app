@@ -243,12 +243,6 @@ export function FloatingChat() {
       });
     }
 
-    // A greeting is not a knowledge gap and has no source, so it skips both the
-    // enqueue above (via hasSources) and the tour footer below.
-    if (result.kind === "greeting") {
-      return t("assistant.greetingReply");
-    }
-
     return withSourceFooter(
       composeReply(result),
       result.sourceTourId,

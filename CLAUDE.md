@@ -8,7 +8,8 @@
 
 **Status legend:** ✅ Completed · 🚧 In Progress · ⚠️ Known Issue · ⏳ Pending · ❌ Not Started
 
-Last updated: **2026-08-05** (entitlements refresh when stale, so newly unlocked tours reach the app)
+Last updated: **2026-08-07** (greeting handling moved from code to the Knowledge Base; four retrieval
+bugs that made "Hi" answer with an arch)
 
 ---
 
@@ -340,9 +341,13 @@ Last updated: **2026-08-05** (entitlements refresh when stale, so newly unlocked
 ## 8. Testing & Verification Status
 
 - ✅ TypeScript `tsc --noEmit` clean — both `aurelia-app` and `admin-and-server-aurelia`.
-- ✅ Unit tests **198/198 pass** (`pnpm test`, Vitest, aurelia-app) across 26 files.
-  Newest: `src/lib/bundle/knowledge-search.test.ts` (word boundaries incl. the "us"/"museum" and
-  singular↔plural guards, small-talk detection, multi-document replies, sentence-boundary trim) —
+- ✅ Unit tests **200/200 pass** (`pnpm test`, Vitest, aurelia-app) across 27 files.
+  Newest: `src/lib/knowledge/assistant.test.ts` (the subject frame keeps a real title, drops a
+  keyword-list one) and the additions to `src/lib/bundle/knowledge-search.test.ts` (the hi→his plural
+  guard, short entries returned whole, supporting documents contributing nothing) — see the
+  2026-08-07 changelog entry.
+  Also `src/lib/bundle/knowledge-search.test.ts`'s original cases (word boundaries incl. the
+  "us"/"museum" and singular↔plural guards, multi-document replies, sentence-boundary trim) —
   the chat ranker had no tests at all before 2026-08-05.
   Also: `src/lib/host/availability.test.ts` (venue-clock window + server fallback),
   `src/lib/app-content/resolve-asset.test.ts` (slot fallbacks + de-dup), and
@@ -422,6 +427,54 @@ Last updated: **2026-08-05** (entitlements refresh when stale, so newly unlocked
 ---
 
 ## 12. Changelog
+
+- **2026-08-07** — **Greetings are admin content now, and "Hi" stopped being answered with an arch.**
+  Two connected changes: the hardcoded greeting allowlist was removed at the admin's request, and the
+  four retrieval bugs that removal exposed were fixed. Reported as *"Hi likhe full reply dicche"* — a
+  greeting returned a keyword list followed by a passage about the Arch of Constantine.
+  - **`detectSmallTalk` deleted** (the `SMALL_TALK` set, `rawTokens`, `SMALL_TALK_MAX_TOKENS`, the
+    `GREETING` constant, `AssistantAnswer["kind"] === "greeting"`, its branch in `floating-chat.tsx`,
+    and `assistant.greetingReply` × 3 locales). It reverses the 2026-08-05 entry below **deliberately**:
+    a code-side allowlist meant every new greeting phrasing ("How are you?", "What's up?") needed an
+    app release, and the admin wants that wording under their own control. Greetings are now ordinary
+    Knowledge Base entries, retuned from `/knowledge` with no build.
+  - ⚠️ **Root cause of the bad reply: the plural tolerance turned `hi` into `his`.** `termMatcher`
+    appends `(?:e?s)?` so "temple" still matches "temples" (added 2026-08-05 for exactly that reason).
+    On a **two-letter** stem that suffix is not a plural, it is a different word — so `hi` matched
+    "legitimize **his** rule", "**his** reign", "**his** death", and every page of Roman prose scored
+    for a greeting. New `MIN_PLURAL_STEM_LENGTH = 3` gates the tolerance; two-letter terms match
+    exactly, which is also what **AD/BC** already needed. Guarded by a test that **fails** if the
+    constant is dropped to 0 (verified by doing exactly that).
+  - **Supporting documents could quote themselves for free.** `pickBestSentences` fell back to "best
+    sentence anyway" when a body contained none of the query terms — correct for the *winning*
+    document (it matched on title/keywords, so the entry is the answer) but for documents 2 and 3 it
+    appended unrelated prose to every reply. The fallback is now gated on `isPrimary`.
+  - **A short entry is returned whole.** With no in-body term match, the old fallback returned the
+    single best sentence — which for a greeting is `"Ciao!"`, hence the truncated replies. An entry
+    that fits the 480-char budget is now returned in full: it was authored as the answer, not as a
+    corpus to mine.
+  - ⚠️ **The `subject` frame printed authoring metadata.** `answerWithSubject` renders
+    `{title} — {body}` to restore an antecedent a lifted sentence lost ("It was rebuilt…" — what was?).
+    That is right for "Arch of Constantine" and wrong for a KB entry whose title is the trigger-word
+    list, which is why replies began *"Hi, hello, hey, good morning, greetings — …"*. New
+    `subjectFrom()` drops a title containing a comma or over 60 chars. A real subject still frames its
+    answer (covered by a test, so the 2026-08-05 antecedent fix is not silently undone).
+  - **New Settings → "Refresh knowledge base"** panel
+    ([knowledge-settings-panel.tsx](src/components/settings/knowledge-settings-panel.tsx)), so an
+    admin edit reaches a device without waiting for the next foreground sync or signing out.
+    `knowledgeStore.sync()` now returns a boolean so the button can distinguish success from failure —
+    its `status` cannot, since it returns to `"ready"` on both paths whenever a pack is already cached.
+    ⚠️ **Deliberately always visible, not connectivity-gated** (the admin asked for the latter): this
+    app has **no** `NetInfo`/`expo-network` anywhere by design (§6, 2026-08-04), and adding one for a
+    cosmetic gate would mean a new native dependency plus a rebuild. The button instead reports
+    "No connection — showing saved content", which is more informative than disappearing.
+  - **New [assistant.test.ts](src/lib/knowledge/assistant.test.ts)** + 3 cases in
+    `knowledge-search.test.ts`; 194 → **200 tests**, `tsc` clean, lint 0 errors (30 pre-existing
+    warnings).
+  - ⏳ **Device-verified for English only.** "Hi" now returns the greeting entry alone and a real
+    question still returns its tour passage *with* its subject. Acceptance still open: the es/fr
+    greeting entries the admin is adding, and confirming the unanswered-questions triage list does not
+    fill with greetings once entries exist for them.
 
 - **2026-08-05** — **A signed-in device now picks up newly unlocked tours on its own (entitlements
   staleness refresh).** Reported as "one tour opens, the other still shows locked". The server half

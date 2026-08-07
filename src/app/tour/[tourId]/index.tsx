@@ -167,6 +167,7 @@ export default function TourRouteScreen() {
           <ScreenHeader
             title={tourTitle}
             onBack={() => router.dismissTo("/")}
+            onDark
           />
 
           <View

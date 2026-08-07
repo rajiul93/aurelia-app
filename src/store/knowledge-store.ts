@@ -14,7 +14,7 @@ type KnowledgeState = {
   status: SyncStatus;
   hydrated: boolean;
   hydrate: () => Promise<void>;
-  sync: () => Promise<void>;
+  sync: () => Promise<boolean>;
 };
 
 export const useKnowledgeStore = create<KnowledgeState>((set, get) => ({
@@ -45,9 +45,11 @@ export const useKnowledgeStore = create<KnowledgeState>((set, get) => ({
       } else {
         set({ status: "ready" });
       }
+      return true;
     } catch {
       // Offline or server error: keep whatever we already have cached.
       set({ status: current ? "ready" : "error" });
+      return false;
     }
   },
 }));

@@ -25,6 +25,7 @@ export default function ContentPageScreen() {
           <ScreenHeader
             title={page?.title ?? t("drawer.menu")}
             onBack={() => router.back()}
+            onDark
           />
 
           {page ? (
