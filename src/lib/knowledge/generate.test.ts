@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { retrievePassages } from "@/lib/knowledge/assistant";
 import { generateAnswer } from "@/lib/knowledge/generate";
 import { getDeviceCapability } from "@/lib/llm/device-capability";
+import { isGeminiAvailable, streamGeminiCompletion } from "@/lib/llm/gemini-runtime";
 import {
   getLlamaContext,
   isLlamaNativeAvailable,
@@ -18,6 +19,10 @@ vi.mock("@/lib/llm/llama-runtime", () => ({
   isLlamaNativeAvailable: vi.fn(),
   getLlamaContext: vi.fn(),
   streamCompletion: vi.fn(),
+}));
+vi.mock("@/lib/llm/gemini-runtime", () => ({
+  isGeminiAvailable: vi.fn(),
+  streamGeminiCompletion: vi.fn(),
 }));
 vi.mock("@/lib/llm/model-manager", () => ({
   getInstalledModelPath: vi.fn(),
@@ -45,7 +50,7 @@ function request(overrides: Partial<Parameters<typeof generateAnswer>[0]> = {}) 
     pack: null,
     tourDocuments: [passage],
     preferredTourId: null,
-    enabled: true,
+    provider: "gemma" as const,
     onToken: vi.fn(),
     ...overrides,
   };
@@ -84,14 +89,6 @@ describe("generateAnswer fallback chain", () => {
     }
   });
 
-  it("skips when the remote flag is off", async () => {
-    const result = await generateAnswer(request({ enabled: false }));
-
-    expect(result).toEqual({ started: false, reason: "disabled" });
-    // The gate must come first: no model load, no retrieval, no work at all.
-    expect(getLlamaContext).not.toHaveBeenCalled();
-    expect(retrievePassages).not.toHaveBeenCalled();
-  });
 
   it("skips on a device below the memory floor", async () => {
     vi.mocked(getDeviceCapability).mockReturnValue({
@@ -153,5 +150,46 @@ describe("generateAnswer fallback chain", () => {
     const [, , userPrompt] = vi.mocked(streamCompletion).mock.calls[0]!;
     expect(userPrompt).toContain("Built in 80 AD.");
     expect(userPrompt).toContain("When was it built?");
+  });
+});
+
+describe("generateAnswer Gemini provider", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(retrievePassages).mockReturnValue([passage]);
+  });
+
+  it("generates when Gemini key is available", async () => {
+    vi.mocked(isGeminiAvailable).mockReturnValue(true);
+    vi.mocked(streamGeminiCompletion).mockReturnValue({
+      completion: Promise.resolve("It was built in 80 AD."),
+      stop: vi.fn(),
+    });
+
+    const result = await generateAnswer(request({ provider: "gemini" }));
+
+    expect(result.started).toBe(true);
+    if (result.started) {
+      expect(await result.handle.completion).toBe("It was built in 80 AD.");
+      expect(result.handle.sourceTourId).toBe("tour-1");
+    }
+  });
+
+  it("skips when Gemini key is missing", async () => {
+    vi.mocked(isGeminiAvailable).mockReturnValue(false);
+
+    const result = await generateAnswer(request({ provider: "gemini" }));
+
+    expect(result).toEqual({ started: false, reason: "gemini_key_missing" });
+    expect(streamGeminiCompletion).not.toHaveBeenCalled();
+  });
+
+  it("checks no-passages guard before checking Gemini availability", async () => {
+    vi.mocked(retrievePassages).mockReturnValue([]);
+
+    const result = await generateAnswer(request({ provider: "gemini" }));
+
+    expect(result).toEqual({ started: false, reason: "no_passages" });
+    expect(isGeminiAvailable).not.toHaveBeenCalled();
   });
 });

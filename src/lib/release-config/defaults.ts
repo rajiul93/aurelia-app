@@ -21,6 +21,8 @@ export const DEFAULT_REMOTE_CONFIG: RemoteConfig = {
   // start before the cached config is read) the app follows the device, which
   // is the least surprising thing to show.
   appTheme: "system",
+  // On-device Gemma by default; admin can switch to "gemini" for cloud API.
+  aiChatProvider: "gemma",
   // Off until the admin publishes a model URL. Defaulting this on would have
   // every pre-sync client trying to generate with no model on disk — harmless
   // (it falls back) but pointless work on the path of every question.

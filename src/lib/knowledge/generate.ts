@@ -1,5 +1,6 @@
 import { retrievePassages } from "@/lib/knowledge/assistant";
 import { getDeviceCapability } from "@/lib/llm/device-capability";
+import { isGeminiAvailable, streamGeminiCompletion } from "@/lib/llm/gemini-runtime";
 import {
   getLlamaContext,
   isLlamaNativeAvailable,
@@ -17,7 +18,7 @@ export type GenerateRequest = {
   pack: KnowledgePack | null;
   tourDocuments: SearchDocument[];
   preferredTourId?: string | null;
-  enabled: boolean;
+  provider: "gemma" | "gemini";
   onToken: (text: string) => void;
 };
 
@@ -39,7 +40,8 @@ export type GenerationSkipReason =
   | "runtime_missing"
   | "model_missing"
   | "no_passages"
-  | "context_failed";
+  | "context_failed"
+  | "gemini_key_missing";
 
 export type GenerateResult =
   | { started: true; handle: GenerationHandle }
@@ -55,10 +57,44 @@ export type GenerateResult =
 export async function generateAnswer(
   request: GenerateRequest,
 ): Promise<GenerateResult> {
-  if (!request.enabled) {
-    return { started: false, reason: "disabled" };
+  // Retrieve passages first — the hallucination guard for all providers.
+  const passages = retrievePassages(
+    request.question,
+    request.language,
+    request.pack,
+    request.tourDocuments,
+    request.preferredTourId,
+  );
+
+  // With nothing retrieved the model has no source of truth and a 1B model will
+  // happily invent one. No passages means no generation, full stop.
+  if (passages.length === 0) {
+    return { started: false, reason: "no_passages" };
   }
 
+  // Branch on provider.
+  if (request.provider === "gemini") {
+    if (!isGeminiAvailable()) {
+      return { started: false, reason: "gemini_key_missing" };
+    }
+
+    const handle = streamGeminiCompletion({
+      systemPrompt: buildSystemPrompt(request.language, "gemini"),
+      userPrompt: buildUserPrompt(request.question, passages, "gemini"),
+      onToken: request.onToken,
+    });
+
+    return {
+      started: true,
+      handle: {
+        completion: handle.completion,
+        stop: handle.stop,
+        sourceTourId: passages[0]?.tourId || null,
+      },
+    };
+  }
+
+  // provider === "gemma"
   if (!getDeviceCapability().canRunModel) {
     return { started: false, reason: "device_incapable" };
   }
@@ -72,21 +108,6 @@ export async function generateAnswer(
     return { started: false, reason: "model_missing" };
   }
 
-  const passages = retrievePassages(
-    request.question,
-    request.language,
-    request.pack,
-    request.tourDocuments,
-    request.preferredTourId,
-  );
-
-  // The hallucination guard, and the reason it sits *before* the context load:
-  // with nothing retrieved the model has no source of truth and a 1B model will
-  // happily invent one. No passages means no generation, full stop.
-  if (passages.length === 0) {
-    return { started: false, reason: "no_passages" };
-  }
-
   const context = await getLlamaContext(modelPath);
   if (!context) {
     return { started: false, reason: "context_failed" };
@@ -94,8 +115,8 @@ export async function generateAnswer(
 
   const handle = streamCompletion(
     context,
-    buildSystemPrompt(request.language),
-    buildUserPrompt(request.question, passages),
+    buildSystemPrompt(request.language, "gemma"),
+    buildUserPrompt(request.question, passages, "gemma"),
     request.onToken,
   );
 

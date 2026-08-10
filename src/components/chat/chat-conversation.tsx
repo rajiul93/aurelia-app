@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 
+import { LinkifiedText } from "@/components/chat/linkified-text";
 import { ThemedText } from "@/components/themed-text";
 import { Fonts, Spacing } from "@/constants/theme";
 import { useStrings } from "@/hooks/use-strings";
@@ -151,14 +152,14 @@ export function ChatConversation({
                       ],
                 ]}
               >
-                <ThemedText
+                <LinkifiedText
                   type="small"
                   style={{
                     color: isUser ? theme.primaryForeground : theme.text,
                   }}
-                >
-                  {message.content}
-                </ThemedText>
+                  linkColor={isUser ? theme.primaryForeground : theme.primary}
+                  content={message.content}
+                />
               </View>
             );
           })}

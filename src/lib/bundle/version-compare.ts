@@ -1,3 +1,5 @@
+import type { InstalledTourMeta } from "@/types/tour-bundle";
+
 export type EntitledVersions = {
   tourBundleVersion: number;
   mediaVersion: number;
@@ -34,4 +36,19 @@ export function isUpdateAvailable(
     entitled.aiKnowledgeVersion > installed.aiKnowledgeVersion ||
     entitled.routeVersion > installed.routeVersion
   );
+}
+
+/** Filter installed tours to those due for an update. */
+export function getToursNeedingUpdate(
+  installedByTourId: Record<string, InstalledTourMeta>,
+  entitledVersionsByTourId: Map<string, EntitledVersions>,
+): InstalledTourMeta[] {
+  return Object.values(installedByTourId).filter((installed) => {
+    if (isInstallFormatStale(installed)) {
+      return true;
+    }
+
+    const entitled = entitledVersionsByTourId.get(installed.tourId);
+    return entitled ? isUpdateAvailable(installed, entitled) : false;
+  });
 }

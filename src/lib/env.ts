@@ -7,6 +7,7 @@ const extra = Constants.expoConfig?.extra as
       mobileApiKey?: string;
       apiVersion?: number;
       stripePublishableKey?: string;
+      geminiApiKey?: string;
     }
   | undefined;
 
@@ -90,6 +91,20 @@ function resolveMobileApiKey() {
   return configured;
 }
 
+function resolveGeminiApiKey() {
+  const configured =
+    process.env.EXPO_PUBLIC_GEMINI_API_KEY ?? extra?.geminiApiKey ?? "";
+
+  if (!configured && __DEV__) {
+    console.warn(
+      "[env] EXPO_PUBLIC_GEMINI_API_KEY is not set — Gemini chat provider will not work. " +
+        "Set it in .env.local to use cloud-based generative chat.",
+    );
+  }
+
+  return configured;
+}
+
 export const env = {
   apiBaseUrl: resolveApiBaseUrl(),
   mobileApiKey: resolveMobileApiKey(),
@@ -100,4 +115,5 @@ export const env = {
     process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ??
     extra?.stripePublishableKey ??
     "",
+  geminiApiKey: resolveGeminiApiKey(),
 };

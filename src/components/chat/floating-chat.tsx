@@ -279,7 +279,7 @@ export function FloatingChat() {
       pack,
       tourDocuments: documents,
       preferredTourId: activeTourId,
-      enabled: remote.enableOnDeviceLlm,
+      provider: remote.aiChatProvider,
       onToken: (chunk) => appendToAssistantMessage(assistantId, chunk),
     });
 

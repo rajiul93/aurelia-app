@@ -30,6 +30,11 @@ export type RemoteConfig = {
    */
   appTheme: AppTheme;
   /**
+   * Which AI provider generates chat answers: "gemma" (on-device GGUF) or
+   * "gemini" (cloud API). Defaults to "gemma" for backward compatibility.
+   */
+  aiChatProvider: "gemma" | "gemini";
+  /**
    * Master switch for on-device generative answers. Off means the assistant
    * uses keyword retrieval only — the behaviour that shipped before the model.
    * Remote so a bad model build can be turned off for everyone without an app

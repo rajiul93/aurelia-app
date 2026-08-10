@@ -2,12 +2,16 @@ import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 
+import { getToursNeedingUpdate } from "@/lib/bundle/version-compare";
 import { ThemedText } from "@/components/themed-text";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Spacing } from "@/constants/theme";
 import { useStrings } from "@/hooks/use-strings";
 import { useTheme } from "@/hooks/use-theme";
+import { useDownloadTour } from "@/hooks/mutations/use-download-tour";
+import { useEntitlementStatus } from "@/hooks/use-entitlement-status";
 import { useKnowledgeStore } from "@/store/knowledge-store";
+import { useInstalledToursStore } from "@/store/installed-tours-store";
 
 export function KnowledgeSettingsPanel() {
   const theme = useTheme();
@@ -17,12 +21,45 @@ export function KnowledgeSettingsPanel() {
 
   const sync = useKnowledgeStore((state) => state.sync);
   const pack = useKnowledgeStore((state) => state.pack);
+  const downloadTour = useDownloadTour();
+  const { refetchAccess, entitledVersionsByTourId } = useEntitlementStatus();
+  const installedByTourId = useInstalledToursStore(
+    (state) => state.installedByTourId,
+  );
 
   async function handleRefresh() {
     setIsRefreshing(true);
-    const success = await sync();
+
+    // Refresh global FAQ/KB pack
+    const kbSuccess = await sync();
+
+    // Refresh tour bundles: fetch fresh entitlements, then re-download any tours with pending updates
+    try {
+      await refetchAccess();
+
+      const toursToUpdate = getToursNeedingUpdate(
+        installedByTourId,
+        entitledVersionsByTourId,
+      );
+
+      // Re-download sequentially — each download checks storage space, so
+      // running several at once could trigger a false "not enough space".
+      for (const installed of toursToUpdate) {
+        await downloadTour
+          .mutateAsync({
+            tourId: installed.tourId,
+            slug: installed.slug,
+            title: installed.title,
+            preferences: installed.downloadPreferences,
+          })
+          .catch(() => undefined); // Best-effort: one tour's failure doesn't block the others
+      }
+    } catch {
+      // Silently continue even if entitlements fetch fails — the KB sync result drives feedback
+    }
+
     setIsRefreshing(false);
-    setFeedbackState(success ? "success" : "error");
+    setFeedbackState(kbSuccess ? "success" : "error");
 
     // Clear feedback after 3 seconds
     setTimeout(() => setFeedbackState("idle"), 3000);
