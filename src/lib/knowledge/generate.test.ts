@@ -177,11 +177,17 @@ describe("generateAnswer Gemini provider", () => {
 
   it("skips when Gemini key is missing", async () => {
     vi.mocked(isGeminiAvailable).mockReturnValue(false);
+    // This skip is a build misconfiguration, not a device limit, and the
+    // fallback is silent to the user — so it must at least warn a developer.
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     const result = await generateAnswer(request({ provider: "gemini" }));
 
     expect(result).toEqual({ started: false, reason: "gemini_key_missing" });
     expect(streamGeminiCompletion).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalled();
+
+    warn.mockRestore();
   });
 
   it("checks no-passages guard before checking Gemini availability", async () => {

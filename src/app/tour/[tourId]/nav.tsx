@@ -1,4 +1,5 @@
 import { Ionicons } from "@react-native-vector-icons/ionicons";
+import * as Location from "expo-location";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useFocusEffect,
@@ -24,6 +25,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CompassOverlay } from "@/components/navigation/compass-overlay";
+import { ModeSelectModal } from "@/components/navigation/mode-select-modal";
 import { OffRouteBanner } from "@/components/navigation/off-route-banner";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -43,11 +45,13 @@ import { getFloorScope } from "@/lib/bundle/floor-routing";
 import { orderSpotsByRoute } from "@/lib/bundle/route-order";
 import { useFloorSelection } from "@/hooks/use-floor-selection";
 import { isMapLibreNativeAvailable } from "@/lib/map/native-available";
+import { resolveBootstrapLocation } from "@/lib/navigation/bootstrap-location";
 import { speakApproach } from "@/lib/navigation/approach-voice";
 import { ensureOfflineMapPack, readMapPackMeta } from "@/lib/map/offline-pack";
 import { getNextIncompleteSpot } from "@/lib/navigation/proximity";
 import { queryKeys } from "@/lib/query/keys";
 import { useRemoteConfig } from "@/store/release-config-store";
+import { useNavigationSessionStore } from "@/store/navigation-session-store";
 import { useTourProgressStore } from "@/store/tour-progress-store";
 
 // memo, because rotating the map updates `mapBearing` on this screen once per
@@ -88,6 +92,12 @@ export default function TourNavigationScreen() {
   // the compass consumes this; TourMapView is memoized so a turn does not
   // re-render the map itself.
   const [mapBearing, setMapBearing] = useState(0);
+  // Mode selection: explore (free browsing, no GPS) or walk (full navigation).
+  // null means modal is showing; user must pick one to proceed.
+  const [mode, setMode] = useState<"explore" | "walk" | null>(null);
+  const [isResolvingMyLocation, setIsResolvingMyLocation] = useState(false);
+  // Reference to the map handle for one-off centering when "My Location" is tapped.
+  const mapHandleRef = useRef<{ centerOnLocation: (point: { lat: number; lng: number }) => void } | null>(null);
 
   // Pushing a spot detail leaves this screen mounted, so the GPS session keeps
   // running and would announce the next stop from behind the stack. Tracked in
@@ -168,7 +178,7 @@ export default function TourNavigationScreen() {
   // used to auto-play here was removed deliberately (see CLAUDE.md §12).
   const announceApproach = useCallback(
     (spotId: string) => {
-      if (!isFocusedRef.current || !remote.enableVoiceGuidance) {
+      if (!isFocusedRef.current || !remote.enableVoiceGuidance || mode !== "walk") {
         return;
       }
 
@@ -179,7 +189,7 @@ export default function TourNavigationScreen() {
 
       speakApproach(spotId, t("nav.approachVoice", { title }), language);
     },
-    [language, remote.enableVoiceGuidance, stopTitleById, t],
+    [language, mode, remote.enableVoiceGuidance, stopTitleById, t],
   );
 
   const { canNavigate, snapshot, isAwaitingLocation, locationStatus } =
@@ -187,7 +197,7 @@ export default function TourNavigationScreen() {
       tourId: tourId ?? "",
       content: content ?? undefined,
       floorId: selectedFloorId,
-      enabled: Boolean(tourId && content),
+      enabled: Boolean(tourId && content && mode === "walk"),
       onApproachSpot: announceApproach,
     });
 
@@ -221,6 +231,26 @@ export default function TourNavigationScreen() {
     (bearing: number) => setMapBearing(bearing),
     [],
   );
+
+  // One-off "My Location" handler for Explore mode: request permission, resolve
+  // current location, and center the map on it. No continuous tracking.
+  const handleMyLocation = useCallback(async () => {
+    setIsResolvingMyLocation(true);
+    try {
+      await Location.requestForegroundPermissionsAsync();
+      const location = await resolveBootstrapLocation();
+      if (location && mapHandleRef.current) {
+        mapHandleRef.current.centerOnLocation({
+          lat: location.latitude,
+          lng: location.longitude,
+        });
+      }
+    } catch {
+      // Silently fail (permission denied, timeout, etc.); the user can tap again.
+    } finally {
+      setIsResolvingMyLocation(false);
+    }
+  }, []);
 
   // Warm the offline tile pack as soon as the tour content is available. The
   // map mount is gated on useMapPackReady; this keeps pack status fresh if the
@@ -273,16 +303,31 @@ export default function TourNavigationScreen() {
     );
   }
 
-  if (!canNavigate || !isMapLibreNativeAvailable()) {
-    const hint = !isMapLibreNativeAvailable()
-      ? t("nav.requiresDevBuild")
-      : t("nav.unavailableHint");
-
+  if (!isMapLibreNativeAvailable()) {
     return (
       <ThemedView transparent style={styles.centered}>
         <ThemedText type="smallBold">{t("nav.unavailableTitle")}</ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
-          {hint}
+          {t("nav.requiresDevBuild")}
+        </ThemedText>
+        <Pressable
+          onPress={() => router.back()}
+          style={[styles.backButton, { borderColor: theme.backgroundSelected }]}
+        >
+          <Ionicons name="arrow-back" size={16} color={theme.text} />
+          <ThemedText type="smallBold">{t("accessLock.goBack")}</ThemedText>
+        </Pressable>
+      </ThemedView>
+    );
+  }
+
+  // Show unavailable message only when explicitly in Walk mode but GPS fails.
+  if (mode === "walk" && !canNavigate) {
+    return (
+      <ThemedView transparent style={styles.centered}>
+        <ThemedText type="smallBold">{t("nav.unavailableTitle")}</ThemedText>
+        <ThemedText type="small" themeColor="textSecondary">
+          {t("nav.unavailableHint")}
         </ThemedText>
         <Pressable
           onPress={() => router.back()}
@@ -315,8 +360,12 @@ export default function TourNavigationScreen() {
           floorId={selectedFloorId}
           orderedSpots={orderedSpots}
           snapshot={snapshot}
+          mode={mode}
           onLoadError={handleMapLoadError}
           onBearingChange={handleBearingChange}
+          onCameraReady={(handle) => {
+            mapHandleRef.current = handle;
+          }}
         />
       </Suspense>
 
@@ -337,6 +386,25 @@ export default function TourNavigationScreen() {
             </Pressable>
 
             <View style={styles.topRight}>
+              {mode === "explore" ? (
+                <Pressable
+                  onPress={handleMyLocation}
+                  disabled={isResolvingMyLocation}
+                  accessibilityLabel={t("nav.myLocation")}
+                  style={[
+                    styles.iconChip,
+                    {
+                      backgroundColor: "rgba(28, 25, 23, 0.82)",
+                    },
+                  ]}
+                >
+                  {isResolvingMyLocation ? (
+                    <ActivityIndicator color="#ffffff" size="small" />
+                  ) : (
+                    <Ionicons name="locate" size={20} color="#ffffff" />
+                  )}
+                </Pressable>
+              ) : null}
               <Pressable
                 onPress={handleRefresh}
                 accessibilityLabel={t("nav.refresh")}
@@ -412,11 +480,11 @@ export default function TourNavigationScreen() {
             </View>
           ) : null}
 
-          {snapshot?.status === "offRoute" ? (
+          {mode === "walk" && snapshot?.status === "offRoute" ? (
             <OffRouteBanner distanceM={snapshot.distanceOffRouteM} />
           ) : null}
 
-          {snapshot && snapshot.proximity.distanceToNextStopM !== null ? (
+          {mode === "walk" && snapshot && snapshot.proximity.distanceToNextStopM !== null ? (
             <View
               style={[
                 styles.distanceChip,
@@ -445,6 +513,18 @@ export default function TourNavigationScreen() {
           </Pressable>
         </View>
       </SafeAreaView>
+
+      <ModeSelectModal
+        visible={mode === null}
+        onSelectExplore={() => {
+          useNavigationSessionStore.getState().reset();
+          setMode("explore");
+        }}
+        onSelectWalk={() => {
+          useNavigationSessionStore.getState().reset();
+          setMode("walk");
+        }}
+      />
     </ThemedView>
   );
 }

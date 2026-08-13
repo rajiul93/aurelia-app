@@ -333,6 +333,13 @@ const en = {
   "nav.preparingMap": "Preparing offline map…",
   "nav.locationDenied":
     "Location permission is required for guided walk. Enable it in Settings.",
+  "nav.modeSelect.title": "How would you like to begin?",
+  "nav.modeSelect.subtitle": "Choose how to experience this tour.",
+  "nav.modeSelect.exploreCta": "Explore",
+  "nav.modeSelect.exploreHint": "Look around freely — no GPS tracking.",
+  "nav.modeSelect.walkCta": "Start Walk",
+  "nav.modeSelect.walkHint": "Live tracking with turn-by-turn guidance.",
+  "nav.myLocation": "My location",
 
   "spot.notFound": "Stop not found",
   "spot.indexOfTotal": "Stop {current} of {total}",
@@ -729,6 +736,14 @@ const es: Record<StringKey, string> = {
   "nav.preparingMap": "Preparando mapa sin conexión…",
   "nav.locationDenied":
     "Se necesita permiso de ubicación para la caminata guiada. Actívalo en Ajustes.",
+  "nav.modeSelect.title": "¿Cómo te gustaría comenzar?",
+  "nav.modeSelect.subtitle": "Elige cómo experimentar este tour.",
+  "nav.modeSelect.exploreCta": "Explorar",
+  "nav.modeSelect.exploreHint": "Mira alrededor libremente — sin seguimiento GPS.",
+  "nav.modeSelect.walkCta": "Comenzar caminata",
+  "nav.modeSelect.walkHint": "Seguimiento en vivo con orientación paso a paso.",
+  "nav.myLocation": "Mi ubicación",
+
   "spot.notFound": "Parada no encontrada",
   "spot.indexOfTotal": "Parada {current} de {total}",
   "spot.transcript": "Transcripción",
@@ -1120,6 +1135,14 @@ const fr: Record<StringKey, string> = {
   "nav.preparingMap": "Préparation de la carte hors ligne…",
   "nav.locationDenied":
     "L'autorisation de localisation est requise pour la visite guidée. Activez-la dans Réglages.",
+  "nav.modeSelect.title": "Comment aimeriez-vous commencer?",
+  "nav.modeSelect.subtitle": "Choisissez comment découvrir cette visite.",
+  "nav.modeSelect.exploreCta": "Explorer",
+  "nav.modeSelect.exploreHint": "Regardez librement — pas de suivi GPS.",
+  "nav.modeSelect.walkCta": "Commencer la visite",
+  "nav.modeSelect.walkHint": "Suivi en direct avec guidance pas à pas.",
+  "nav.myLocation": "Ma localisation",
+
   "spot.notFound": "Arrêt introuvable",
   "spot.indexOfTotal": "Arrêt {current} sur {total}",
   "spot.transcript": "Transcription",

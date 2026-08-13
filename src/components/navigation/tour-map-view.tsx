@@ -42,12 +42,19 @@ type TourMapViewProps = {
   floorId?: string;
   orderedSpots: BundleSpot[];
   snapshot: NavigationSessionSnapshot | null;
+  /** "explore" (free browsing, no GPS) or "walk" (full navigation). null = modal still showing. */
+  mode: "explore" | "walk" | null;
   onLoadError?: () => void;
   /**
    * Fires with the map's rotation in degrees (0 = north-up) as the user turns it
    * with two fingers. The compass reads this to stay pointed at true north.
    */
   onBearingChange?: (bearing: number) => void;
+  /**
+   * Fires once the camera is ready (mapReady). Hands up a handle with centerOnLocation
+   * for the "My Location" button's one-off centering.
+   */
+  onCameraReady?: (handle: { centerOnLocation: (point: { lat: number; lng: number }) => void }) => void;
 };
 
 /** A stop with valid coordinates, plus its 1-based label along the route. */
@@ -117,8 +124,10 @@ export function TourMapView({
   floorId,
   orderedSpots,
   snapshot,
+  mode,
   onLoadError,
   onBearingChange,
+  onCameraReady,
 }: TourMapViewProps) {
   const router = useRouter();
   const cameraRef = useRef<CameraRef>(null);
@@ -228,7 +237,7 @@ export function TourMapView({
   // MapLibre's native location puck, so it needs no permission of its own.
 
   useEffect(() => {
-    if (!mapReadyRef.current || !initialTourFitRef.current || !displayLocation) {
+    if (mode !== "walk" || !mapReadyRef.current || !initialTourFitRef.current || !displayLocation) {
       return;
     }
 
@@ -237,7 +246,7 @@ export function TourMapView({
       zoom: 16,
       duration: CAMERA_FOLLOW_MS,
     });
-  }, [displayLocation]);
+  }, [displayLocation, mode]);
 
   const isMoving =
     snapshot?.status === "tracking" || snapshot?.status === "offRoute";
@@ -266,8 +275,18 @@ export function TourMapView({
         onDidFinishLoadingMap={() => {
           styleRetryRef.current = 0;
           mapReadyRef.current = true;
-          fitTourArea(Boolean(displayLocation));
+          fitTourArea(mode === "walk" && Boolean(displayLocation));
           initialTourFitRef.current = true;
+          // Hand up the camera handle for one-off "My Location" centering in Explore mode.
+          onCameraReady?.({
+            centerOnLocation: (point: { lat: number; lng: number }) => {
+              cameraRef.current?.easeTo({
+                center: [point.lng, point.lat],
+                zoom: 16,
+                duration: CAMERA_FOLLOW_MS,
+              });
+            },
+          });
         }}
         onDidFailLoadingMap={() => {
           // Offline, a missing base style/tiles leaves a blank map and the

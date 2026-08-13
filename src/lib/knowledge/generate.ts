@@ -75,6 +75,17 @@ export async function generateAnswer(
   // Branch on provider.
   if (request.provider === "gemini") {
     if (!isGeminiAvailable()) {
+      // The only skip reason that is a *configuration* fault rather than a
+      // device limit — the admin selected Gemini and the build shipped without
+      // a key, so every answer quietly degrades to keyword retrieval with
+      // nothing on screen to say so.
+      if (__DEV__) {
+        console.warn(
+          "[generate] provider is 'gemini' but no API key is bundled — " +
+            "falling back to keyword retrieval. See resolveGeminiApiKey().",
+        );
+      }
+
       return { started: false, reason: "gemini_key_missing" };
     }
 

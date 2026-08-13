@@ -97,8 +97,11 @@ function resolveGeminiApiKey() {
 
   if (!configured && __DEV__) {
     console.warn(
-      "[env] EXPO_PUBLIC_GEMINI_API_KEY is not set — Gemini chat provider will not work. " +
-        "Set it in .env.local to use cloud-based generative chat.",
+      "[env] EXPO_PUBLIC_GEMINI_API_KEY is not set — Gemini chat provider will " +
+        "silently fall back to keyword retrieval. Local builds read it from " +
+        ".env.local; EAS builds do NOT (it is gitignored, so it is never " +
+        "uploaded) — set it there with `eas env:create --environment production " +
+        "--name EXPO_PUBLIC_GEMINI_API_KEY`.",
     );
   }
 
